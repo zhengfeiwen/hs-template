@@ -1,0 +1,283 @@
+<template>
+  <el-dialog append-to-body :close-on-click-modal="!1" title="异动结转流水记录" :visible.sync="visible" width="70%" :before-close="onClose" @open="open()">
+    <div class="abnormal-turn-record-dialog-container">
+      <ul class="ul-info">
+        <li>学生姓名：<span>{{ changeInfo.stuName }}</span></li>
+        <li>业务：<span>{{ getValueByConstrantArray("business", changeInfo.business ) }}</span></li>
+        <li>所在学校：<span>{{ changeInfo.schoolName }}</span></li>
+        <li>所在年级：<span>{{ changeInfo.gradeName }}</span></li>
+        <li>所在专业：<span>{{ changeInfo.subjectName }}</span></li>
+      </ul>
+      <el-collapse v-model="activeNames" @change="handleChange">
+        <el-collapse-item title="不可结转金额处理" name="1">
+          <hs-table
+            ref="unChangePayRecordTable"
+            id="unChangePayRecordTable"
+            v-loading="loading"
+            style="flex: inherit;"
+            :data="changeInfo.unChangeItems"
+            :border="!0"
+            :show-summary="!0"
+            :summary-method="getUnChangePayRecordTableSummaries"
+            header-row-class-name="header-style">
+              <hs-table-column prop="business" label="缴费业务">
+                <template slot-scope="scope">{{ getValueByConstrantArray("business", scope.row.business) }}</template>
+              </hs-table-column>
+              <hs-table-column prop="schoolName" label="缴费院校"></hs-table-column>
+              <hs-table-column prop="gradeName" label="缴费年级"></hs-table-column>
+              <hs-table-column prop="subjectName" label="缴费专业"></hs-table-column>
+              <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+              <hs-table-column prop="schoolYearName" label="学年"></hs-table-column>
+              <hs-table-column prop="amount" :formatter="formatterMoney" label="已收"></hs-table-column>
+              <hs-table-column prop="reductionAmount" :formatter="formatterMoney" label="已减"></hs-table-column>
+              <hs-table-column prop="unChangeAmount" label="已收不可结转" width="155"></hs-table-column>
+              <hs-table-column prop="refundAmount" :formatter="formatterMoney" label="已退"></hs-table-column>
+              <!-- <hs-table-column prop="" :formatter="formatterMoney" label="已结算"></hs-table-column> -->
+            </hs-table>
+          <ul class="ul-money">
+            <li>可结转减免金额：<span>{{ changeInfo.reductionAmount }}</span></li>
+            <li>可结转收费金额：<span>{{ changeInfo.payAmount }}</span></li>
+          </ul>
+        </el-collapse-item>
+        <el-collapse-item title="分配可结转金额" name="2">
+          <hs-table
+            ref="abnormalTurnOperationTable"
+            id="abnormalTurnOperationTable"
+            style="flex: inherit;width: 100%"
+            :data="changeInfo.items"
+            :border="!0"
+            :show-summary="!0"
+            :summary-method="getAbnormalTurnOperationTableSummaries"
+            header-row-class-name="header-style">
+              <hs-table-column prop="business" label="缴费业务">
+                <template slot-scope="scope">{{ getValueByConstrantArray("business", scope.row.business) }}</template>
+              </hs-table-column>
+              <hs-table-column prop="schoolName" label="缴费院校"></hs-table-column>
+              <hs-table-column prop="gradeName" label="缴费年级"></hs-table-column>
+              <hs-table-column prop="subjectName" label="缴费专业"></hs-table-column>
+              <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+              <hs-table-column prop="schoolYearName" label="学年"></hs-table-column>
+              <hs-table-column prop="feeMust" label="必缴">
+                <template slot-scope="scope">
+                  {{ scope.row.feeMust === 1 ? '是' : '否' }}
+                </template>
+              </hs-table-column>
+              <hs-table-column prop="receivableAmount" :formatter="formatterMoney" label="应收"></hs-table-column>
+              <!-- <hs-table-column prop="payAmount" :formatter="formatterMoney" label="已收"></hs-table-column> -->
+              <hs-table-column prop="reductionAmount" label="本次减免" width="155"></hs-table-column>
+              <hs-table-column prop="payAmount" label="本次收费" width="155"></hs-table-column>
+          </hs-table>
+          <div class="line auto">
+            <el-tooltip class="item" effect="dark" content="总收款=勾选项收款金额和" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+            <static-item label="总收款">{{ changeInfo.payAmount }}</static-item>
+            <el-tooltip class="item" effect="dark" content="总减免=勾选项减免金额和" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+            <static-item label="总减免">{{ changeInfo.reductionAmount }}</static-item>
+            <el-tooltip class="item" effect="dark" content="个人账户余额=可结转金额 - 总收款金额" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+            <static-item label="个人账户余额">{{ changeInfo.accountAmount }}</static-item>
+            <el-tooltip class="item" effect="dark" content="欠费=各项的{应收-已收-减免）+已退-本次到账}和" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+            <static-item label="欠款">{{ changeInfo.arrearsAmount }}</static-item>
+          </div>
+        </el-collapse-item>
+      </el-collapse>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="info" plain @click="onClose">关 闭</el-button>
+      </div>
+    </div>
+  </el-dialog>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { studentApi } from '@/api/prestudentcenter'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable,
+    StaticItem
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private abnormalTurnRecordId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private activeNames = ['2']
+
+  private changeInfo: any = {}
+
+  private amountFormat (num: number) {
+    return Number(num.toFixed(2))
+  }
+
+  private loading = !1
+
+  private async onQuery () {
+    this.loading = !0
+    await studentApi('changeDetail', {
+      id: this.abnormalTurnRecordId
+    }).then((res: any) => {
+      this.changeInfo = res.object.info
+      this.changeInfo.changeAmount = this.changeInfo.changeAmount / 100
+      this.changeInfo.unChangeAmount = this.changeInfo.unChangeAmount / 100
+      this.changeInfo.unChangeItems = res.object.info.unChangeItems.map((v: any) => {
+        v.amount = v.amount / 100
+        v.payAmount = v.payAmount / 100
+        v.refundAmount = v.refundAmount / 100
+        v.reductionAmount = v.reductionAmount / 100
+        v.settleAmount = v.settleAmount / 100
+        v.unChangeAmount = v.unChangeAmount / 100
+        return v
+      })
+      this.loading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private setUnChangePayRecordTableColSpan () {
+    setTimeout(() => {
+      if (document.querySelector('#unChangePayRecordTable')) {
+        var current = (document as any)
+          .querySelector('#unChangePayRecordTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '7'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+        cell[5].style.display = 'none'
+        cell[6].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private setAbnormalTurnOperationTableColSpan () {
+    setTimeout(() => {
+      if (document.querySelector('#abnormalTurnOperationTable')) {
+        var current = (document as any)
+          .querySelector('#abnormalTurnOperationTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '8'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+        cell[5].style.display = 'none'
+        cell[6].style.display = 'none'
+        cell[7].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private getUnChangePayRecordTableSummaries (param: any) {
+    const { columns, data } = param
+    const sumsNumber: any = []
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计'
+        return
+      }
+      const values = data.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return this.amountFormat(prev + curr)
+          } else {
+            return prev
+          }
+        }, 0))
+        sumsNumber[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return this.amountFormat(prev + curr)
+          } else {
+            return prev
+          }
+        }, 0)
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private getAbnormalTurnOperationTableSummaries (param: any) {
+    const { columns, data } = param
+    const sumsNumber: any = []
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计（勾选项）'
+        return
+      }
+      const values = data.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return this.amountFormat(prev + curr)
+          } else {
+            return prev
+          }
+        }, 0))
+        sumsNumber[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return this.amountFormat(prev + curr)
+          } else {
+            return prev
+          }
+        }, 0)
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private constrantArray: any = {
+    business: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.business = await getConstantByGroup('business')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private clear () {
+    this.activeNames = ['2']
+    this.changeInfo = {}
+  }
+
+  private onClose () {
+    this.clear()
+    this.$emit('update:visible', false)
+  }
+
+  public open (): void {
+    this.getConstrantList()
+    this.onQuery()
+    this.setUnChangePayRecordTableColSpan()
+    this.setAbnormalTurnOperationTableColSpan()
+  }
+}
+</script>
+
+<style lang='scss'>
+@import "./index";
+</style>

@@ -1,0 +1,337 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+/**
+* 获取学生列表
+* @param data
+*/
+export const getStudentList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 验证数据
+* @param data
+*/
+export const validateData = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 导入数据
+* @param data
+*/
+export const importData = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 减免待处理列表
+* @param data
+*/
+export const reduceUntreatedList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/untreated/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 减免待处理列表总数
+* @param data
+*/
+export const reduceUntreatedCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/untreated/list/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 减免已处理列表
+* @param data
+*/
+export const reduceAlreadyList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/already/process/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 减免已处理列表总数
+* @param data
+*/
+export const reduceAlreadyCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/already/process/list/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 减免作废
+* @param data
+*/
+export const reduceAlreadyNullifyPayRecord = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/already/process/nullifyPayRecord`,
+    method: 'post',
+    data
+  })
+
+/**
+* 减免修改
+* @param data
+*/
+export const reduceAlreadyUpdatePayRecord = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/already/process/updatePayRecord`,
+    method: 'post',
+    data
+  })
+
+/**
+* 减免新增验证
+* @param data
+*/
+export const updateUntreatedGetReduceItem = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/untreated/verifyReduce`,
+    method: 'post',
+    data
+  })
+
+/**
+* 减免项目列表
+* @param data
+*/
+export const getReduceItem = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/untreated/getReduceItem`,
+    method: 'post',
+    data
+  })
+
+/**
+* 减免新增
+* @param data
+*/
+export const updateUntreatedInsert = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/untreated/insert`,
+    method: 'post',
+    data
+  })
+
+/**
+* 全日制收费待处理列表
+* @param data
+*/
+export const unPayList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/ft/un/pay/list`,
+    method: 'post',
+    data
+  })
+/**
+* 全日制收费待处理列表条数
+* @param data
+*/
+export const unPayListCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/ft/un/pay/list/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 全日制收费已处理列表
+* @param data
+*/
+export const ftPayList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/ft/pay/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 全日制收费已处理列表条数
+* @param data
+*/
+export const ftPayListCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/ft/pay/list/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 全日制收费待收费项目
+* @param data
+*/
+export const ftPayInvalid = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/ft/pay/invalid`,
+    method: 'post',
+    data
+  })
+
+
+ /**
+* 全日制收费待收费项目
+* @param data
+*/
+export const stuItemList = (data: any) =>
+request({
+  url: `${apiUrl.api}/fcs/ft/un/pay/stu/item/list`,
+  method: 'post',
+  data
+})
+
+
+/**
+* 开票
+* @param data
+*/
+export const invoice = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/common/fees/open/invoice`,
+    method: 'post',
+    data: data
+  })
+
+/**
+* 退费待处理列表
+* @param data
+*/
+export const refundUntreatedList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/untreated/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 退费待处理列表总数
+* @param data
+*/
+export const refundUntreatedCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/untreated/list/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 退费详情
+* @param data
+*/
+export const refundAlreadyDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/already/process/detail`,
+    method: 'post',
+    data
+  })
+
+/**
+* 退费项目列表
+* @param data
+*/
+export const getRefundItem = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/untreated/getRefundItem`,
+    method: 'post',
+    data
+  })
+
+/**
+* 退费新增
+* @param data
+*/
+export const refundAlreadyProcessInsert = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/already/process/insert`,
+    method: 'post',
+    data
+  })
+
+/**
+* 退费新增验证
+* @param data
+*/
+export const refundUntreatedVerifyRefund = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/untreated/verifyRefund`,
+    method: 'post',
+    data
+  })
+
+/**
+* 退费修改
+* @param data
+*/
+export const refundAlreadyProcessUpdatePayRecord = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/already/process/updatePayRecord`,
+    method: 'post',
+    data
+  })
+
+/**
+* 退费已处理列表
+* @param data
+*/
+export const refundAlreadyProcessList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/already/process/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 退费已处理列表总数
+* @param data
+*/
+export const refundAlreadyProcessCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/already/process/list/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 退费作废
+* @param data
+*/
+export const refundAlreadyProcessNullifyPayRecord = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/already/process/nullifyPayRecord`,
+    method: 'post',
+    data
+  })
+
+export const collect = {
+  getStudentList: getStudentList,
+  validateData: validateData,
+  importData: importData,
+  reduceUntreatedList: reduceUntreatedList,
+  reduceUntreatedCount: reduceUntreatedCount,
+  reduceAlreadyList: reduceAlreadyList,
+  reduceAlreadyCount: reduceAlreadyCount,
+  reduceAlreadyNullifyPayRecord: reduceAlreadyNullifyPayRecord,
+  reduceAlreadyUpdatePayRecord: reduceAlreadyUpdatePayRecord,
+  updateUntreatedGetReduceItem: updateUntreatedGetReduceItem,
+  updateUntreatedInsert: updateUntreatedInsert
+}

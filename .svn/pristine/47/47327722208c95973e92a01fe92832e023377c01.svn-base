@@ -1,0 +1,50 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+const apiUrl = setting.apiUrl
+
+/**
+ * 获取数据-通用
+ * @param data
+ */
+export const getList = (data: any) =>
+  request({
+    url: `${apiUrl.api}${data.url}`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+ * 获取常量字典列表
+ * @param data
+ */
+export const getConstant = (data: any) =>
+  request({
+    url: `${apiUrl.api}/lb/lboption/getConstant`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+*根据变量字典数据
+*
+* @param data
+* @returns {*}
+*/
+export const getOption = (data: any) =>
+  request({
+    url: `${apiUrl.api}/lb/lboption/getOption`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+ * 获取院校树
+ * @param data
+ */
+export const schoolTree = (data: any) =>
+  request({
+    url: `${apiUrl.api}${data.url}`,
+    method: 'post',
+    data: qs.stringify(data)
+  })

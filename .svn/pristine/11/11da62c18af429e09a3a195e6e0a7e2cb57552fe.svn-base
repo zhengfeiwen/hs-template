@@ -1,0 +1,161 @@
+<!-- 手机预览外壳 -->
+<template>
+  <div class="mobile-container">
+    <div class="left-btn">
+      <div class="btn1 shadow"></div>
+      <div class="btn2 shadow"></div>
+      <div class="btn3 shadow"></div>
+    </div>
+    <div class="main-body shadow">
+      <div class="top">
+        <div class="ring"></div>
+        <div class="line"></div>
+      </div>
+      <div class="body shadow">
+        <div class="screen">
+          <component :is="componentId" :data="data" :instrs="instrs"></component>
+        </div>
+      </div>
+      <div class="bottom">
+        <div class="ring shadow"></div>
+      </div>
+    </div>
+    <div class="right-btn shadow"></div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import PreViewBase from './preview/base.vue'
+import PreViewTemp1 from './preview/temp1/index.vue'
+
+@Component({
+  name: 'mobile-view',
+  components: {
+    PreViewBase,
+    PreViewTemp1
+  }
+})
+
+export default class MobileView extends Vue {
+  @Prop({ type: String, default: 'PreViewBase' })
+  private componentId!: string
+
+  @Prop({ type: [Object, Array] })
+  private data!: object|any
+
+  @Prop({ type: Array })
+  private instrs!: any[]
+
+  public updateData (data: any) {
+    this.data = data
+  }
+
+  public updateDataTnstrs (instrs: any) {
+    this.instrs = instrs
+  }
+}
+</script>
+<style lang="scss" scoped>
+  .mobile-container{
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    width: 352px;
+    height: 612px;
+    .left-btn{
+      display: flex;
+      flex-direction: column;
+      div{
+        position: absolute;
+        border: 1px solid #dedede;
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+        width: 5px;
+        left: -3px;
+      }
+      .btn1{
+        height: 40px;
+        top: 80px;
+      }
+      .btn2{
+        height: 55px;
+        top: 150px;
+      }
+      .btn3{
+        height: 55px;
+        top: 215px;
+      }
+    }
+    .main-body{
+      position: absolute;
+      width: 352px;
+      height: 612px;
+      border: 1px solid #dedede;
+      border-radius: 50px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      .top{
+        height: 67px;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        .ring{
+          height: 13px;
+          width: 13px;
+          border: 2px solid #dedede;
+          border-radius: 13px;
+        }
+        .line{
+          height: 6px;
+          width: 80px;
+          border: 2px solid #dedede;
+          border-radius: 10px;
+          margin-left: 20px;
+        }
+      }
+      .body{
+        width: 300px;
+        height: 517px;
+        border: 2px solid #dedede;
+        .screen{
+          height: 100%;
+          width: 100%;
+          iframe{
+            width: 100%;
+            height: 100%;
+          }
+        }
+      }
+      .bottom{
+        height: 87px;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        .ring{
+          margin-top: 5px;
+          width: 45px;
+          height: 45px;
+          border: solid 2px #dedede;
+          border-radius: 60px;
+        }
+      }
+    }
+    .right-btn{
+      position: absolute;
+      border: 1px solid #dedede;
+      border-top-left-radius: 4px;
+      border-bottom-left-radius: 4px;
+      width: 5px;
+      height: 60px;
+      right: -3px;
+      top: 150px;
+    }
+  }
+</style>

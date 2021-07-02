@@ -1,0 +1,181 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog append-to-body :title="title" :visible.sync="visibleSync" width="60%" :close-on-click-modal="!1" @open="open">
+    <div class="feestandard-log-container">
+      <simple-table ref="hsTable" :export-name="exportName" :exportable="exportable" :export-columns="exportColumns" :columnable="!1" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['business', 'schoolYear', 'tradeType']">
+        <template slot="action-block">
+            <hs-button type="danger" v-permission="['fcsPayRecordItemExport']" @click="onExport" icon="hs-icon-download" size="mini">导出</hs-button>
+        </template>
+      </simple-table>
+    </div>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { checkPermission } from '@/utils/permission'
+import dayjs from 'dayjs'
+import { baseApi } from '@/api/base'
+
+@Component({
+  name: 'feestandard-log-container',
+  components: {
+    SimpleTable
+  }
+})
+
+export default class FeestandardLogContainer extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private data!: object|any
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private exportParam () {
+    const temp = {
+      id: this.data.id
+    }
+    return temp
+  }
+
+  private exportColumns = [{
+    prop: 'stuName',
+    label: '学生姓名'
+  },
+  {
+    prop: 'stuPaperworkNumber',
+    label: '身份证号'
+  },
+  {
+    prop: 'stuSchoolName',
+    label: '院校'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'stuGradeName',
+    label: '年级'
+  },
+  {
+    prop: 'stuSubjectName',
+    label: '专业'
+  },
+  {
+    prop: 'billNo',
+    label: '流水号'
+  },
+  {
+    prop: 'tradeTypeName',
+    label: '类型'
+  },
+  {
+    prop: 'payTime',
+    label: '缴费时间',
+    format: 'date'
+  }]
+
+  private exportable = {
+    exportable: checkPermission(['fcsPayRecordItemExport']),
+    src: '/fcs/schoolFeeStandard/payRecordItem/export',
+    data: this.exportParam
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `院校收费存在的有效收费流水-${day}`
+  }
+
+  private onExport () {
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  private columns = [
+    {
+      prop: 'stuName',
+      label: '学生姓名'
+    },
+    {
+      prop: 'stuPaperworkNumber',
+      label: '身份证号'
+    },
+    {
+      prop: 'stuSchoolName',
+      label: '院校'
+    },
+    {
+      prop: 'studyName',
+      label: '学习类型'
+    },
+    {
+      prop: 'stuGradeName',
+      label: '年级'
+    },
+    {
+      prop: 'stuSubjectName',
+      label: '专业'
+    },
+    {
+      prop: 'billNo',
+      label: '流水号'
+    },
+    {
+      prop: 'tradeType',
+      label: '类型'
+    },
+    {
+      prop: 'payTime',
+      label: '缴费时间',
+      format: 'date'
+    }]
+
+  private loading = !1
+
+  private async onQuery (pagination: any = null) {
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('payRecordItemList', {
+      id: this.data.id,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = res.object.totalCount
+        this.loading = !1
+      } else {
+        this.$message.error({ message: res.message, showClose: !0, duration: 1500 })
+      }
+    })
+  }
+
+  private open () {
+    this.loading = !0
+    this.onQuery()
+    this.tableData.list = this.data.list
+    this.tableData.totalCount = this.data.totalCount
+  }
+}
+</script>
+<style lang="scss">
+  .feestandard-log-container{
+    width: calc(100% + 10px);
+    height: calc(100% + 30px);
+    margin-top: -20px;
+    margin-left: -10px;
+  }
+</style>

@@ -1,0 +1,67 @@
+<template>
+  <div class="refund-manage-container">
+    <div class="left">
+      <drawer-select :data="businessList" :value.sync="curBusiness"></drawer-select>
+    </div>
+    <div class="right">
+      <component v-if="flag" :is="componentId" :params="{ business: curBusiness }"></component>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Watch } from 'vue-property-decorator'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import FullRefund from './fulltime/index.vue'
+import PartRefund from './parttime/index.vue'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'refund-manage',
+  components: {
+    DrawerSelect,
+    FullRefund,
+    PartRefund
+  }
+})
+export default class RefundManage extends Vue {
+  private businessList = []
+
+  // 重新渲染组件
+  private flag = !0
+
+  private businessDict: any = {
+    1: 'FullRefund',
+    2: 'PartRefund',
+    3: 'FullRefund',
+    4: 'FullRefund',
+    5: 'FullRefund'
+  }
+
+  @Watch('curBusiness', { deep: !0 })
+  private curBusinessChange () {
+    this.flag = !1
+    setTimeout(() => {
+      this.flag = !0
+    })
+  }
+
+  get componentId () {
+    return this.businessDict[this.curBusiness.key]
+  }
+
+  private curBusiness: any = {}
+
+  private async initData () {
+    this.businessList = await getConstantByGroup('businessType', { update: !0 })
+    this.curBusiness = this.businessList[0]
+  }
+
+  async beforeMount () {
+    await this.initData()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

@@ -1,0 +1,93 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+const apiUrl = setting.apiUrl
+
+/**
+* 删除用户
+* @param data
+*/
+export const removeUser = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/user/delete`,
+    method: 'post',
+    data
+  })
+
+/**
+* 用户列表
+* @param data
+*/
+export const userList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/user/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 用户列表
+* @param data
+*/
+export const userCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/user/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 新增用户
+* @param data
+*/
+export const addUser = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/user/add`,
+    method: 'post',
+    data
+  })
+///
+
+/**
+* 缴费列表
+* @param data
+*/
+export const payList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/pay/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 缴费总数
+* @param data
+*/
+export const payCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/pay/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 缴费详情
+* @param data
+*/
+export const payDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/pay/detail`,
+    method: 'post',
+    data
+  })
+///
+/**
+* 缴费详情
+* @param data
+*/
+export const studentCenterUpdate = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/center/update`,
+    method: 'post',
+    data
+  })

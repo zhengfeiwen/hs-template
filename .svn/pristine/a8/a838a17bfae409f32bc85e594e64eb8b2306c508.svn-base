@@ -1,0 +1,852 @@
+<template>
+  <div class="change-stubaseinfo-dialog-container">
+    <el-dialog z-index="1000" :close-on-click-modal="!1" title="学生基础信息修改" :visible.sync="visible" :before-close="onClose" @open="open()">
+      <hs-form ref="stuInfo" :rules="rules" :model="stuInfo" label-width="98px" class="border-style2">
+      <table v-loading="loading" class="simple-table" border="1">
+        <tr>
+          <td>
+            <hs-form-item label="姓名" prop="stuName">
+              <hs-input maxlength="20" show-word-limit size="mini" v-model="stuInfo.stuName" placeholder="请输入姓名" ></hs-input>
+            </hs-form-item>
+          </td>
+          <td rowspan="4">
+            <hs-form-item class="photo-block" label="照片" prop="photo">
+            <hs-plupload
+              browseButton="browseButton"
+              :url="postUrl"
+              :FilesAdded="filesAdded"
+              :headers="{ token: token, accept: 'application/json' }"
+              :multipart-params="{'parentFolder': 'fcs/student/' + nowTime()}"
+              @inputUploader="inputUploader"
+              :filters="filters"
+              :UploadComplete="UploadComplete"
+              :FileUploaded="FileUploaded"
+              :Error="error"
+            />
+            <hs-image v-if="stuInfo.attachment" v-loading="photoLoading" class="image-dashed" :src="setting.ossIp + '/' + stuInfo.attachment.filePath"></hs-image>
+            <hs-link id="browseButton" v-loading="photoLoading" v-else class="add-image image-dashed" icon="hs-icon-plus">添加照片</hs-link>
+          </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="性别" prop="stuSex">
+              <dict-select :isInit="!0" :val.sync="stuInfo.stuSex" constant-group-name="sex"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="民族" prop="stuEthnic">
+              <dict-select :isInit="!0" ref="stuEthnic" :val.sync="stuInfo.stuEthnic" @change="(val, label)=>{ this.stuInfo.stuEthnic = val; this.stuInfo.stuEthnicName = label}" :prop="{ key: 'nationKey', value: 'nationName' }" :option="options.ethnic"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="业务" prop="stuBusinessId">
+              <dict-select :isInit="!0" :val.sync="stuInfo.stuBusinessId" constant-group-name="businessType" @change="businessChange"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="院校" prop="stuSchoolDataKey">
+              <dict-select :isInit="!0" @change="schoolChange()" :data="schoolItemData" :prop="{ key: 'dataKey', value: 'showValue' }" :val.sync="stuInfo.stuSchoolDataKey"></dict-select>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="专业" prop="stuSubjectDataKey">
+              <dict-select :isInit="!0" @change="$forceUpdate()" :data="subjectItemData" :prop="{ key: 'dataKey', value: 'showValue' }" :val.sync="stuInfo.stuSubjectDataKey"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="年级" prop="stuGradeDataKey">
+              <dict-select :isInit="!0" @change="$forceUpdate()" :data="gradeItemData" :prop="{ key: 'dataKey', value: 'gradeName' }" :val.sync="stuInfo.stuGradeDataKey"></dict-select>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="学籍状态" prop="stuSchoolRollStatus">
+              <dict-select :isInit="!0" :val.sync="stuInfo.stuSchoolRollStatus" constant-group-name="stuSchoolRollStatus"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="第二学历" prop="stuTwoEducation">
+          <dict-select :isInit="!0" :val.sync="stuInfo.stuTwoEducation" @change="stuTwoEducationChange()" constant-group-name="yesOrNo"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr v-if="stuInfo.stuTwoEducation === 1">
+          <td>
+            <hs-form-item label="第二院校" prop="stuTwoEducationSchool">
+              <dict-select :isInit="!0" @change="twoEducationSchoolChange()" :data="twoEducationSchoolItemData" :prop="{ key: 'dataKey', value: 'showValue' }" :val.sync="stuInfo.stuTwoEducationSchoolDataKey"></dict-select>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="第二专业" prop="stuTwoEducationSubject">
+              <dict-select :isInit="!0" @change="$forceUpdate()" :data="twoEducationSubjectItemData" :prop="{ key: 'dataKey', value: 'showValue' }" :val.sync="stuInfo.stuTwoEducationSubjectDataKey"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr v-if="stuInfo.stuTwoEducation === 1">
+          <td>
+            <hs-form-item label="第二年级" prop="stuTwoEducationGrade">
+              <dict-select :isInit="!0" @change="$forceUpdate()" :data="twoEducationGradeItemData" :prop="{ key: 'dataKey', value: 'gradeName' }" :val.sync="stuInfo.stuTwoEducationGradeDataKey"></dict-select>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="第二学籍状态" prop="stuTwoEducationSchoolRollStatus">
+              <dict-select :isInit="!0" :val.sync="stuInfo.stuTwoEducationSchoolRollStatus" constant-group-name="stuSchoolRollStatus"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="所属中心" prop="stuBelongCenter">
+              <dict-select :isInit="!0" ref="center" @change="(val, label)=>{ this.stuInfo.stuBelongCenter = val; this.stuInfo.stuBelongCenterName = label}" :option="options.center" :prop="{ key: 'id', value: 'centerName' }" :val.sync="stuInfo.stuBelongCenter"></dict-select>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="教学点" prop="stuTeachingPoint">
+              <dict-select :isInit="!0" v-if="stuInfo.stuBusinessId == 2" :option="options.stuTeachingPoint" :prop="{ key: 'optionValue', value: 'optionValue' }" :val.sync="stuInfo.stuTeachingPoint"></dict-select>
+              <hs-input maxlength="30" show-word-limit v-else size="mini" v-model="stuInfo.stuTeachingPoint" placeholder="请输入教学点" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="学生来源" prop="stuSource">
+              <el-cascader @change="stuSourceCascaderChange" size="mini" :props="stuSourceProps" :options="stuSourceTreeData" :show-all-levels="false" v-model="stuSourceArr"></el-cascader>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="来源名称" prop="stuSourceName">
+              <dict-select :isInit="!0" v-if="stuInfo.stuSource == 19" :option="options.stuSourceName" :prop="{ key: 'optionValue', value: 'optionValue' }" :val.sync="stuInfo.stuSourceName"></dict-select>
+              <hs-input maxlength="50" show-word-limit v-else size="mini" v-model="stuInfo.stuSourceName" placeholder="请输入来源名称" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="证件类型" prop="stuPaperworkType">
+              <dict-select :isInit="!0" :val.sync="stuInfo.stuPaperworkType" constant-group-name="stuPaperworkType"></dict-select>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="证件号码" prop="stuPaperworkNumber">
+              <hs-input maxlength="19" show-word-limit size="mini" v-model="stuInfo.stuPaperworkNumber" placeholder="请输入证件号码" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="联系电话" prop="stuPhone">
+              <hs-input maxlength="15" show-word-limit onkeyup="value=value.replace(/[^\d]/g,'')" size="mini" v-model="stuInfo.stuPhone" placeholder="请输入联系电话" ></hs-input>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="备用手机号" prop="relativesMobile">
+              <hs-input maxlength="15" show-word-limit onkeyup="value=value.replace(/[^\d]/g,'')" size="mini" v-model="stuInfo.relativesMobile" placeholder="请输入备用手机号" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="准考证号" prop="stuExamNumber">
+              <hs-input maxlength="30" show-word-limit size="mini" v-model="stuInfo.stuExamNumber" placeholder="请输入准考证号" ></hs-input>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="学号" prop="stuNumber">
+              <hs-input maxlength="30" show-word-limit size="mini" v-model="stuInfo.stuNumber" placeholder="请输入学号" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr v-if="stuInfo.stuBusinessId === 1">
+          <td>
+            <hs-form-item label="上门次数" prop="visits">
+              <dict-select :isInit="!0" :val.sync="stuInfo.visits" constant-group-name="visits" :disabled="visitsDisabled"></dict-select>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="缴费状态" prop="firstPaymentSituation">
+              <dict-select :isInit="!0" :val.sync="stuInfo.firstPaymentSituation" constant-group-name="firstPaymentSituation" :disabled="firstPaymentSituationDisabled"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="家庭住址" prop="stuAddress">
+              <hs-input size="mini" v-model="stuInfo.stuAddress" placeholder="请输入家庭住址" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="备注" prop="stuRemark">
+              <hs-input type="textarea" maxlength="200" show-word-limit :rows="3" v-model="stuInfo.stuRemark" resize="none"></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+      </table>
+    </hs-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="onClose">取 消</el-button>
+        <el-button type="primary" @click="submit" :disabled="submitDisabled">确 定</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import setting from '@/settings'
+import { studentApi } from '@/api/prestudentcenter'
+import { getList } from '@/api/common'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import { UserModule } from '@/store/modules/user'
+import dayjs from 'dayjs'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    DictSelect
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  get token () {
+    return UserModule.token
+  }
+
+  get postUrl () {
+    return `${process.env.VUE_APP_BASE_API}api/core/oss/file/fileUploadPost`
+  }
+
+  private nowTime () {
+    return dayjs().format('YYYYMMDD')
+  }
+
+  private setting = setting
+
+  private stuInfo: any = {}
+
+  private stuSourceTreeData: any[] = []
+
+  private stuSourceProps = {
+    value: 'optionKey',
+    label: 'optionValue',
+    children: 'children'
+  }
+
+  private stuSourceArr: any[] = []
+
+  private loading = !1
+
+  private submitDisabled = !1
+
+  private visitsDisabled = !1
+
+  private firstPaymentSituationDisabled = !1
+
+  private up: any = {}
+
+  private files: any[] = []
+
+  private photoLoading = !1
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private filesAdded (up: any, files: any) {
+    if (up.files.length > 1) {
+      up.removeFile(up.files[0])
+    }
+    this.upload()
+  }
+
+  private async upload () {
+    this.photoLoading = !0
+    this.up.start()
+  }
+
+  private filters = {
+    mime_types: [
+      { title: 'image type', extensions: 'bmp,jpg,png,jpeg,gif,gpng,ico' }
+    ]
+  }
+
+  private FileUploaded (up: any, files: any, res: any) {
+    this.photoLoading = !1
+    const response = JSON.parse(res.response)
+    this.stuInfo.attachment = {
+      originalName: response.fileInfos[0].originalFileName,
+      fileNewName: response.fileInfos[0].newFileName,
+      filePath: response.fileInfos[0].savePath,
+      fileSize: response.fileInfos[0].fileSize,
+      fileSuffix: response.fileInfos[0].fileSuffix
+    }
+  }
+
+  private constrantArray: any = {
+    businessType: [],
+    subjectLen: [],
+    subjectDegree: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.businessType = await getConstantByGroup('businessType')
+    this.constrantArray.subjectLen = await getConstantByGroup('subjectLen')
+    this.constrantArray.subjectDegree = await getConstantByGroup('subjectDegree')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private schoolItemData: any = []
+
+  private subjectItemData: any = []
+
+  private gradeItemData: any = []
+
+  private twoEducationSchoolItemData: any = []
+
+  private twoEducationSubjectItemData: any = []
+
+  private twoEducationGradeItemData: any = []
+
+  private async getSchoolItem () {
+    await getList({
+      url: this.options.school.url,
+      data: {
+        businessId: this.stuInfo.stuBusinessId
+      }
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.schoolItemData = []
+        res.object.list.map((v: any) => {
+          v.dataKey = `${v.id}-${v.schoolCode}-${v.schoolName}-${v.study}-${v.studyName}`
+          v.showValue = `[${this.getValueByConstrantArray('businessType', Number(this.stuInfo.stuBusinessId))}]${v.schoolName}[${v.studyName}]`
+          this.schoolItemData.push(v)
+          if (v.id === this.stuInfo.stuSchoolId) {
+            this.stuInfo.stuSchoolDataKey = v.dataKey
+            this.getSubjectItem()
+            this.getGradeItem()
+          }
+        })
+      }
+    })
+  }
+
+  private async getSubjectItem () {
+    await getList({
+      url: this.options.subject.url,
+      data: {
+        schoolId: this.stuInfo.stuSchoolDataKey.split('-')[0]
+      }
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.subjectItemData = []
+        res.object.list.map((v: any) => {
+          v.dataKey = `${v.id}-${v.subjectCode}-${v.subjectName}`
+          v.showValue = `[${this.getValueByConstrantArray('subjectDegree', Number(v.degree))}]${v.subjectName}[${this.getValueByConstrantArray('subjectLen', Number(v.len))}年]`
+          this.subjectItemData.push(v)
+          // 只有第一次加载的时候会触发以下内容
+          if (v.id === this.stuInfo.stuSubjectId) {
+            this.stuInfo.stuSubjectDataKey = v.dataKey
+            this.loading = !1
+          }
+        })
+      }
+    })
+  }
+
+  private async getGradeItem () {
+    await getList({
+      url: this.options.grade.url,
+      data: {
+        schoolId: this.stuInfo.stuSchoolDataKey.split('-')[0]
+      }
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.gradeItemData = []
+        res.object.list.map((v: any) => {
+          v.dataKey = `${v.id}-${v.gradeCode}-${v.gradeName}`
+          this.gradeItemData.push(v)
+          // 只有第一次加载的时候会触发以下内容
+          if (v.id === this.stuInfo.stuGradeId) {
+            this.stuInfo.stuGradeDataKey = v.dataKey
+            this.loading = !1
+          }
+        })
+      }
+    })
+  }
+
+  private async getTwoEducationSchoolItem () {
+    await getList({
+      url: this.options.school.url,
+      data: {
+        businessId: this.stuInfo.stuBusinessId
+      }
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.twoEducationSchoolItemData = []
+        res.object.list.map((v: any) => {
+          v.dataKey = `${v.id}-${v.schoolCode}-${v.schoolName}-${v.study}-${v.studyName}`
+          v.showValue = `[${this.getValueByConstrantArray('businessType', Number(this.stuInfo.stuBusinessId))}]${v.schoolName}[${v.studyName}]`
+          this.twoEducationSchoolItemData.push(v)
+          if (v.id === this.stuInfo.stuTwoEducationSchoolId) {
+            this.stuInfo.stuTwoEducationSchoolDataKey = v.dataKey
+            this.getTwoEducationSubjectItem()
+            this.getTwoEducationGradeItem()
+          }
+        })
+      }
+    })
+  }
+
+  private async getTwoEducationSubjectItem () {
+    await getList({
+      url: this.options.subject.url,
+      data: {
+        schoolId: this.stuInfo.stuTwoEducationSchoolDataKey.split('-')[0]
+      }
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.twoEducationSubjectItemData = []
+        res.object.list.map((v: any) => {
+          v.dataKey = `${v.id}-${v.subjectCode}-${v.subjectName}`
+          v.showValue = `[${this.getValueByConstrantArray('subjectDegree', Number(v.degree))}]${v.subjectName}[${this.getValueByConstrantArray('subjectLen', Number(v.len))}年]`
+          this.twoEducationSubjectItemData.push(v)
+          // 只有第一次加载的时候会触发以下内容
+          if (v.id === this.stuInfo.stuTwoEducationSubjectId) {
+            this.stuInfo.stuTwoEducationSubjectDataKey = v.dataKey
+            this.loading = !1
+          }
+        })
+      }
+    })
+  }
+
+  private async getTwoEducationGradeItem () {
+    await getList({
+      url: this.options.grade.url,
+      data: {
+        schoolId: this.stuInfo.stuTwoEducationSchoolDataKey.split('-')[0]
+      }
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.twoEducationGradeItemData = []
+        res.object.list.map((v: any) => {
+          v.dataKey = `${v.id}-${v.gradeCode}-${v.gradeName}`
+          this.twoEducationGradeItemData.push(v)
+          // 只有第一次加载的时候会触发以下内容
+          if (v.id === this.stuInfo.stuTwoEducationGradeId) {
+            this.stuInfo.stuTwoEducationGradeDataKey = v.dataKey
+            this.loading = !1
+          }
+        })
+      }
+    })
+  }
+
+  private async getStuSourceTree () {
+    await studentApi('stuSourceTree', {
+      businessId: this.stuInfo.stuBusinessId
+    }).then((res: any) => {
+      this.stuSourceTreeData = res.object.list
+      this.stuSourceArr = this.getStuSourceArr(this.stuInfo.stuSource + '', 'optionKey', this.stuSourceTreeData)
+    })
+  }
+
+  private getNodePath (temppath: any, key: any, value: any, node: any) {
+    temppath.push(node)
+    if (node[key] === value) {
+      throw new Error('GOT IT!')
+    }
+    if (node.children && node.children.length > 0) {
+      for (var i = 0; i < node.children.length; i++) {
+        this.getNodePath(temppath, key, value, node.children[i])
+      }
+      temppath.pop()
+    } else {
+      temppath.pop()
+    }
+  }
+
+  private getStuSourceArr (value: any, key: any, arr: any) {
+    const temppath: any[] = []
+    try {
+      for (let i = 0; i < arr.length; i++) {
+        this.getNodePath(temppath, key, value, arr[i])
+      }
+      return []
+    } catch (e) {
+      return temppath.map((item) => { return item.optionKey })
+    }
+  }
+
+  // 仅保存获取数据的叶节点的数据
+  private stuSourceCascaderChange (row: any) {
+    this.stuInfo.stuSource = row.slice(-1)[0]
+  }
+
+  private stuTwoEducationChange () {
+    this.stuInfo.stuTwoEducationSchoolId = ''
+    this.stuInfo.stuTwoEducationSubjectId = ''
+    this.stuInfo.stuTwoEducationGradeId = ''
+    this.stuInfo.stuTwoEducationSchoolDataKey = ''
+    this.stuInfo.stuTwoEducationSubjectDataKey = ''
+    this.stuInfo.stuTwoEducationGradeDataKey = ''
+    this.twoEducationSchoolItemData = []
+    this.twoEducationSubjectItemData = []
+    this.twoEducationGradeItemData = []
+    this.getTwoEducationSchoolItem()
+    this.getTwoEducationSubjectItem()
+    this.getTwoEducationGradeItem()
+  }
+
+  private rules = {
+    stuName: [
+      { required: true, message: '请输入名字', trigger: 'blur' }
+    ],
+    stuSex: [
+      { required: true, message: '请选择性别', trigger: 'blur' }
+    ],
+    stuEthnic: [
+      { required: true, message: '请选择民族', trigger: 'blur' }
+    ],
+    stuBusinessId: [
+      { required: true, message: '请选择业务', trigger: 'blur' }
+    ],
+    stuSchoolDataKey: [
+      { required: true, message: '请选择院校', trigger: 'blur' }
+    ],
+    stuSubjectDataKey: [
+      { required: true, message: '请选择专业', trigger: 'blur' }
+    ],
+    stuGradeDataKey: [
+      { required: true, message: '请选择年级', trigger: 'blur' }
+    ],
+    stuSchoolRollStatus: [
+      { required: true, message: '请选择学籍状态', trigger: 'blur' }
+    ],
+    stuTwoEducation: [
+      { required: true, message: '请选择是否第二学历', trigger: 'blur' }
+    ],
+    stuBelongCenter: [
+      { required: true, message: '请选择所属中心', trigger: 'blur' }
+    ],
+    stuSource: [
+      { required: true, message: '请选择学生来源', trigger: 'blur' }
+    ],
+    stuSourceName: [
+      { required: true, message: '请输入来源名称', trigger: 'blur' }
+    ],
+    stuPaperworkType: [
+      { required: true, message: '请选择证件类型', trigger: 'blur' }
+    ],
+    stuPaperworkNumber: [
+      { required: true, message: '请输入证件号码', trigger: 'blur' }
+    ],
+    stuPhone: [
+      { required: true, message: '请输入联系电话', trigger: 'blur' }
+    ],
+    visits: [
+      { required: true, message: '请选择上门次数', trigger: 'blur' }
+    ],
+    firstPaymentSituation: [
+      { required: true, message: '请选择缴费状态', trigger: 'blur' }
+    ]
+  }
+
+  private options: any = {
+    ethnic: {
+      url: '/fcs/nation/select',
+      data: {
+      }
+    },
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {
+        businessId: -1
+      }
+    },
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+        // studyId: -1
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        schoolId: -1
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+        schoolId: -1
+      }
+    },
+    center: {
+      url: '/fcs/center/getCenterSelect',
+      data: {
+        isJoinUser: 0
+      }
+    },
+    stuSource: {
+      url: '/fcs/fcsoption/getOption?optionName=stuSource&businessId='
+    },
+    stuSourceName: {
+      url: '/fcs/fcsoption/getOption?optionName=19'
+    },
+    stuTeachingPoint: {
+      url: '/fcs/fcsoption/getOption?optionName=teachPoint'
+    }
+  }
+
+  private businessChange () {
+    this.stuInfo.stuSchoolId = ''
+    this.stuInfo.stuSubjectId = ''
+    this.stuInfo.stuGradeId = ''
+    this.stuInfo.stuSchoolDataKey = ''
+    this.stuInfo.stuSubjectDataKey = ''
+    this.stuInfo.stuGradeDataKey = ''
+    this.stuInfo.stuBelongCenter = ''
+    this.stuInfo.stuTwoEducationSchoolId = ''
+    this.stuInfo.stuTwoEducationSubjectId = ''
+    this.stuInfo.stuTwoEducationGradeId = ''
+    this.stuInfo.stuTwoEducationSchoolDataKey = ''
+    this.stuInfo.stuTwoEducationSubjectDataKey = ''
+    this.stuInfo.stuTwoEducationGradeDataKey = ''
+    this.stuInfo.stuSource = ''
+    this.schoolItemData = []
+    this.subjectItemData = []
+    this.gradeItemData = []
+    this.twoEducationSchoolItemData = []
+    this.twoEducationSubjectItemData = []
+    this.twoEducationGradeItemData = []
+    this.stuSourceTreeData = []
+    this.options.stuSource.url = '/fcs/fcsoption/getOption?optionName=stuSource&businessId=' + this.stuInfo.stuBusinessId
+    this.options.center.data.businessId = this.stuInfo.stuBusinessId
+    this.options.center.data.isJoinUser = 0;
+    (this.$refs.center as any).getList()
+    this.getSchoolItem()
+    this.getSubjectItem()
+    this.getGradeItem()
+    this.getTwoEducationSchoolItem()
+    this.getTwoEducationSubjectItem()
+    this.getTwoEducationGradeItem()
+    this.getStuSourceTree()
+  }
+
+  private schoolChange () {
+    this.stuInfo.stuSubjectId = ''
+    this.stuInfo.stuGradeId = ''
+    this.stuInfo.stuSubjectDataKey = ''
+    this.stuInfo.stuGradeDataKey = ''
+    this.subjectItemData = []
+    this.gradeItemData = []
+    this.getSubjectItem()
+    this.getGradeItem()
+  }
+
+  private twoEducationSchoolChange () {
+    this.stuInfo.stuTwoEducationSubjectId = ''
+    this.stuInfo.stuTwoEducationGradeId = ''
+    this.stuInfo.stuTwoEducationSubjectDataKey = ''
+    this.stuInfo.stuTwoEducationGradeDataKey = ''
+    this.twoEducationSubjectItemData = []
+    this.twoEducationGradeItemData = []
+    this.getTwoEducationSubjectItem()
+    this.getTwoEducationGradeItem()
+  }
+
+  private async getDetail () {
+    await studentApi('stuDetail', {
+      id: this.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.stuInfo = res.object.info
+        this.getSchoolItem()
+        this.getTwoEducationSchoolItem()
+        this.getStuSourceTree()
+      } else {
+        this.$message({
+          message: res.message,
+          type: 'warning'
+        })
+      }
+      this.loading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private submit () {
+    (this.$refs.stuInfo as any).validate(async (valid: any) => {
+      if (valid) {
+        this.submitDisabled = !0
+        await studentApi('stuInsertCheck', {
+          stuId: this.stuInfo.id,
+          businessId: this.stuInfo.stuBusinessId,
+          schoolId: this.stuInfo.stuSchoolDataKey.split('-')[0],
+          gradeId: this.stuInfo.stuGradeDataKey.split('-')[0],
+          subjectId: this.stuInfo.stuSubjectDataKey.split('-')[0],
+          idCard: this.stuInfo.stuPaperworkNumber
+        }).then(async (res:any) => {
+          if (res.code === 10000) {
+            const submitForm = {
+              id: this.stuInfo.id,
+              stuPaperworkType: this.stuInfo.stuPaperworkType,
+              stuPaperworkNumber: this.stuInfo.stuPaperworkNumber,
+              stuPhone: this.stuInfo.stuPhone,
+              relativesMobile: this.stuInfo.relativesMobile,
+              stuName: this.stuInfo.stuName,
+              stuSex: this.stuInfo.stuSex,
+              stuEthnic: this.stuInfo.stuEthnic,
+              stuEthnicName: this.stuInfo.stuEthnicName,
+              stuBusinessId: this.stuInfo.stuBusinessId,
+              stuStudyId: this.stuInfo.stuSchoolDataKey.split('-')[3],
+              stuSchoolName: this.stuInfo.stuSchoolDataKey.split('-')[2],
+              stuSchoolId: this.stuInfo.stuSchoolDataKey.split('-')[0],
+              stuSchoolCode: this.stuInfo.stuSchoolDataKey.split('-')[1],
+              studyName: this.stuInfo.stuSchoolDataKey.split('-')[4],
+              stuGradeId: this.stuInfo.stuGradeDataKey.split('-')[0],
+              stuGradeCode: this.stuInfo.stuGradeDataKey.split('-')[1],
+              stuGradeName: this.stuInfo.stuGradeDataKey.split('-')[2],
+              stuSubjectId: this.stuInfo.stuSubjectDataKey.split('-')[0],
+              stuSubjectCode: this.stuInfo.stuSubjectDataKey.split('-')[1],
+              stuSubjectName: this.stuInfo.stuSubjectDataKey.split('-')[2],
+              stuSchoolRollStatus: this.stuInfo.stuSchoolRollStatus,
+              stuTwoEducation: this.stuInfo.stuTwoEducation,
+              stuTwoEducationSchoolId: !this.stuInfo.stuTwoEducationSchoolDataKey ? '' : this.stuInfo.stuTwoEducationSchoolDataKey.split('-')[0],
+              stuTwoEducationSchoolCode: !this.stuInfo.stuTwoEducationSchoolDataKey ? '' : this.stuInfo.stuTwoEducationSchoolDataKey.split('-')[1],
+              stuTwoEducationSchoolName: !this.stuInfo.stuTwoEducationSchoolDataKey ? '' : this.stuInfo.stuTwoEducationSchoolDataKey.split('-')[2],
+              stuTwoEducationGradeId: !this.stuInfo.stuTwoEducationGradeDataKey ? '' : this.stuInfo.stuTwoEducationGradeDataKey.split('-')[0],
+              stuTwoEducationGradeCode: !this.stuInfo.stuTwoEducationGradeDataKey ? '' : this.stuInfo.stuTwoEducationGradeDataKey.split('-')[1],
+              stuTwoEducationGradeName: !this.stuInfo.stuTwoEducationGradeDataKey ? '' : this.stuInfo.stuTwoEducationGradeDataKey.split('-')[2],
+              stuTwoEducationSubjectId: !this.stuInfo.stuTwoEducationSubjectDataKey ? '' : this.stuInfo.stuTwoEducationSubjectDataKey.split('-')[0],
+              stuTwoEducationSubjectCode: !this.stuInfo.stuTwoEducationSubjectDataKey ? '' : this.stuInfo.stuTwoEducationSubjectDataKey.split('-')[1],
+              stuTwoEducationSubjectName: !this.stuInfo.stuTwoEducationSubjectDataKey ? '' : this.stuInfo.stuTwoEducationSubjectDataKey.split('-')[2],
+              stuTwoEducationSchoolRollStatus: !this.stuInfo.stuTwoEducation ? '' : this.stuInfo.stuTwoEducationSchoolRollStatus,
+              stuBelongCenter: this.stuInfo.stuBelongCenter,
+              stuBelongCenterName: this.stuInfo.stuBelongCenterName,
+              stuTeachingPoint: this.stuInfo.stuTeachingPoint,
+              stuSource: this.stuInfo.stuSource,
+              stuSourceName: this.stuInfo.stuSourceName,
+              stuExamNumber: this.stuInfo.stuExamNumber,
+              stuNumber: this.stuInfo.stuNumber,
+              stuAddress: this.stuInfo.stuAddress,
+              stuRemark: this.stuInfo.stuRemark,
+              attachment: this.stuInfo.attachment,
+              visits: this.stuInfo.visits,
+              firstPaymentSituation: this.stuInfo.firstPaymentSituation,
+              tesStuId: this.stuInfo.tesStuId
+            }
+            await studentApi('stuUpdate', {
+              ...submitForm
+            }).then((res: any) => {
+              if (res.code === 10000) {
+                this.$message({
+                  message: res.message,
+                  type: 'success'
+                })
+                this.$emit('update:visible', false)
+                this.$emit('loadmethod')
+              } else {
+                this.$message({
+                  message: res.message,
+                  type: 'warning'
+                })
+              }
+            }).catch((err: any) => {
+              console.log('err', err)
+            })
+          } else {
+            this.$confirm(res.message, '唯一性验证', {
+              confirmButtonText: '确定',
+              customClass: 'message-top'
+            })
+          }
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+        this.submitDisabled = !1
+      } else {
+        console.log('error submit!!')
+        return false
+      }
+    })
+  }
+
+  private clear () {
+    this.visitsDisabled = !1
+    this.firstPaymentSituationDisabled = !1
+    this.stuInfo = {}
+    this.schoolItemData = []
+    this.subjectItemData = []
+    this.gradeItemData = []
+    this.twoEducationSchoolItemData = []
+    this.twoEducationSubjectItemData = []
+    this.twoEducationGradeItemData = []
+    this.stuSourceTreeData = []
+    this.stuSourceArr = []
+    this.files = [];
+    (this.$refs.stuInfo as any).resetFields()
+  }
+
+  private onClose () {
+    this.clear()
+    this.$emit('update:visible', false)
+  }
+
+  public async open (): Promise<void> {
+    await studentApi('stuCommonTesOrgId'
+    ).then((res: any) => {
+      if (res.code !== 10000) {
+        this.$alert('您未绑定招生系统所属组织，无法上门修改次数或缴费状态！', '提示', {
+          confirmButtonText: '确定',
+          customClass: 'message-top',
+          type: 'warning'
+        })
+        this.visitsDisabled = !0
+        this.firstPaymentSituationDisabled = !0
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+    this.loading = !0
+    this.getConstrantList()
+    this.getDetail();
+    (this.$refs.stuEthnic as any).getList();
+    (this.$refs.center as any).getList()
+  }
+}
+</script>
+
+<style lang='scss'>
+.change-stubaseinfo-dialog-container{
+  .border-style2{
+    height: 500px;
+    overflow-y: scroll;
+  }
+}
+.top{
+  z-index: 9999999 !important;
+}
+</style>

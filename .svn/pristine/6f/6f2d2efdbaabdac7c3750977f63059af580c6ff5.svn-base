@@ -1,0 +1,142 @@
+// 请求处理
+import axios from 'axios'
+import { UserModule } from '@/store/modules/user'
+import { isType, typeName, urlParamsParse } from '@/utils/common'
+import { Message } from 'element-ui'
+import { isWhite, standardization } from './apidatautils'
+import qs from 'qs'
+import { isEmpty } from 'xe-utils'
+
+const service = axios.create({
+  baseURL: process.env.VUE_APP_BASE_API, // url = base url + request url
+  timeout: 60 * 1000
+  // withCredentials: true // send cookies when cross-domain requests
+})
+
+const getDataFormat = (df: any) => {
+  if (!df) return []
+  let dataFormats: any[] = []
+  df.split('|').map((v: any) => {
+    if (v.includes(':')) {
+      dataFormats.push({
+        format: v.split(':')[0],
+        range: v.split(':')[1]
+      })
+    } else {
+      dataFormats.push({
+        format: v
+      })
+    }
+  })
+  return dataFormats
+}
+
+// Request interceptors
+service.interceptors.request.use(
+  (config: any) => {
+    // 数据标准化类型
+    let dataFormat = getDataFormat(config.headers['data-format'])
+    if (!isWhite(config.url) && isEmpty(dataFormat)) {
+      dataFormat.push({
+        format: 'trim',
+        range: 'request'
+      })
+    }
+    if (!isWhite(config.url) && config.data && dataFormat && dataFormat.length > 0) {
+      dataFormat.map((v: any) => {
+        if (!v.range || v.range === 'request') {
+          let data = config.data
+          const option = v.format === 'money' ? { units: 100 } : {}
+          if (isType(data, 'string')) {
+            data = urlParamsParse(data)
+            let temp = standardization(data, `${typeName(data)}:${v.format}`, option)
+            if (temp.items) {
+              temp.items = standardization(data.items, `${typeName(data.items)}:${v.format}`, option)
+            }
+            config.data = qs.stringify(temp)
+          } else if (isType(data, 'object') || isType(data, 'array')) {
+            let temp = standardization(data, `${typeName(data)}:${v.format}`, option)
+            if (temp.items) {
+              temp.items = standardization(data.items, `${typeName(data.items)}:${v.format}`, option)
+            }
+            config.data = temp
+          }
+        }
+      })
+    }
+    // Add X-Access-Token header to every request, you can add other custom headers here
+    if (UserModule.token) {
+      // config.headers['Content-Session-Token'] = 'ceaa1afa4b8643ccaeba03b7f8b65212'
+      config.headers['token'] = UserModule.token
+    }
+    return config
+  },
+  (error) => {
+    Promise.reject(error)
+  }
+)
+
+// Response interceptors
+service.interceptors.response.use(
+  (response :any) => {
+    // Some example codes here:
+    // code == 10000: success
+    // code == 50001: invalid access token
+    // code == 50002: already login in other place
+    // code == 50003: access token expired
+    // code == 50004: invalid user (user not exist)
+    // code == 50005: username or password is incorrect
+    // You can change this part for your own usage.
+    const res = response.data
+    if (res.code !== 10000 && res.code !== -10000 && response.headers['content-type'].indexOf('application/json') > -1) {
+      Message({
+        message: res.message || 'Error',
+        type: 'error',
+        duration: 60 * 1000
+      })
+      if (res.code === 50008 || res.code === 50012 || res.code === 50014 || res.code === -9999) {
+        Message.error('你已被登出，请重新登录')
+        UserModule.ResetToken()
+        UserModule.Logout()
+        location.reload()
+      }
+      return Promise.reject(new Error(res.message || 'Error'))
+    } else {
+      // 处理后端返回值为 -1的默认转为 空
+      if (!isWhite((response.config as any).url)) {
+        response.data.object && (response.data.object = standardization(response.data.object, `${typeName(response.data.object)}:trim`, {}))
+        response.data.object && (response.data.object.info = standardization(response.data.object.info, `${typeName(response.data.object.info)}:trim`, {}))
+        response.data.object && (response.data.object.list = standardization(response.data.object.list, `${typeName(response.data.object.list)}:trim`, {}))
+        response.data.object && response.data.object.info && (response.data.object.info.items = standardization(response.data.object.info.items, `${typeName(response.data.object.info.items)}:trim`, {}))
+      }
+      // 数据标准化类型
+      const dataFormat = getDataFormat(response.config.headers['data-format'])
+      if (!isWhite((response.config as any).url) && response.data && dataFormat && dataFormat.length > 0) {
+        dataFormat.map((v: any) => {
+          if (!v.range || v.range === 'response') {
+            const option = v.format === 'money' ? { units: 0.01 } : v.format === 'absmoney' ? { units: 0.01, abs: !0 } : {}
+            v.format === 'absmoney' && (v.format = 'money')
+            response.data.object && (response.data.object = standardization(response.data.object, `${typeName(response.data.object)}:${v.format}`, option))
+            response.data.object && (response.data.object.info = standardization(response.data.object.info, `${typeName(response.data.object.info)}:${v.format}`, option))
+            response.data.object && (response.data.object.list = standardization(response.data.object.list, `${typeName(response.data.object.list)}:${v.format}`, option))
+            response.data.object && response.data.object.info && (response.data.object.info.items = standardization(response.data.object.info.items, `${typeName(response.data.object.info.items)}:${v.format}`, option))
+          }
+        })
+      }
+      return response.config.headers.responseData === 'all' ? response : response.data
+    }
+  },
+  (error) => {
+    if ((process.env.VUE_APP_BASE_API?.indexOf('mock') === -1)) {
+      Message({
+        message: '连接超时，请联系管理员',
+        type: 'error',
+        duration: 5 * 1000
+      })
+    }
+    console.error(error)
+    return Promise.reject(error)
+  }
+)
+
+export default service

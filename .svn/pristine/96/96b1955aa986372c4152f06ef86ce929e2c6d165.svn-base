@@ -1,0 +1,221 @@
+<template>
+  <div class="preview-temp-container">
+    <header>
+      <hs-image class="logo" :src="setting.ossIp + '/' + data.logo"></hs-image>
+      <div class="right">
+        <div class="item title">{{ data.schoolName }}</div>
+        <div class="item text-overflow-line" :title="data.degreeName">开设层次：{{ data.degreeName }}</div>
+        <div class="item text-overflow-line">
+          <hs-tag type='default' effect="plain" v-for="(label, i) in labels" :key="i">{{ label }}</hs-tag>
+        </div>
+        <div class="item">招生人数：{{ data.peopleNum }} <hs-button type="danger" round size="mini">去分享</hs-button></div>
+      </div>
+    </header>
+    <section>
+      <template v-for="(item, i) in instrs">
+        <div class="item" :key="i" v-if="item.title || item.subtitle || item.content || (item.att && item.att.length >= 1)">
+          <div class="header">
+            <div class="title">
+              {{ item.title }}
+            </div>
+            <div class="subtitle">
+              {{ item.subtitle }}
+            </div>
+          </div>
+          <div class="content">
+            {{ item.content }}
+          </div>
+          <div class="line"></div>
+          <div class="single">
+            <hs-image v-if="item.att && item.att.length === 1" :src="setting.ossIp + '/' + item.att[0].path"></hs-image>
+          </div>
+          <hs-carousel v-if="item.att && item.att.length > 1" style="overflow: hidden;height: 190px;">
+            <hs-carousel-item v-for="(img, i) in item.att" :key="i">
+              <hs-image style="height: 190px; width: 100%;" :src="setting.ossIp + '/' + img.path"></hs-image>
+            </hs-carousel-item>
+          </hs-carousel>
+        </div>
+      </template>
+    </section>
+    <footer>
+      <div class="btns">
+        <div class="btn1">
+          <i class="hs-icon-share" /><span>分享</span>
+        </div>
+        <div class="btn2">立即报名</div>
+      </div>
+    </footer>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Prop } from 'vue-property-decorator'
+import setting from '@/settings'
+
+@Component({
+  name: 'preview-base'
+})
+
+export default class PreviewBase extends Vue {
+  private setting = setting
+
+  // 基础信息
+  @Prop({ type: Object })
+  private data!: {}|any
+
+  // 简章信息
+  @Prop({ type: Array })
+  private instrs!: []
+
+  get labels () {
+    return this.data.labelName ? this.data.labelName.split(',') : []
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+  .preview-temp-container{
+    width: 100%;
+    height: calc(100% - 50px);
+    overflow: auto;
+    background-color: #EDEDED;
+    &::-webkit-scrollbar {/*滚动条整体样式*/
+      width: 3px;     /*高宽分别对应横竖滚动条的尺寸*/
+      height: 3px;
+    }
+    &::-webkit-scrollbar-thumb {/*滚动条里面小方块*/
+      border-radius: 10px;
+      -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+      background: #535353;
+    }
+    &::-webkit-scrollbar-track {/*滚动条里面轨道*/
+      -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+      border-radius: 10px;
+      background: #EDEDED;
+    }
+    header{
+      width: calc(100% - 12px);
+      display: flex;
+      flex-direction: row;
+      justify-content: flex-start;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 6px;
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      .logo{
+        width: 70px;
+        height: 70px;
+        margin-right: 20px;
+        border-radius: 100%;
+      }
+      .right{
+        width: calc(100% - 90px);
+        .item{
+          font-size: 12px;
+          width: 100%;
+          margin-bottom: 8px;
+          .hs-tag{
+            border-radius: 15px;
+            margin-right: 2px;
+          }
+          .hs-button{
+            height: 22px;
+            padding: 0 5px !important;
+            margin-left: 10px;
+          }
+        }
+        .item:not(:last-child){
+          margin-bottom: 8px;
+        }
+        .title{
+          font-size: 14px;
+          font-weight: bold;
+        }
+      }
+    }
+    section{
+      width: 100%;
+      padding: 10px 20px;
+      background-color: #fff;
+      .item{
+        width: 100%;
+        margin-bottom: 10px;
+        .title{
+          font-size: 16px;
+          font-weight: bold;
+          color: rgb(211, 39, 39);
+          margin-bottom: 8px;
+        }
+        .subtitle{
+          font-size: 14px;
+          margin-bottom: 4px;
+          color: rgb(144, 144, 144);
+        }
+        .content{
+          font-size: 14px;
+          margin-bottom: 14px;
+        }
+        .header{
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          border-bottom: 2px solid #E6E6E6;
+          margin-bottom: 10px;
+          &:after{
+           content: '';
+           height: 3px;
+           margin-bottom: -3px;
+           background-color: rgb(211, 39, 39);
+           width: 130PX;
+          }
+        }
+      }
+    }
+    footer{
+      background-color: #fff;
+      width: 100%;
+      height: 0;
+      position: absolute;
+      bottom: -21px;
+      .btns{
+        position: absolute;
+        width: calc(100% - 52px);
+        bottom: 74px;
+        height: 50px;
+        border: 2px solid #dedede;
+        display: flex;
+        div{
+          display: flex;
+          flex-direction: row;
+          justify-content: center;
+          align-items: center;
+          font-size: 17px;
+          font-weight: 400;
+          color:#fff;
+        }
+        .btn1{
+          height: 100%;
+          width: 40%;
+          color: #000;
+          background-color: #fff;
+          font-size: 17px;
+          border-right: 2px solid #dedede;
+          i{
+            font-size: 17px;
+            margin-right: 3px;
+          }
+          span{
+            font-size: 17px;
+          }
+        }
+        .btn2{
+          height: 100%;
+          width: 60%;
+          background-color: rgba(15, 111, 237, 1);
+        }
+      }
+    }
+  }
+</style>

@@ -1,0 +1,32 @@
+// 根据字段key自动翻译字典
+import { isType } from '../common'
+const dicts: any = {
+  status: { 0: '无效', 1: '正常' },
+  ifMust: { 0: '否', 1: '是' },
+  ifRefund: { 0: '否', 1: '是' },
+  openInvoice: { 0: '否', 1: '是' }
+}
+
+export const DICT_MONEY_KEY = dicts
+
+// 是否是常量
+const isDict = (key: any) => Object.keys(dicts).includes(key)
+
+// 换算金额
+const translate = (key: any, obj: any, option: any) => {
+  const dict = dicts[key]
+  const val = dict[obj[key]]
+  const nameKey = `${key}Name`
+  if (val) {
+    obj[nameKey] = val
+  } else {
+    obj[nameKey] = `字典不存在该值${key}:${val}`
+  }
+  return obj
+}
+
+// 常量字典标准化
+export const dictStandardization = (key: any, val: any, option: any) => {
+  if (isDict(key) && isType(val, 'object')) return translate(key, val, option)
+  return val
+}

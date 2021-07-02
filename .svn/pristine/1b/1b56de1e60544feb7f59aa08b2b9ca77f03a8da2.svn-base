@@ -1,0 +1,160 @@
+<template>
+  <div class="history-intercourse-dialog-container">
+    <el-dialog title="历史往来" :visible.sync="visible" :before-close="onClose" @open="open()">
+      <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="Pagination" :dicts="['schoolState']">
+        <template slot="custom_intercourseDetail" slot-scope="{ scope }">
+            <hs-button
+                @click.native.prevent="showHistoryIntercourseDetailDetail(scope.row)"
+                type="text"
+                size="small">
+                详情
+            </hs-button>
+        </template>
+        <template slot="custom_abnormalTurnRecord" slot-scope="{ scope }">
+            <hs-button
+                @click.native.prevent="showAbnormalTurnRecordDetail(scope.row)"
+                type="text"
+                size="small">
+                详情
+            </hs-button>
+        </template>
+      </simple-table>
+      <div slot="footer" class="dialog-footer">
+        <el-button >取 消</el-button>
+        <el-button type="primary" >确 定</el-button>
+      </div>
+    </el-dialog>
+    <AbnormalTurnRecordDialog :stuId="stuId" :visible.sync="AbnormalTurnRecordDialogFormVisible"></AbnormalTurnRecordDialog>
+    <HistoryIntercourseDetailDialog :data="HistoryIntercourseDetailDialogDetail" :visible.sync="HistoryIntercourseDetailDialogVisible"></HistoryIntercourseDetailDialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import AbnormalTurnRecordDialog from '@/views/student/studentmanage/StudentBaseInfo/AbnormalTurnRecord/AbnormalTurnRecordDialog/index.vue'
+import HistoryIntercourseDetailDialog from '@/views/student/studentmanage/PersonalIntercourse/HistoryIntercourseDialog/HistoryIntercourseDetailDialog/index.vue'
+import util from '@/utils/busi/util'
+import { businessList } from '@/api/base'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable,
+    AbnormalTurnRecordDialog,
+    HistoryIntercourseDetailDialog
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private form = {
+    gradeState: 1
+  }
+
+  private HistoryIntercourseDetailDialogDetail = {}
+
+  private amount = 123
+
+  private loading = !1
+
+  private tableData = {
+    list: [{
+      businessName: '1',
+      schoolName: '2021',
+      gradeName: 1,
+      subjectName: 2
+    },
+    {
+      businessName: '1',
+      schoolName: '2021',
+      gradeName: 1,
+      subjectName: 2
+    }],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'businessName',
+    label: '业务'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业'
+  },
+  {
+    prop: 'intercourseDetail',
+    label: '来往明细',
+    custom: !0
+  },
+  {
+    prop: 'abnormalTurnRecord',
+    label: '异动结转记录',
+    custom: !0
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await businessList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      gradeState: 1
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  private AbnormalTurnRecordDialogFormVisible = false;
+
+  private showAbnormalTurnRecordDetail (row: any) {
+    this.AbnormalTurnRecordDialogFormVisible = true
+  }
+
+  private HistoryIntercourseDetailDialogVisible = false;
+
+  private showHistoryIntercourseDetailDetail (row: any) {
+    this.HistoryIntercourseDetailDialogDetail = row
+    this.HistoryIntercourseDetailDialogVisible = true
+  }
+
+  public mounted (): void {
+    this.onReset()
+  }
+}
+</script>
+
+<style lang='scss'>
+// @import "./index";
+</style>

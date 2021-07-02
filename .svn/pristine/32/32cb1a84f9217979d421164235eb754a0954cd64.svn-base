@@ -1,0 +1,170 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const path = require('path')
+const webpack = require('webpack')
+const CompressionWebpackPlugin = require('compression-webpack-plugin')
+const cdnDependencies = require('./dependencies-cdn')
+const configs = require('./env.config.json')
+const productionGzipExtensions = ['js', 'css'] // 对什么文件进行压缩
+const devServerPort = configs.devServerPort
+const mockServerPort = configs.mockServerPort
+const name = configs.name
+
+// 设置不参与构建的库
+const externals = {}
+cdnDependencies.forEach(package => {
+  externals[package.name] = package.library
+})
+
+// 引入文件的 cdn 链接
+const cdn = {
+  css: cdnDependencies.map(e => e.css).filter(e => e),
+  js: cdnDependencies.map(e => e.js).filter(e => e)
+}
+
+console.log('---------------------------process.env-------------------------------')
+console.log('NODE_ENV:' + process.env.NODE_ENV)
+console.log('VUE_APP_BASE_API:' + process.env.VUE_APP_BASE_API)
+console.log('---------------------------process.env-------------------------------')
+if (process.env.NODE_ENV === 'production') {
+  if (process.env.VUE_APP_TYPE && process.env.VUE_APP_TYPE === 'test') {
+    process.env.VUE_APP_VARIABLE = JSON.stringify(require('./variable.config.json').test)
+  } else {
+    process.env.VUE_APP_VARIABLE = JSON.stringify(require('./variable.config.json').production)
+  }
+} else {
+  process.env.VUE_APP_VARIABLE = JSON.stringify(require('./variable.config.json').development)
+  console.log(process.env.VUE_APP_VARIABLE)
+}
+module.exports = {
+  publicPath: process.env.NODE_ENV === 'production' ? '/' : '/',
+  lintOnSave: process.env.NODE_ENV === 'development',
+  productionSourceMap: !1,
+  configureWebpack: config => {
+    config.plugins.push(
+      new CompressionWebpackPlugin({
+        algorithm: 'gzip',
+        test: new RegExp('\\.(' + productionGzipExtensions.join('|') + ')$'),
+        threshold: 10240,
+        minRatio: 0.8
+      }),
+      new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
+      new webpack.optimize.LimitChunkCountPlugin({
+        maxChunks: 100, // 打包模块数量
+        minChunkSize: 100
+      })
+    )
+    config.externals = {
+      vue: 'Vue',
+      'vue-router': 'VueRouter',
+      vuex: 'Vuex',
+      axios: 'axios',
+      'element-ui': 'ELEMENT',
+      'vue-i18n': 'VueI18n',
+      lodash: '-',
+      'js-cookie': 'Cookies',
+      nprogress: 'NProgress',
+      dayjs: 'dayjs',
+      qs: 'Qs',
+      screenfull: 'screenfull'
+    }
+  },
+  devServer: {
+    port: devServerPort,
+    open: true,
+    overlay: {
+      warnings: false,
+      errors: true
+    },
+    progress: false,
+    proxy: {
+      '/mock/': {
+        target: `http://127.0.0.1:${mockServerPort}/mock-api/v1`,
+        changeOrigin: true,
+        ws: true,
+        pathRewrite: {
+          '/mock/api': '/api'
+        }
+      },
+      '/dev/': {
+        target: configs.proxyTarget.fcs,
+        changeOrigin: true,
+        ws: true,
+        pathRewrite: {
+          '/dev/api': '/'
+        }
+      }
+    }
+  },
+  pluginOptions: {
+    'style-resources-loader': {
+      preProcessor: 'scss',
+      patterns: [
+        path.resolve(__dirname, 'src/styles/_variables.scss'),
+        path.resolve(__dirname, 'src/styles/_mixins.scss')
+      ]
+    }
+  },
+  chainWebpack (config) {
+    config.resolve.alias.set('@', path.resolve(__dirname, './src'))
+
+    /**
+     * 添加 CDN 参数到 htmlWebpackPlugin 配置中
+     */
+    config.plugin('html').tap(args => {
+      if (process.env.NODE_ENV === 'production') {
+        args[0].cdn = cdn
+      } else {
+        args[0].cdn = cdn
+      }
+      return args
+    })
+
+    // 添加title名称
+    config.plugin('html').tap(args => {
+      args[0].title = name
+      return args
+    })
+
+    // 删除懒加载模块的 prefetch preload，降低带宽压力
+    config.plugin('preload').tap(() => [
+      {
+        rel: 'preload',
+        fileBlacklist: [/\.map$/, /hot-update\.js$/, /runtime\..*\.js$/],
+        include: 'initial'
+      }
+    ])
+    config.plugins.delete('prefetch')
+
+    // 分模块压缩
+    config.when(process.env.NODE_ENV !== 'development', config => {
+      config.optimization.splitChunks({
+        chunks: 'all',
+        cacheGroups: {
+          libs: {
+            name: 'chunk-libs',
+            test: /[\\/]node_modules[\\/]/,
+            priority: 10,
+            chunks: 'initial'
+          },
+          elementUI: {
+            name: 'chunk-elementUI',
+            priority: 20,
+            test: /[\\/]node_modules[\\/]_?element-ui(.*)/
+          },
+          commons: {
+            name: 'chunk-commons',
+            test: path.resolve(__dirname, 'src/components'),
+            minChunks: 3,
+            priority: 5,
+            reuseExistingChunk: true
+          }
+        }
+      })
+      config.optimization.runtimeChunk('single')
+    })
+    // 开发环境 sourcemap 不包含列信息
+    config.when(process.env.NODE_ENV === 'development', config =>
+      config.devtool('cheap-source-map')
+    )
+  }
+}

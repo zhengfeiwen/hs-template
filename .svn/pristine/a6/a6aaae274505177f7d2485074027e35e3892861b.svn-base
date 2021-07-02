@@ -1,0 +1,78 @@
+<template>
+    <div class="insert-existence-dialog-container">
+        <el-dialog title="匹配到多条数据，系统默认关联录入时间更早的数据" :visible.sync="visible" :before-close="onClose" width="70%" @open="open()">
+            <simple-table :columnable="!1" :isCheckbox="!1" :data="tableData" :columns="columns" :pagination="!1">
+            </simple-table>
+            <div slot="footer" class="dialog-footer">
+                <el-button type="primary" @click="submit">确定</el-button>
+            </div>
+        </el-dialog>
+    </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+@Component({
+  name: 'insert-existence-dialog',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private tableData!: object;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private columns = [{
+    prop: 'parentId',
+    label: '编号',
+    width: 100
+  },
+  {
+    prop: 'stuName',
+    label: '学生姓名'
+  },
+  {
+    prop: 'stuPhone',
+    label: '联系电话'
+  },
+  {
+    prop: 'stuPaperworkNumber',
+    label: '身份证号'
+  },
+  {
+    prop: 'stuSourceByNameStr',
+    label: '学生来源',
+    width: 250
+  },
+  {
+    prop: 'createTime',
+    label: '录入时间',
+    format: 'date'
+  },
+  {
+    prop: 'createAdminName',
+    label: '录入者'
+  },
+  {
+    prop: 'createAdminOrgName',
+    label: '录入者的组织部门'
+  }]
+
+  private submit () {
+    this.onClose()
+  }
+
+  private clear () {
+    this.tableData = []
+  }
+
+  private onClose () {
+    this.clear()
+    this.$emit('update:visible', false)
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

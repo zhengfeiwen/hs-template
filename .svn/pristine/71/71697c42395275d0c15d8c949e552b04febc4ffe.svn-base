@@ -1,0 +1,122 @@
+<template>
+  <div class="dashboard-container">
+    <header>
+      <static-item required label="置顶通知" :width="300">
+        {{ curDate }}
+      </static-item>
+      <static-item required :label="curDate" :width="300">
+        <dict-select :val.sync="standardForm.standardCode" :data="standardCodes"></dict-select>
+      </static-item>
+    </header>
+    <section>
+      <div class="user-message"></div>
+      <hs-tabs v-model="activeName" @tab-click="tabchange">
+        <hs-tab-pane label="全部消息" name="all"></hs-tab-pane>
+        <hs-tab-pane label="未读" name="unread"></hs-tab-pane>
+        <hs-tab-pane label="已读" name="readed"></hs-tab-pane>
+      </hs-tabs>
+      <simple-table :isCheckbox="!0" @selection-change="selectionChange" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+      </simple-table>
+      <detail-dialog title="详情" :data="detailData" :visible.sync="visible"></detail-dialog>
+    </section>
+  </div>
+</template>
+
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import DetailDialog from './detaildialog.vue'
+import dayjs from 'dayjs'
+import { businessList, businessCount } from '@/api/base'
+
+@Component({
+  name: 'Dashboard',
+  components: {
+    SimpleTable,
+    StaticItem,
+    DetailDialog
+  }
+})
+export default class extends Vue {
+  private activeName = 'all'
+
+  private curDate = '2021-05-01'
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private columns = [{
+    prop: 'name',
+    label: '名称'
+  },
+  {
+    prop: 'publisher',
+    label: '发布者'
+  },
+  {
+    prop: 'status',
+    label: '状态'
+  },
+  {
+    prop: 'createTime',
+    label: '发布时间'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    !pagination && (this.pagination.currentPage = 1)
+    await businessList({
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      await businessCount({
+      }).then((resCnt: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = resCnt.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+}
+</script>
+<style lang="scss">
+  .dashboard-container{
+    height: 100%;
+    width: 100%;
+    header{
+      width: 100%;
+      padding: 20px;
+      border-bottom: 1px solid #d9d9d9;
+      display: flex;
+    }
+  }
+</style>

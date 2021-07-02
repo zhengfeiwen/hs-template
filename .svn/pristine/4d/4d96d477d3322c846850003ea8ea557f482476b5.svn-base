@@ -1,0 +1,284 @@
+<!-- 拖拽组件 -->
+<template>
+  <!-- class为外部配置的class才允许拖拽 -->
+<div class="darggable-item" v-if="isEdit || (form.title || form.subtitle || form.content || (picList && picList.length > 0))">
+    <header>
+      <span>{{ option.name }}</span>
+    </header>
+    <section>
+      <div class="item">
+        <div class="label">{{ option.title }}</div>
+        <div class="content">
+          <hs-input maxlength="100" show-word-limit v-if="isEdit" v-model="form.title" size="mini" :placeholder="option.placeholder"></hs-input>
+          <span v-else>{{ form.title || '' }}</span>
+        </div>
+      </div>
+      <div class="item" v-if="option.subtitle">
+        <div class="label">{{ option.subtitle }}</div>
+        <div class="content">
+          <hs-input maxlength="100" show-word-limit v-if="isEdit" v-model="form.subtitle" size="mini" :placeholder="option.subplaceholder"></hs-input>
+          <span v-else>{{ form.subtitle || '' }}</span>
+        </div>
+      </div>
+      <div class="item" v-if="option.content">
+        <div class="label">{{ option.content }}</div>
+        <div class="content">
+          <hs-input
+            v-if="isEdit"
+            maxlength="200" show-word-limit
+            type="textarea"
+            :rows="3"
+            resize="none"
+            :placeholder="option.contentplaceholder"
+            v-model="form.content">
+          </hs-input>
+          <span v-else>{{ form.content || '' }}</span>
+        </div>
+      </div>
+      <div class="item upload-images" v-if="option.upload">
+        <div class="label">{{ option.upload }}</div>
+        <div class="content" v-if="picList.length">
+          <!-- 注意browseButton为上传按钮id，且一个页面中要唯一，不然会报错 -->
+          <hs-plupload
+            :browseButton="uploadBtn"
+            url="/api/core/oss/file/fileUploadPost"
+            :FilesAdded="filesAdded"
+            @inputUploader="inputUploader"
+            :headers="{ token: token, accept: 'application/json' }"
+            :multipart-params="{'parentFolder': 'lb/schoolDetail'}"
+            :UploadComplete="UploadComplete"
+            :FileUploaded="FileUploaded"
+            :Error="error"
+          />
+          <div class="images">
+            <hs-link type="primary" v-if="isEdit" :id="uploadBtn" v-show="picList.length < option.uploadCnt || !option.uploadCnt">{{ option.uploadBtn }} </hs-link>
+            <div :class="'warn' + (option.uploadCnt > 1 ? ' red' : '')" v-if="isEdit && option.warning">{{ option.warning}}</div>
+          </div>
+          <div class="text-overflow-line" v-for="(item,i) in picList" :key="i">{{ item.name }}<i v-if="isEdit" @click="delImg(i)" class="hs-icon-error" /></div>
+          <!-- <hs-link type="primary">{{ option.upload }}</hs-link> -->
+        </div>
+      </div>
+    </section>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Prop, Watch, Component } from 'vue-property-decorator'
+import { FileUrl } from 'hs-elementui/src/utils/commons'
+import { UserModule } from '@/store/modules/user'
+
+@Component({
+  name: 'darggable-item'
+})
+
+export default class DarggableItem extends Vue {
+  get token () {
+    return UserModule.token
+  }
+
+  @Prop({ type: String })
+  private titleType!: string
+
+  @Prop({ type: [String, Number] })
+  private schoolId!: string|number
+
+  @Prop({ type: Object })
+  private form!: object|any
+
+  @Prop({ type: Object })
+  private option!: object|any
+
+  @Prop({ type: String })
+  private serverConfigUrl!: string
+
+  @Prop({ type: String })
+  private flag!: string
+
+  get isEdit () {
+    return this.flag !== 'show'
+  }
+
+  get uploadBtn () {
+    return 'browseButton_' + this.titleType
+  }
+
+  private picList: any[] = this.form.att ? this.form.att.map((v: any) => {
+    return {
+      src: v.path || v.src,
+      name: v.realName || v.name
+    }
+  }) : []
+
+  private up: any = {}
+
+  private files: any = this.form.att ? this.form.att.map((v: any) => {
+    return {
+      src: v.path,
+      name: v.realName
+    }
+  }) : []
+
+  private changed = !1
+
+  @Watch('changed')
+  private changeChanged () {
+    const picList: any[] = []
+    this.files.forEach((e: any) => {
+      picList.push({ src: e.imgsrc, file: e, name: e.name })
+    })
+    this.picList = picList
+  }
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private filesAdded (up: any, files: any) {
+    if (!this.option.uploadCnt || this.option.uploadCnt < 2) {
+      if (up.files.length > 1) {
+        up.removeFile(up.files[0])
+      }
+    }
+    files.forEach((f: any) => {
+      // eslint-disable-next-line handle-callback-err
+      FileUrl(f.getNative(), (err: any, imgsrc: any) => {
+        f.imgsrc = imgsrc
+        this.changed = !this.changed
+      })
+    })
+    this.upload()
+  }
+
+  private async upload () {
+    this.up.start()
+  }
+
+  private UploadComplete (up: any, files: any) {
+    console.log(up, files)
+  }
+
+  private FileUploaded (up: any, files: any, res: any) {
+    const response = JSON.parse(res.response)
+    if (this.option.uploadCnt && this.option.uploadCnt > 1) {
+      this.form.att.push({
+        createTime: new Date().getTime(),
+        path: response.fileInfos[0].savePath,
+        realName: response.fileInfos[0].originalFileName
+      })
+      this.picList = this.form.att.map((v: any) => {
+        return {
+          src: v.path || v.src,
+          name: v.realName || v.name
+        }
+      })
+    } else {
+      this.form.att = [{
+        createTime: new Date().getTime(),
+        path: response.fileInfos[0].savePath,
+        realName: response.fileInfos[0].originalFileName
+      }]
+    }
+  }
+
+  private delImg (index: any) {
+    this.form.att.splice(index, 1)
+    this.picList.splice(index, 1)
+  }
+
+  private error (up: any, res: any) {
+    this.$message.error(res.message)
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+$labelWidth: 60px;
+
+  .darggable-item{
+    width: 100%;
+    min-width: 580px;
+    border: 1px solid rgba(215, 215, 215, 1);
+    margin-top: 6px;
+    pointer-events: initial;
+    header{
+      width: 100%;
+      padding: 6px;
+      border-bottom: 1px solid rgba(215, 215, 215, 1);
+      span{
+        font-size: 14px;
+        font-weight: bold;
+      }
+    }
+    section{
+      margin-top: 3px;
+      padding: 0 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      .item{
+        width: 100%;
+        display: flex;
+        padding: 6px 0;
+        align-items: center;
+        .label{
+          width: $labelWidth;
+          text-align: right;
+          line-height: 2;
+          &:after{
+            contain: ':';
+            margin: 0 3px;
+          }
+        }
+        .content{
+          width: calc(100% - #{$labelWidth} - 10px);
+          margin-left: 10px;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          .hs-input{
+            width: 60%;
+          }
+          .hs-textarea{
+            width: 90%;
+          }
+        }
+        &.upload-images{
+          .content{
+            border: 2px dashed #d6d6d6;
+            padding: 3px;
+            .warn{
+              color: #cdcdcd;
+              &::before{
+                content: '温馨提示:';
+                margin-right: 6px;
+              }
+              margin-left: 6px;
+            }
+            .red{
+              color: red;
+            }
+            .images{
+              display: flex;
+              font-size: 14px;
+              .warn{
+                margin-left: 40px;
+              }
+              .text-overflow-line{
+                width: 90%;
+              }
+            }
+            .hs-icon-error{
+              color: #F56C6C;
+              margin-left: 3px;
+              cursor: pointer;
+              &:hover{
+                opacity: 0.5;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+</style>

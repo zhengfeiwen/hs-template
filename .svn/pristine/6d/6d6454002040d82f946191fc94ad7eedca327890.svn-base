@@ -1,0 +1,92 @@
+<template>
+  <div class="history-intercourse-detail-dialog-container">
+    <el-dialog title="历史往来详情" :visible.sync="visible" :before-close="onClose" :append-to-body="true" @open="open()">
+      <div class="intercourse-info">
+        业务：<span>{{data.businessName}}</span>
+        院校：<span>{{intercourseInfo.school}}</span>
+        年级：<span>{{intercourseInfo.gradeName}}</span>
+        专业：<span>{{intercourseInfo.subjectName}}</span>
+      </div>
+      <el-tabs type="card" v-model="activeName" @tab-click="handleClick" v-if="businessType == 1">
+        <el-tab-pane :label="item.label" :name="item.name" v-for="(item, index) in years" :key="index">
+          <IntercourseTable :stuId="stuId" :year="item.value" v-if="item.name == nowpage"></IntercourseTable>
+        </el-tab-pane>
+      </el-tabs>
+      <IntercourseTable :stuId="stuId" v-else-if="businessType == 2"></IntercourseTable>
+    </el-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Prop, Component } from 'vue-property-decorator'
+import AccountBalanceDetailDialog from '@/views/student/studentmanage/PersonalIntercourse/AccountBalanceDetailDialog/index.vue'
+import IntercourseTable from '@/views/student/studentmanage/PersonalIntercourse/IntercourseTable/index.vue'
+import HistoryIntercourseDialog from '@/views/student/studentmanage/PersonalIntercourse/HistoryIntercourseDialog/index.vue'
+@Component({
+  name: 'student-manage',
+  components: {
+    AccountBalanceDetailDialog,
+    IntercourseTable,
+    HistoryIntercourseDialog
+  }
+})
+export default class StudentCenterUpdateInput extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  @Prop({ default: false }) private data!: any;
+
+  private businessType = this.data.businessName === '全日制' ? 1 : 2
+
+  private activeName = 'third'
+
+  private AccountBalanceDetailDialogVisible = false
+
+  private HistoryIntercourseDialogVisible = false
+
+  private amount = 123
+
+  private nowpage = 'third'
+
+  private intercourseInfo = {
+    businessName: this.data.businessName,
+    school: '集美大学诚毅学院',
+    gradeName: '2021',
+    subjectName: '产品设计'
+  }
+
+  private years = [{
+    label: '第三学年',
+    value: 3,
+    name: 'third'
+  },
+  {
+    label: '第二学年',
+    value: 2,
+    name: 'second'
+  },
+  {
+    label: '第一学年',
+    value: 1,
+    name: 'first'
+  }]
+
+  private handleClick (tab: any) {
+    console.log(tab)
+    this.nowpage = tab.name
+  }
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  public open (): void {
+    this.businessType = this.data.businessName === '全日制' ? 1 : 2
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

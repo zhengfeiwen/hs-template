@@ -1,0 +1,26 @@
+
+
+.hs-button--mini {
+  padding: 6px 10px !important;
+}
+.user-info-box {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: 68px;
+  margin-top: 15px;
+  font-size: 14px;
+}
+.detail-line {
+  display: block;
+  width: 100%;
+  border-top: 1px dashed #ddd;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  // padding:20px;
+}
+
+
+
+
+
+

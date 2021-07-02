@@ -1,0 +1,1043 @@
+<template>
+  <div class="batchimport-container">
+    <header>
+      <div class="step-header">
+        <span class="title">{{ title }}</span>
+        <el-steps align-center style="width:calc(100% - 300px); margin-bottom: 10px;" :active="active" :process-status="processStatus" finish-status="success">
+          <el-step title="提交表单"></el-step>
+          <el-step title="批量导入"></el-step>
+          <el-step title="导入验证"></el-step>
+        </el-steps>
+        <coverlap></coverlap>
+      </div>
+      <hs-form ref="form" :model="form" :rules="rules" label-width="98px" :inline="true">
+        <hs-form-item label="学习类型" prop="studyId">
+          <dict-select :disabled="isSubmit" ref="study" @change="studyChange" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.studyId" clearable></dict-select>
+        </hs-form-item>
+        <hs-form-item label="院校" prop="schoolId">
+          <dict-select :disabled="isSubmit" ref="school" @change="schoolChange" :option="options.school" :prop="{ key: 'id', value: 'schoolName' }" :val.sync="form.schoolId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="年级" prop="gradeId">
+          <dict-select :disabled="isSubmit" ref="grade" @change="gradeChange" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId" clearable></dict-select>
+        </hs-form-item>
+        <hs-form-item label="学年" prop="schoolYear">
+          <dict-select :disabled="isSubmit" @change="schoolYearChange" :val.sync="form.schoolYear" constant-group-name="schoolYear"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="收款方式" prop="payType" v-if="action.type === 'prepaid' || action.type === 'collect'">
+          <dict-select :disabled="isSubmit" :exclude="[5, 71]" @change="payTypeChange" :val.sync="form.payType" constant-group-name="payType"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="专业" prop="subjectId">
+          <dict-select :disabled="isSubmit" style="width: 300px;" ref="subject" multiple @change="subjectChange" :data="subjectItemData" :prop="{ key: 'id', value: 'showValue' }" :val.sync="form.subjectId" clearable></dict-select>
+        </hs-form-item>
+          <hs-form-item label="收费标准" prop="standard">
+          <dict-select :disabled="isSubmit" style="width: 610px;" ref="standard" multiple @change="standardChange" :data="standardItemData" :prop="{ key: 'showKey', value: 'showValue' }" :val.sync="form.standard" clearable></dict-select>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" :disabled="isSubmit" @click="onSubmit" size="mini" icon="hs-icon-upload2">提交</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <transition name="el-zoom-in-top">
+        <div class="tip" :style="{ height: tipHidden ? '12px' : 'auto' }">
+          <i :class="tipHidden ? icon.up : icon.down" @click="tipHidden = !tipHidden"></i>
+          <p>操作步骤：收费标准中输入本次减免金额→选择减免时间→点击“批量导入”即可</p>
+          <p>如需部分学生批量导入，可通过“选择学生”批量筛选名单</p>
+          <p style="color: #f56c6c;">{{ `为了您操作便捷，建议按一个专业批量操作、超过${maxUpload}人以上使用下载模板编辑后再导入` }}</p>
+        </div>
+      </transition>
+      <template v-if="columns.length && res.code !== -10000 && res.code !== 10000">
+        <hs-button style="float:right; margin-bottom: 10px;" type="primary" @click="onAddStudent" :disabled="!columns.length" size="mini" icon="hs-icon-plus">选择学生</hs-button>
+        <hs-alert
+          v-show="!isEdit"
+          :closable="!1"
+          :title="`学生名单已超${maxUpload}人，请前往下载模板处理`"
+          type="error"
+          center
+          show-icon>
+        </hs-alert>
+        <hs-table
+          v-show="res && res.code !== -9998"
+          ref="hsTable"
+          :exportName="'模板文件' + (new Date().getTime())"
+          :exportable="!0"
+          :id="tableId"
+          :data="list"
+          :border="!0"
+          :export-columns="exportColumns"
+          :columns="columns"
+          :show-summary="!0"
+          :summary-method="getSummaries"
+          style="width: 100%"
+          header-row-class-name="header-style">
+            <hs-table-column type="index" label="序号" header-align="center" align="center" width="50"></hs-table-column>
+            <hs-table-column v-for="(column, i) in fixedColumns.left" :prop="column.prop" :label="column.label" :key="i" :width="column.format === 'date' ? 240 : 'auto'">
+              <template slot-scope="scope" width="240">
+                <el-date-picker
+                  :disabled="!isEdit"
+                  v-if="column.format === 'date'"
+                  v-model="list[scope.$index][scope.column.property]"
+                  value-format="timestamp"
+                  :picker-options="pickerOptions"
+                  type="datetime"
+                  format="yyyy-MM-dd HH:mm:ss"
+                  size="mini"
+                  placeholder="选择日期时间">
+                </el-date-picker>
+                <hs-input v-else-if="column.format === 'input'" :disabled="!isEdit" style="margin: 1px 0;" v-money size="mini" v-model.trim="list[scope.$index][scope.column.property]"></hs-input>
+                <span v-else-if="column.format === 'auto'">{{ generatingThousandthPer(list[scope.$index][scope.column.property] || '0.00') }}</span>
+                <span v-else>{{ generatingThousandthPer(list[scope.$index][scope.column.property] || '0.00') }}</span>
+              </template>
+            </hs-table-column>
+            <hs-table-column v-for="(column, i) in columns" :prop="column.prop" :label="column.label" :key="i">
+              <template slot-scope="scope">
+                <hs-input :disabled="!isEdit" style="margin: 1px 0;" v-money size="mini" v-model.trim="list[scope.$index][scope.column.property]"></hs-input>
+              </template>
+            </hs-table-column>
+            <hs-table-column v-for="(column, i) in fixedColumns.right" :prop="column.prop" :label="column.label" :key="i" :width="column.format === 'date' ? 240 : 'auto'">
+              <template slot-scope="scope">
+                <el-date-picker
+                  :disabled="!isEdit"
+                  v-if="column.format === 'date'"
+                  :picker-options="pickerOptions"
+                  v-model="list[scope.$index][scope.column.property]"
+                  value-format="timestamp"
+                  type="datetime"
+                  format="yyyy-MM-dd HH:mm:ss"
+                  size="mini"
+                  placeholder="选择日期时间">
+                </el-date-picker>
+                <hs-input v-else-if="column.format === 'input'" :disabled="!isEdit" style="margin: 1px 0;" v-money size="mini" v-model.trim="list[scope.$index][scope.column.property]"></hs-input>
+                <span v-if="column.format === 'auto'">{{ generatingThousandthPer(list[scope.$index][scope.column.property] || '0.00') }}</span>
+                <span v-else>{{ list[scope.$index][scope.column.property] }}</span>
+              </template>
+            </hs-table-column>
+            <hs-table-column  v-if="res.result === 0" prop="error" label="错误提示">
+              <template slot-scope="scope">
+                <span style="color: #f56c6c;">{{ scope.row.error }}</span>
+              </template>
+            </hs-table-column>
+        </hs-table>
+        <div class="line">
+          <el-button type="primary" @click="onDownLoadTemplate" size="mini" icon="hs-icon-download">下载模板</el-button>
+          <hs-plupload
+            ref="uploader"
+            :filters="filters"
+            :FilesAdded="filesAdded"
+            browseButton="browseButton_batchimport"
+            :url="postUrl"
+            @inputUploader="inputUploader"
+            :headers="{ token: token, accept: 'application/json' }"
+            :multipart-params="{'parentFolder': parentFolder}"
+            :FileUploaded="FileUploaded"
+            :Error="error"
+          />
+          <el-button id="browseButton_batchimport" v-permission="permission.excelImport" type="success" size="mini" icon="hs-icon-plus">选择文件</el-button>
+          <el-button :loading="importLoading" type="default" :disabled="this.list.length === 0" v-permission="permission.batchImport" @click="onBatchUpload" size="mini" icon="hs-icon-upload">批量导入</el-button>
+        </div>
+      </template>
+      <template v-if="columns.length === 0 && res.code !== -10000 && res.code !== -9998 && res.code !== 10000">
+        <div class="empty">
+          <i class="hs-icon-folder-add" />
+          <span>请先填写以上表单</span>
+        </div>
+      </template>
+      <div class="result-block" v-if="res.code === -9998 || res.code === -10000 || res.code === 10000">
+        <template v-if="res.code === 10000">
+          <i class="hs-icon-success" />
+          <p class="result-info">提交成功</p>
+          <!-- <span class="message">本次批量导入<span style="color: #67C23A;">{{ res.object.totalCount }}</span>数据</span> -->
+          <hs-button type="primary" @click="onView('success')" size="mini" icon="hs-icon-back">返回列表</hs-button>
+        </template>
+        <template v-if="res.code === -10000 || res.code === -9998">
+          <i class="hs-icon-error" />
+          <p class="result-info">提交失败</p>
+          <!-- <span class="message">本次批量导入{{ res.object.info.totalCount }}数据，<span style="color: #67C23A;">{{ res.object.info.successCount }}</span>条导入成功，<span style="color: #F56C6C;">{{ res.object.info.errorCount }}</span>条失败</span> -->
+          <hs-button style="margin-bottom: 10px;" type="primary" @click="onView" size="mini" icon="hs-icon-back">返回列表</hs-button>
+          <simple-table style="width: 100%;" v-if="res.code === -10000 || res.code === -9998" :columnable="!1" :isCheckbox="!1" :data="errorTableData" :columns="errorColumns" :pagination.sync="errorPagination"></simple-table>
+        </template>
+      </div>
+    </section>
+    <add-student :params="addParams" @save="getStudent" :visible.sync="visible"></add-student>
+    <export-template ref="exportTemplate" :title="templateTitle" :data="templateData" :cloumns="templateCloumns"></export-template>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+import AddStudent from './addstudent.vue'
+import dayjs from 'dayjs'
+import settings from '@/settings'
+import { collectApi } from '@/api/collect'
+import { getList } from '@/api/common'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import { UserModule } from '@/store/modules/user'
+import ExportTemplate from './exporttemplate.vue'
+import { formatBatchImport } from './batchimportUtil'
+@Component({
+  name: 'batch-import',
+  components: {
+    Coverlap,
+    SimpleTable,
+    ExportTemplate,
+    DictSelect,
+    AddStudent
+  }
+})
+export default class Batchimport extends Vue {
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private fixedColumns!: object|any
+
+  @Prop({ type: Number, default: 0 })
+  private leftColSpan!: number
+
+  @Prop({ type: String })
+  private backRouter!: string
+
+  @Prop({ type: Array })
+  private autoColumns!: any[]
+
+  @Prop({ type: Object })
+  private permission!: object|any
+
+  @Prop({ type: Number, default: 100 })
+  private maxUpload!: number
+
+  @Prop({ type: Object })
+  private params!: object|any
+
+  @Prop({ type: Object })
+  private action!: object|any
+
+  private form: any = {
+    schoolId: null,
+    gradeId: null,
+    studyId: null,
+    subjectId: null,
+    standard: null
+  }
+
+  private importLoading = !1
+
+  private pickerOptions = {
+    disabledDate: (time: any) => {
+      const _now = Date.now()
+      return time.getTime() > _now
+    }
+  }
+
+  private parentFolder = `fcs/fee/${dayjs(new Date()).format('YYYYMMDD')}`
+
+  private options: any = {
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+        studyId: this.form.studyId || null,
+        businessId: this.params.businessId
+      }
+    },
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {
+        businessId: this.params.businessId
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        schoolId: this.form.schoolId || null,
+        businessId: this.params.businessId
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+        schoolId: this.form.schoolId || null,
+        businessId: this.params.businessId
+      }
+    },
+    standard: {
+      url: '/fcs/schoolFeeStandard/batch/fees/select/list',
+      data: {
+        feeStandardCode: null,
+        feeItemName: null,
+        schoolId: this.form.schoolId || null,
+        gradeId: this.form.gradeId || null,
+        subjectIds: this.form.subjectIds || null,
+        schoolYear: this.form.schoolYear || null,
+        pageSize: 9999,
+        currentPage: 1
+      }
+    }
+  }
+
+  get token () {
+    return UserModule.token
+  }
+
+  get postUrl () {
+    return `${process.env.VUE_APP_BASE_API}api/core/oss/file/fileUploadPost`
+  }
+
+  private isSubmit = !1
+
+  private addParams = {}
+
+  private settings = settings
+
+  private processStatus = 'process'
+
+  private dayjs = dayjs
+
+  private active = 1
+
+  private visible = !1
+
+  private files: any[] = []
+  private up: any = {}
+
+  private res: any = {
+    code: 0,
+    object: {
+      list: [],
+      info: {}
+    }
+  }
+
+  private tableId = `batch-import-${Math.random().toString(36).substr(2, 4) + '-' + Math.random().toString(36).substr(4, 4)}`
+
+  private loading = !1
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private filters = {
+    mime_types: [
+      { title: 'xlsx type', extensions: 'xlsx,xls' }
+    ]
+  }
+
+  private autoData () {
+    if (!this.autoColumns || this.autoColumns.length === 0) return
+    this.autoColumns.forEach(key => {
+      this.list.map((v: any) => {
+        v[key] = this.columns.reduce((prev: any, curr: any) => {
+          const value = Number(v[curr.prop])
+          if (!isNaN(value)) {
+            return prev + value
+          } else {
+            return prev
+          }
+        }, 0)
+      })
+    })
+  }
+
+  private filesAdded (up: any, files: any) {
+    if (files.length > 1) {
+      this.$message.error('每次只允许选择一个文件')
+      return
+    }
+    if (up.files.length > 1) {
+      up.removeFile(up.files[0])
+    }
+    this.up.start()
+  }
+
+  private error (up: any, res: any) {
+    if (res.code === -601) {
+      this.$message.error('只能上传xlsx,xls格式')
+      return
+    }
+    this.$message.error(res.message)
+  }
+
+  private async FileUploaded (up: any, files: any, res: any) {
+    const response = JSON.parse(res.response)
+    this.files[0].name = response.fileInfos[0].originalFileName
+    this.files[0].path = response.fileInfos[0].savePath
+    await collectApi(this.action.excelImport, {
+      filePath: settings.ossIp + '/' + response.fileInfos[0].savePath,
+      businessId: this.params.businessId,
+      schoolId: this.form.schoolId || null,
+      gradeId: this.form.gradeId || null,
+      schoolYear: this.form.schoolYear,
+      schoolYearName: this.form.schoolYearName,
+      payType: this.form.payType || 5 // 减免与退费的默认为5
+    }).then((res: any) => {
+      this.res = { ...res }
+      this.errorColumns = []
+      this.errorTableData = {
+        list: [],
+        totalCount: 0
+      }
+      if (res.code === -9998) {
+        // this.setColSpan()
+        this.active = 2
+        this.processStatus = 'error'
+        // excel导出报错
+        res.object.list[0].map((v: any, index: any) => {
+          this.errorColumns.push({
+            prop: index,
+            label: v
+          })
+        })
+        this.errorColumns.push({
+          prop: res.object.list[0].length,
+          label: '错误提示'
+        })
+        this.errorTableData.list = res.object.list.filter((v: any, index: any) => index > 0)
+        this.errorTableData.totalCount = this.errorTableData.list.length
+      } else if (res.code === 10000) {
+        // this.setColSpan()
+        this.active = 3
+      }
+    }).catch((e: any) => {
+      this.$message.error('操作异常，请刷新页面重新操作')
+      console.error(e)
+    })
+  }
+
+  private handleNodeClick (data: any) {
+    console.log(data)
+  }
+
+  private generatingThousandthPer (val: any) {
+    if (typeof val === 'number' || typeof val === 'bigint') return util.generatingThousandthPer(val)
+    return val
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private list: any[] = []
+
+  private isEdit = !1
+
+  @Watch('list', { deep: !0 })
+  private listChange () {
+    if (this.list.length < this.maxUpload) {
+      this.isEdit = !0
+    } else {
+      this.isEdit = !1
+    }
+    this.autoData()
+  }
+
+  private rules = {
+    studyId: [
+      { required: !0, message: '请选择学习类型', trigger: 'change' }
+    ],
+    schoolId: [
+      { required: !0, message: '请选择院校', trigger: 'change' }
+    ],
+    gradeId: [
+      { required: !0, message: '请选择年级', trigger: 'change' }
+    ],
+    subjectId: [
+      { required: !0, message: '请选择专业', trigger: 'change' }
+    ],
+    schoolYear: [
+      { required: !0, message: '请选择学年', trigger: 'change' }
+    ],
+    standard: [
+      { required: !0, message: '请选择收费标准', trigger: 'change' }
+    ],
+    payType: [
+      { required: !0, message: '请选择收费方式', trigger: 'change' }
+    ]
+  }
+
+  private columns: any = []
+
+  private exportColumns: any = []
+
+  private icon = {
+    up: 'hs-icon-d-arrow-right',
+    down: 'hs-icon-d-arrow-left'
+  }
+
+  private subjectItemData: any = []
+
+  private standardItemData: any = []
+
+  private constrantArray: any = {
+    businessType: [],
+    subjectLen: [],
+    subjectDegree: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.businessType = await getConstantByGroup('businessType')
+    this.constrantArray.subjectLen = await getConstantByGroup('subjectLen')
+    this.constrantArray.subjectDegree = await getConstantByGroup('subjectDegree')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private async getStandardItem () {
+    await collectApi('schoolFeeStandardBatchFeesSelectList', {
+      feeStandardCode: null,
+      feeItemName: null,
+      schoolId: this.form.schoolId || null,
+      gradeId: this.form.gradeId || null,
+      subjectIds: this.form.subjectId || null,
+      schoolYear: this.form.schoolYear || null,
+      pageSize: 9999,
+      currentPage: 1
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.standardItemData = []
+        res.object.list.map((v: any) => {
+          v.showKey = `${v.feeStandardId}-${v.feeStandardCode}-${v.feeItemId}-${v.feeItemName}-${v.ifMust}-${v.amount}`
+          v.showValue = `${v.feeItemName}_${v.amount}元`
+          this.standardItemData.push(v)
+        })
+      }
+    })
+  }
+
+  private async getSubjectItem () {
+    await getList({
+      url: this.options.subject.url,
+      data: {
+        schoolId: this.form.schoolId || null
+      }
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.subjectItemData = []
+        res.object.list.map((v: any) => {
+          v.dataKey = `${v.id}-${v.subjectCode}-${v.subjectName}`
+          v.showValue = `[${this.getValueByConstrantArray('subjectDegree', Number(v.degree))}]${v.subjectName}[${this.getValueByConstrantArray('subjectLen', Number(v.len))}年]`
+          this.subjectItemData.push(v)
+        })
+      }
+    })
+  }
+
+  private studyChange (val: any, label: any) {
+    this.options.school.data.studyId = this.form.studyId || null
+    this.form.studyName = label
+    this.form.schoolId = null
+    this.form.gradeId = null
+    this.form.subjectId = null;
+    (this.$refs.school as any).getList()
+  }
+
+  private schoolChange (val: any, label: any) {
+    this.form.gradeId = null
+    this.form.subjectId = null
+    this.form.schoolName = label
+    this.options.grade.data.schoolId = this.form.schoolId || null
+    this.options.subject.data.schoolId = this.form.schoolId || null;
+    (this.$refs.grade as any).getList()
+    this.getSubjectItem()
+    this.getStandardItem()
+  }
+
+  private gradeChange (val: any, label: any) {
+    this.form.standard = null
+    this.form.gradeName = label
+    this.getStandardItem()
+  }
+
+  private subjectChange () {
+    this.form.standard = null
+    this.getStandardItem()
+  }
+
+  private schoolYearChange (val: any, label: any) {
+    this.form.standard = null
+    this.form.schoolYearName = label
+    this.getStandardItem()
+  }
+
+  private onReset () {
+    this.active = 1
+    this.isSubmit = !1
+    this.exportColumns = []
+    this.processStatus = 'process'
+    // this.form = {
+    //   schoolId: null,
+    //   gradeId: null,
+    //   studyId: null,
+    //   subjectId: null,
+    //   standard: null
+    // }
+    // this.standardSelecteds = []
+    this.list = []
+    this.columns = []
+    this.res = {
+      result: -1,
+      object: {
+        info: {}
+      }
+    }
+  }
+
+  private tipHidden = !1
+
+  private currentPage = 1
+
+  private standardSelecteds: any = []
+
+  private getSummaries (param: any) {
+    const { columns } = param
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计'
+        return
+      }
+      const values = this.list.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)
+      } else {
+        sums[index] = '0'
+      }
+    })
+    const start = this.fixedColumns.left.length
+    const len = this.columns.length
+    const index = start + len + 1
+    sums[index] = ''
+    for (let i = 0; i <= len; i++) {
+      sums[start + i] += ''
+    }
+    return sums.map((v: any) => util.generatingThousandthPer(v || ''))
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      const el = `#${this.tableId}`
+      if (this.$el.querySelector(el)) {
+        var current = (this.$el as any)
+          .querySelector(el)
+          // .querySelector('.el-table__fixed-footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        const leftColumns = this.fixedColumns.left
+        const rightColumns = this.fixedColumns.right
+        const leftLen = this.leftColSpan || (leftColumns.length + 1 - (this.autoColumns ? this.autoColumns.length : 0))
+        console.log(leftLen, this.leftColSpan, leftColumns)
+        cell[0].colSpan = leftLen.toString()
+        for (let i = 1; i < leftLen; i++) {
+          cell[i].style.display = 'none'
+        }
+        const start = leftColumns.length + this.columns.length + 1
+        if (rightColumns.length > 1 || this.res.result === 0) {
+          const len = (this.res.result === 0) ? rightColumns.length + 1 : rightColumns.length
+          cell[start].colSpan = len.toString()
+          for (let i = 1; i <= len; i++) {
+            cell[start + i].style.display = 'none'
+          }
+        }
+      }
+    }, 50)
+  }
+
+  private studentList: any = []
+
+  private onSubmit () {
+    (this.$refs.form as any).validate(async (valid: any) => {
+      if (!valid) {
+        this.isSubmit = !1
+        this.$message.error('请输入必填项')
+      } else {
+        // // 获取学生信息
+        // await collectApi('stuFeesBatchFeesSelectList', {
+        //   businessId: this.params.businessId,
+        //   schoolId: this.form.schoolId,
+        //   gradeId: this.form.gradeId,
+        //   subjectIds: this.form.subjectId,
+        //   schoolYear: this.form.schoolYear
+        // }).then((res: any) => {
+        //   if (res.code === 10000) {
+        //     this.studentList = res.object.list
+        //     if (this.studentList.length === 0) {
+        //       this.$message.error('不存在学生信息，请重置选择')
+        //       this.isSubmit = !1
+        //       return
+        //     }
+        //   }
+        // })
+        this.addParams = {
+          businessId: this.params.businessId,
+          schoolId: this.form.schoolId,
+          gradeId: this.form.gradeId,
+          subjectIds: this.form.subjectId,
+          schoolYear: this.form.schoolYear,
+          tradeType: this.action.type
+        }
+        this.studentList = []
+        this.initTableData()
+      }
+    })
+  }
+
+  private initTableData () {
+    // 获取列信息，渲染总计，导出信息等
+    this.columns = [...this.standardSelecteds]
+    this.setColSpan()
+    this.exportColumns = [].concat(this.fixedColumns.left, this.fixedColumns.right, this.columns)
+    this.templateCloumns = this.exportColumns.map((v: any) => {
+      if (v.prop === 'payTime') {
+        return {
+          prop: 'payTimeName',
+          label: v.label
+        }
+      }
+      if (v.templateLabel) {
+        return {
+          prop: v.prop,
+          label: v.templateLabel
+        }
+      }
+      return v
+    })
+    this.active = 2
+    this.isSubmit = !0
+    this.res = {
+      result: -1,
+      object: {
+        info: {}
+      }
+    }
+    const common: any = {}
+    this.standardSelecteds.map((v: any) => {
+      common[v.prop] = ''
+    })
+    this.list = []
+    this.studentList.map((v: any) => {
+      this.list.push({
+        idCard: v.idCard,
+        stuId: v.stuId,
+        stuCode: v.stuCode,
+        stuName: v.stuName,
+        schoolId: v.schoolId,
+        schoolName: v.schoolName,
+        subjectId: v.subjectId,
+        subjectName: v.subjectName,
+        gradeId: v.gradeId,
+        schoolYear: this.form.schoolYear,
+        gradeName: v.gradeName,
+        ...common,
+        payTime: new Date().getTime(),
+        payTimeName: dayjs(new Date()).format('YYYY-MM-DD hh:mm')
+      })
+    })
+    // 获取列信息，渲染总计，导出信息等
+    this.columns = [...this.standardSelecteds]
+    this.templateData = [...this.list]
+    this.setColSpan()
+    this.exportColumns = [].concat(this.fixedColumns.left, this.fixedColumns.right, this.columns)
+    this.active = 2
+    this.isSubmit = !0
+  }
+
+  private async onAddStudent () {
+    this.visible = !0
+  }
+
+  private getStudent (stus: any) {
+    const common: any = {}
+    this.standardSelecteds.map((v: any) => {
+      common[v.prop] = ''
+    })
+    const temp: any = [...this.list]
+    this.list = []
+    stus.map((v: any) => {
+      let student = {
+        stuId: v.id,
+        stuCode: v.stuCode,
+        idCard: v.stuPaperworkNumber,
+        stuName: v.stuName,
+        business: this.params.businessId,
+        schoolId: v.stuSchoolId,
+        schoolName: v.stuSchoolName,
+        subjectId: v.stuSubjectId,
+        subjectName: v.stuSubjectName,
+        gradeId: v.stuGradeId,
+        gradeName: v.stuGradeName,
+        schoolYear: this.form.schoolYear,
+        payTime: new Date().getTime(),
+        payTimeName: dayjs(new Date()).format('YYYY-MM-DD hh:mm'),
+        payType: this.form.payType || 5, // 减免与退费的默认为5
+        ...common
+      }
+      const len = temp.length
+      for (let i = 0; i < len; i++) {
+        if (temp[i].stuId === v.stuId) {
+          student = {
+            ...temp[i]
+          }
+        }
+      }
+      this.list.push(student)
+    })
+    this.templateData = [...this.list]
+  }
+
+  private standardChange (vals: any, labels: any) {
+    const len = vals.length
+    this.standardSelecteds = []
+    for (let i = 0; i < len; i++) {
+      this.standardSelecteds.push({
+        prop: vals[i],
+        templateLabel: labels[i] + '_' + vals[i].split('-')[1],
+        label: labels[i]
+      })
+    }
+  }
+
+  private templateCloumns: any = []
+
+  private templateData: any = []
+
+  private templateTitle = '集美大学-本科项目-2020级-第一学年'
+
+  private onDownLoadTemplate () {
+    this.templateTitle = `${this.form.studyName}-${this.form.schoolName}-${this.form.gradeName}-${this.form.schoolYearName}-${this.title.slice(2)}`
+    this.templateData = this.templateData.map((v: any) => {
+      v.payTimeName = dayjs(v.payTime).format('YYYY-MM-DD hh:mm:ss')
+      return v
+    });
+    (this.$refs.exportTemplate as any).export()
+    // (this.$refs as any).hsTable.exportHandle()
+  }
+
+  private errorPagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private errorTableData: any = {
+    list: [],
+    totalCount: 0
+  }
+
+  private errorColumns: any = []
+
+  private async onBatchUpload () {
+    if (this.list.length === 0) {
+      this.$message.error('不存在数据，请选择学生')
+    }
+    this.importLoading = !0
+    const params = formatBatchImport(this.params.businessId, this.action.type, this.list, this.standardSelecteds)
+    await collectApi(this.action.batchImport, params).then((res: any) => {
+      this.res = { ...res }
+      if (res.code === -10000) {
+        this.setColSpan()
+        this.active = 2
+        this.processStatus = 'error'
+        this.exportColumns.push({
+          prop: 'error',
+          label: '错误提示'
+        })
+        this.errorTableData.list = []
+        if (res.object && res.object.list) {
+          res.object.list.map((v: any) => {
+            this.list.map((errData: any, index: any) => {
+              // eslint-disable-next-line eqeqeq
+              if (v.rowNum == index) {
+                this.errorTableData.list.push({
+                  error: v.msg,
+                  ...errData
+                })
+                this.list[index].error = v.msg
+              }
+              return errData
+            })
+          })
+        } else {
+          this.list = this.list.map((v: any) => {
+            v.error = res.message
+            return v
+          })
+        }
+        this.errorColumns = [].concat(this.fixedColumns.left, this.columns)
+        this.errorColumns.push({ prop: 'error', label: '错误提示' })
+        this.errorTableData.totalCount = this.errorTableData.list.length
+      } else if (res.code === 10000) {
+        this.setColSpan()
+        this.active = 3
+      }
+    }).catch((e: any) => {
+      this.$message.error('操作异常，请刷新页面重新操作')
+      this.importLoading = !1
+      console.error(e)
+    })
+    this.importLoading = !1
+  }
+
+  private onView (flag:any) {
+    this.res = {
+      result: this.res.code === -10000 ? 0 : 1,
+      object: {
+        info: {}
+      }
+    }
+    if (flag === 'success') {
+      this.onReset()
+    }
+    this.setColSpan()
+  }
+
+  private onBack () {
+    if (!this.backRouter) {
+      this.$router.back()
+    } else {
+      this.$router.push({
+        name: this.backRouter
+      },
+      () => {
+        // do
+        this.loading = !1
+      })
+    }
+  }
+
+  async mounted () {
+    await this.getConstrantList()
+    await this.getSubjectItem()
+  }
+}
+</script>
+
+<style lang="scss">
+.batchimport-container{
+  height: 100%;
+  width: 100%;
+  header{
+    width: 100%;
+    .step-header{
+      width: 100%;
+      height: 66px;
+      position: relative;
+      display: flex;
+      border-bottom: 1px solid #d6d6d6;
+      margin-bottom: 10px;
+      .title{
+        width: 100px;
+        font-size: 22px;
+        font-weight: bold;
+        margin: 0 20px;
+        line-height: 40px;
+        text-align: center;
+      }
+    }
+  }
+  section{
+    position: relative;
+    height: calc(100% - 230px);
+    width: 100%;
+    .line{
+      width: 100%;
+      text-align: center;
+    }
+    .tip{
+      position: relative;
+      padding: 8px 16px;
+      background-color: #ecf8ff;
+      border-radius: 4px;
+      border-left: 5px solid #50bfff;
+      overflow: hidden;
+      margin: 10px 0;
+      i{
+        position: absolute;
+        border-radius: 50%;
+        text-align: center;
+        transform: rotate(90deg);
+        cursor: pointer;
+        font-size: 14px;
+        height: 16px;
+        width: 16px;
+        line-height: 16px;
+        vertical-align: middle;
+        bottom: 0;
+        right: calc(50% - 8px);
+        color: #50bfff;
+        &:hover{
+          color: #fff;
+          background-color: #50bfff;
+        }
+      }
+      p{
+        margin: 6px 0;
+      }
+    }
+    .header-style{
+      th {
+        background-color: #F5F7FA;
+      }
+    }
+    .empty{
+      width: 100%;
+      height: calc(100% - 110px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      i{
+        font-size: 60px;
+        color: #e6e6e6;
+      }
+    }
+    .result-block{
+      width: 100%;
+      height: calc(100% - 90px);
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      top: 0;
+      left: 0;
+      background-color: #fff;
+      .hs-icon-success{
+        font-size: 50px;
+        margin-bottom: 10px;
+        color: #67C23A;
+      }
+      .hs-icon-error{
+        font-size: 50px;
+        margin-bottom: 10px;
+        color: #f56c6c;
+      }
+      .message{
+        margin-bottom: 20px;
+        font-size: 18px;
+      }
+      .result-info{
+        font-size: 24px;
+        font-weight: bolder;
+      }
+    }
+  }
+  .table-setting{
+    display: none;
+  }
+}
+</style>

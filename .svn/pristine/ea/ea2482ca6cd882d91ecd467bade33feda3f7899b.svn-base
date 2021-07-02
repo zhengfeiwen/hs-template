@@ -1,0 +1,22 @@
+
+.flex-column{
+  display: flex;
+  flex-direction: column;
+}
+
+.bs-item{
+  padding:8px 10px;
+  border-radius: 4px;
+}
+
+.bs-item:hover {
+  background-color: #4285F4;
+  color: #fff;
+  
+} 
+
+.profile {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}

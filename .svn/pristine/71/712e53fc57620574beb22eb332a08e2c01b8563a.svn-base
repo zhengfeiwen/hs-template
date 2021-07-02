@@ -1,0 +1,114 @@
+<!-- 新增 -->
+<template>
+  <hs-dialog append-to-body title="收费项目新增" :visible.sync="visibleSync" width="60%" :close-on-click-modal="!1" @open="open">
+    <div class="feeitem-add-container">
+      <el-form ref="form" :rules="rules" :model="form" label-width="128px" :inline="true" class="border-style">
+        <el-form-item label="收费项目名称" prop="feeItemName">
+          <hs-input size="mini" v-model="form.feeItemName" placeholder="请输入收费项目名称" ></hs-input>
+        </el-form-item>
+        <!-- <el-form-item label="是否为预收项目" prop="preItem">
+          <hs-radio v-model="form.preItem" :label="1">是</hs-radio>
+          <hs-radio v-model="form.preItem" :label="0">否</hs-radio>
+        </el-form-item> -->
+        <el-form-item label="备注" prop="remark" class="double line">
+          <el-input type="textarea" maxlength="200" show-word-limit :rows="3" v-model="form.remark" resize="none"></el-input>
+        </el-form-item>
+      </el-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <el-button type="danger" size="mini" :loading="saveLoading" @click="onSave">确认</el-button>
+      <el-button type="info" plain size="mini" @click="visibleSync = !1">关闭</el-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import { baseApi } from '@/api/base'
+import util from '@/utils/busi/util'
+
+@Component({
+  name: 'feeitem-add'
+})
+
+export default class FeeitemAdd extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: Object })
+  private data!: object|any
+
+  private saveLoading = !1
+
+  private form = {
+    feeItemName: '',
+    preItem: 0,
+    remark: ''
+  }
+
+  private rules = {
+    feeItemName: [
+      { required: true, message: '请输入收费项目名称', trigger: 'blur' }
+    ],
+    preItem: [
+      { required: true, message: '请选择是否为预收项目', trigger: 'change' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      this.saveLoading = !0
+      if (this.data.type === 'add') {
+        await baseApi('itemInsert', {
+          ...util.trimForm(this.form)
+        }).then((res: any) => {
+          if (res.code === 10000) {
+            this.$message.success({ message: res.message, showClose: !0, duration: 1500 })
+            this.visibleSync = !1
+            this.$listeners['save-back'] && this.$emit('save-back')
+          } else if (res.code === -10000) {
+            this.$alert(res.message, { type: 'error' })
+          }
+        })
+      } else {
+        await baseApi('itemUpdate', {
+          ...util.trimForm(this.form)
+        }).then((res: any) => {
+          if (res.code === 10000) {
+            this.$message.success({ message: res.message, showClose: !0, duration: 1500 })
+            this.visibleSync = !1
+            this.$listeners['save-back'] && this.$emit('save-back')
+          } else if (res.code === -10000) {
+            this.$alert(res.message, { type: 'error' })
+          }
+        })
+      }
+      this.saveLoading = !1
+    })
+  }
+
+  private open () {
+    this.saveLoading = !1
+    if (this.data.type === 'add') {
+      this.form = {
+        feeItemName: '',
+        preItem: 0,
+        remark: ''
+      }
+      return
+    }
+    this.form = Object.assign(this.form, this.data)
+  }
+}
+</script>
+<style lang="scss">
+  .feeitem-add-container{
+    width: 100%;
+    min-width: 500px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+</style>

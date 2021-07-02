@@ -1,0 +1,241 @@
+<template>
+  <div class="schoolmanage-container">
+    <header>
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+        <hs-form-item label="业务类型">
+          <dialog-select
+            :value.sync="form.businessName"
+            placeholder="请输入业务类型"
+            :option="businessOption"
+            @select="businessSelect"
+          ></dialog-select>
+        </hs-form-item>
+        <hs-form-item label="学习类型">
+         <dialog-select
+            :value.sync="form.studyName"
+            placeholder="请输入学习类型"
+            :option="studyOption"
+            @open="studyOpen"
+          ></dialog-select>
+        </hs-form-item>
+        <hs-form-item label="院校代码">
+          <hs-input
+            size="mini"
+            v-model="form.schoolCode"
+            placeholder="请输入院校代码"
+          ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="院校名称">
+          <hs-input
+            size="mini"
+            v-model="form.schoolName"
+            placeholder="请输入院校名称"
+          ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="院校状态">
+          <dict-select :val.sync="form.schoolState" comm-group-name="state"></dict-select>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table :index="!0" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" :pagination.sync="pagination" @query="onQuery" @row-dbclick="showDetail" :dicts="['schoolState']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+      </simple-table>
+    </section>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DialogSelect from '@/components/busi/custom/dialogselect.vue'
+import util from '@/utils/busi/util'
+import { getSchoolList, schoolDetail } from '@/api/base'
+import dayjs from 'dayjs'
+@Component({
+  name: 'school-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    DialogSelect
+  }
+})
+export default class SchoolManage extends Vue {
+  private form: any = {
+    businessName: '',
+    schoolState: 1
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'schoolCode',
+    label: '院校代码'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'businessName',
+    label: '业务名称'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolState',
+    label: '状态'
+  },
+  {
+    prop: 'createTime',
+    label: '创建时间',
+    disabled: !0,
+    format: 'date'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form }, this.columns)
+    !pagination && (this.pagination.currentPage = 1)
+    await getSchoolList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      schoolState: 1
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await schoolDetail({ id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          schoolCode: res.object.schoolCode,
+          schoolName: res.object.schoolName,
+          businessName: res.object.businessName,
+          studyName: res.object.studyName,
+          schoolState: res.object.schoolState,
+          createTime: res.object.createTimeStamp ? dayjs(res.object.createTimeStamp).format('YYYY-MM-DD HH:mm') : dayjs(row.createTimeStamp).format('YYYY-MM-DD HH:mm')
+        }
+      }
+    })
+  }
+
+  private businessOption = {
+    key: 'businessName',
+    params: {
+
+    },
+    conditions: [
+      {
+        label: '业务名称',
+        value: 'businessName'
+      }
+    ],
+    table: {
+      url: '/fcs/business/search',
+      columns: [{
+        prop: 'businessName',
+        label: '业务名称'
+      },
+      {
+        prop: 'memo',
+        label: '备注'
+      }]
+    }
+  }
+
+  private businessSelect (row: any) {
+    this.studyOption.params = {
+      businessCode: row.businessCode
+    }
+  }
+
+  private studyOption: any = {
+    key: 'businessName',
+    conditions: [
+      {
+        label: '学习类型代码',
+        value: 'studyCode'
+      },
+      {
+        label: '学习类型名称',
+        value: 'studyName'
+      }
+    ],
+    table: {
+      url: '/fcs/study/search',
+      columns: [{
+        prop: 'studyName',
+        label: '学习类型名称'
+      },
+      {
+        prop: 'studyCode',
+        label: '学习类型代码'
+      }]
+    }
+  }
+
+  private studyOpen (done: Function) {
+    if (!this.form.businessName) {
+      this.$alert('请选择业务')
+    } else {
+      done()
+    }
+  }
+
+  mounted () {
+    this.onQuery()
+    util.initFlexForm()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

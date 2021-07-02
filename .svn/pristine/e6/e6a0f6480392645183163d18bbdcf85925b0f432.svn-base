@@ -1,0 +1,51 @@
+// 根据字段key自动翻译字典
+import { getConstant } from '@/api/common'
+import { isEmpty } from 'xe-utils'
+import { isType } from '../common'
+import { SessionStorage } from '../storage'
+const dicts: any = {
+  status: { 0: '无效', 1: '正常' },
+  ifMust: { 0: '否', 1: '是' },
+  ifRefund: { 0: '否', 1: '是' },
+  openInvoice: { 0: '否', 1: '是' }
+}
+
+export const DICT_MONEY_KEY = dicts
+
+// 是否是常量
+const isDict = (key: any) => Object.keys(dicts).includes(key)
+
+// 获取常量列表
+export const getConstantByGroup = async (groupName: any) => {
+  if (!groupName) return {}
+  const key = `constant-${groupName}`
+  let constants: any = SessionStorage.get(key, 'array')
+  if (isEmpty(constants)) {
+    await getConstant({
+      groupName: groupName
+    }).then((res: any) => {
+      constants = res.object.list
+      SessionStorage.set(key, JSON.stringify(constants))
+    })
+  }
+  return constants
+}
+
+// 换算金额
+const translate = (key: any, obj: any, option: any) => {
+  const dict: any = getConstantByGroup(key)
+  const val = dict[obj[key]]
+  const nameKey = `${key}Name`
+  if (val) {
+    obj[nameKey] = val
+  } else {
+    obj[nameKey] = `字典不存在该值${key}:${val}`
+  }
+  return obj
+}
+
+// 常量字典标准化
+export const dictStandardization = (key: any, val: any, option: any) => {
+  if (isDict(key) && isType(val, 'object')) return translate(key, val, option)
+  return val
+}

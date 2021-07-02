@@ -1,0 +1,46 @@
+<template>
+  <div class="studentmanage-container">
+    <el-tabs v-model="activeName" @tab-click="handleClick">
+    <el-tab-pane label="个人总来往" name="first">
+      <PersonalIntercourse :stuId="stuId" v-if="nowPage == 'first'"></PersonalIntercourse>
+    </el-tab-pane>
+    <el-tab-pane label="缴费流水" name="second">
+      <FlowDetail :stuId="stuId" v-if="nowPage == 'second'"></FlowDetail>
+    </el-tab-pane>
+    <el-tab-pane label="学生信息" name="third">
+      <StudentBaseInfo :stuId="stuId"  v-if="nowPage == 'third'"></StudentBaseInfo>
+    </el-tab-pane>
+  </el-tabs>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import StudentBaseInfo from '@/views/student/studentmanage/StudentBaseInfo/index.vue'
+import PersonalIntercourse from '@/views/student/studentmanage/PersonalIntercourse/index.vue'
+import FlowDetail from '@/views/collect/flowdetail/index.vue'
+@Component({
+  name: 'student-manage',
+  components: {
+    StudentBaseInfo,
+    PersonalIntercourse,
+    FlowDetail
+  }
+})
+export default class StudentCenterUpdateInput extends Vue {
+  private activeName = 'first'
+
+  private nowPage = 'first'
+
+  private stuId = 37395
+
+  private handleClick (tab: any) {
+    this.nowPage = tab.name
+    console.log(tab.name)
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

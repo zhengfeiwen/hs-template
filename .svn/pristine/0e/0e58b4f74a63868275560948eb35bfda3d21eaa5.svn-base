@@ -1,0 +1,828 @@
+<template>
+  <el-dialog append-to-body :close-on-click-modal="!1" title="异动结转操作" :visible.sync="visible" width="70%" :before-close="onClose" @open="open()">
+    <div class="abnormal-turn-operation-dialog-container">
+      <div class="top">
+        <div class="line">
+          <i class="hs-icon-user" /><span class="student-name">{{ stuInfo.stuName }}</span>
+        </div>
+        <div class="line">
+          <static-item label="业务">{{ stuInfo.businessName }}</static-item>
+          <static-item label="所在学校">{{ stuInfo.stuSchoolName }}</static-item>
+          <static-item label="所在年级">{{ stuInfo.stuGradeName }}</static-item>
+          <static-item label="所在专业">{{ stuInfo.stuSubjectName }}</static-item>
+          <hs-button class="btn" type="text" size="mini" @click="HistoryFlowDetailDialogVisible = true">历史流水记录></hs-button>
+        </div>
+      </div>
+      <div class="content" v-loading="loading">
+        <div class="line">
+          <el-steps simple :active="active" finish-status="success" style="width: 100%">
+            <span style="position: absolute; top: 42px; left: 28%;">{{'确认不可结转金额 ' + unChangeReductionAmount + ' + ' + unChangePayAmount + ' 元'}}</span>
+            <el-step title="第一步"></el-step>
+            <span style="position: absolute; top: 42px; left: 61%;">{{'分配可结转金额 ' + changeAmount.reductionAmount + ' + ' + changePayAmount + ' 元'}}</span>
+            <el-step title="第二步"></el-step>
+          </el-steps>
+        </div>
+        <div class="step" v-if="unChangePayRecordTableShow">
+          <div class="line workflow-detail-tabs">
+            <hs-table
+            ref="unChangePayRecordTable"
+            id="unChangePayRecordTable"
+            style="width: 100%; position: relative; max-height: 43vh; overflow: auto;"
+            :data="unChangePayRecordList"
+            :border="!0"
+            :show-summary="!0"
+            :summary-method="getUnChangePayRecordTableSummaries"
+            header-row-class-name="header-style">
+              <hs-table-column prop="business" label="缴费业务">
+                <template slot-scope="scope">{{ getValueByConstrantArray("business", scope.row.business) }}</template>
+              </hs-table-column>
+              <hs-table-column prop="schoolName" label="缴费院校"></hs-table-column>
+              <hs-table-column prop="gradeName" label="缴费年级"></hs-table-column>
+              <hs-table-column prop="subjectName" label="缴费专业"></hs-table-column>
+              <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+              <hs-table-column prop="schoolYearName" label="学年"></hs-table-column>hasReductionAmount
+              <hs-table-column prop="amount" :formatter="formatterMoney" label="已收"></hs-table-column>
+              <hs-table-column prop="hasReductionAmount" :formatter="formatterMoney" label="已减"></hs-table-column>
+              <hs-table-column prop="acceptedUnChangeAmount" label="已收不可结转" width="155">
+                <template slot-scope="scope">
+                  <hs-input style="width: 120px;" :disabled="unChangePayRecordList[scope.$index].isNowSub === 1" @input.native="acceptedUnChangeAmountChange($event, scope.$index)" v-money size="mini" @click="change(scope.$index)" v-model.trim="unChangePayRecordList[scope.$index].acceptedUnChangeAmount"></hs-input>
+                </template>
+              </hs-table-column>
+              <hs-table-column prop="refundAmount" :formatter="formatterMoney" label="已退"></hs-table-column>
+              <!-- <hs-table-column prop="" :formatter="formatterMoney" label="已结算"></hs-table-column> -->
+            </hs-table>
+          </div>
+          <el-button type="danger" size="mini" @click="onStep1">下一步</el-button>
+        </div>
+        <div class="step workflow-detail-tabs" v-if="abnormalTurnOperationTableShow">
+          <hs-table
+            ref="abnormalTurnOperationTable"
+            id="abnormalTurnOperationTable"
+            style="width: 100%; position: relative; max-height: 43vh; overflow: auto;"
+            :data="data.list"
+            :border="!0"
+            :show-summary="!0"
+            :summary-method="getAbnormalTurnOperationTableSummaries"
+            @selection-change="selectionChange"
+            @select="selectChange"
+            @select-all="selectChange"
+            header-row-class-name="header-style">
+              <hs-table-column align="center" header-align="center" type="selection"></hs-table-column>
+              <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+              <hs-table-column prop="schoolYearName" label="学年"></hs-table-column>
+              <hs-table-column prop="ifMust" label="必缴">
+                <template slot-scope="scope">
+                  {{ scope.row.ifMust === 1 ? '是' : '否' }}
+                </template>
+              </hs-table-column>
+              <hs-table-column prop="receivableMoney" :formatter="formatterMoney" label="应收"></hs-table-column>
+              <hs-table-column prop="feesMoney" :formatter="formatterMoney" label="已收"></hs-table-column>
+              <hs-table-column prop="thisReduceMoney" label="本次减免" width="155">
+                <template slot="header">
+                  本次减免
+                  <br><span style="font-weight:100;font-size:10px;color:#4285F4;">需分配：{{changeAmount.reductionAmount}}元</span>
+                </template>
+                <template slot-scope="scope">
+                  <span v-if="!data.list[scope.$index].edit">{{ generatingThousandthPer(data.list[scope.$index].thisReduceMoney) }}</span>
+                  <hs-input v-else style="width: 120px;" @input.native="reductionAmountChange($event, scope.$index)" v-money size="mini" @click="change(scope.$index)" v-model.trim="data.list[scope.$index].thisReduceMoney"></hs-input>
+                </template>
+              </hs-table-column>
+              <hs-table-column prop="thisFeesMoney" label="本次收费" width="155">
+                <template slot="header">
+                  本次收费
+                  <br><span style="font-weight:100;font-size:10px;color:#4285F4;">需分配：{{changePayAmount}}元</span>
+                </template>
+                <template slot-scope="scope">
+                  <span v-if="!data.list[scope.$index].edit">{{ generatingThousandthPer(data.list[scope.$index].thisFeesMoney) }}</span>
+                  <hs-input v-else style="width: 120px;" @input.native="feesMoneyChange($event, scope.$index)" v-money size="mini" @click="change(scope.$index)" v-model.trim="data.list[scope.$index].thisFeesMoney"></hs-input>
+                </template>
+              </hs-table-column>
+          </hs-table>
+          <div class="line auto">
+            <el-tooltip class="item" effect="dark" content="总收款" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+            <static-item label="总收款">{{ generatingThousandthPer(changePayAmount) }}</static-item>
+            <el-tooltip class="item" effect="dark" content="总减免" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+            <static-item label="总减免">{{ generatingThousandthPer(changeAmount.reductionAmount) }}</static-item>
+            <el-tooltip class="item" effect="dark" content="个人账户余额" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+            <static-item label="个人账户余额">{{ generatingThousandthPer(amountFormat(changePayAmount - (thisFeesMoneySummarie ? thisFeesMoneySummarie : 0))) }}</static-item>
+            <el-tooltip class="item" effect="dark" content="欠费" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+            <static-item label="欠费">{{ generatingThousandthPer(getArrearsSummarie) }}</static-item>
+          </div>
+          <div class="line2">
+            <el-button type="danger" size="mini" @click="onStep2">上一步</el-button>
+            <el-button type="danger" size="mini" @click="onSubmit" :loading="submitLoading">提交</el-button>
+          </div>
+        </div>
+        <div class="empty-block" v-if="emptyBlockShow">
+          <img src="../../../../assets/statics/pics/empty.png" style="width: 150px;margin-bottom: 20px" alt="">
+          <span>当前学年暂无可收的收费标准，请前往设置</span>
+        </div>
+      </div>
+    </div>
+    <HistoryFlowDetailDialog :stuInfo="stuInfo" :newChangeData="newChangeData" :visible.sync="HistoryFlowDetailDialogVisible"></HistoryFlowDetailDialog>
+  </el-dialog>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { studentApi } from '@/api/studentcenter'
+import StaticItem from '@/components/busi/staticitem.vue'
+import HistoryFlowDetailDialog from '@/views/student/components/AbnormalTurnOperationDialog/historyFlowDetailDialog.vue'
+import util from '@/utils/busi/util'
+
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable,
+    StaticItem,
+    HistoryFlowDetailDialog
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private newChangeData!: object;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private stuInfo = {}
+
+  private active = 0
+
+  private loading = !1
+
+  private submitLoading = !1
+
+  private HistoryFlowDetailDialogVisible = !1
+
+  private unChangePayRecordList: any = []
+
+  private data:any = {
+    info: {},
+    list: []
+  }
+
+  private changeAmount:any = {}
+
+  private selectedRow:any = []
+
+  private emptyBlockShow = !1
+
+  private unChangeReductionAmount = 0
+
+  private generatingThousandthPer (num: any) {
+    return util.generatingThousandthPer(num)
+  }
+
+  private amountFormat (num: number) {
+    return Number(num.toFixed(2))
+  }
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private selectChange (selected: any) {
+    this.selectedRow = selected
+    const len = this.data.list.length
+    for (let i = 0; i < len; i++) {
+      this.data.list[i].edit = !1
+      this.selectedRow.map((v: any) => {
+        if (v.mark === this.data.list[i].mark) {
+          this.data.list[i].edit = !0
+        }
+      })
+    }
+    for (let i = 0; i < this.data.list.length; i++) {
+      this.data.list[i].thisReduceMoney = 0
+      this.data.list[i].thisFeesMoney = 0
+    }
+    // 根据减免金额从大到小，即列表从下往上的减免必选项自动填充金额
+    let reductionAmount = this.changeAmount.reductionAmount
+    for (let i = this.data.list.length - 1; i >= 0; i--) {
+      const reduceMaxMoney = this.data.list[i].receivableMoney
+      if (this.data.list[i].edit) {
+        if (this.amountFormat(reductionAmount - reduceMaxMoney) > 0) {
+          this.data.list[i].thisReduceMoney = reduceMaxMoney
+          reductionAmount = this.amountFormat(reductionAmount - reduceMaxMoney)
+        } else {
+          this.data.list[i].thisReduceMoney = reductionAmount
+          break
+        }
+      }
+    }
+    let amount = (this.changePayAmount as any)
+    for (let i = 0; i < this.data.list.length; i++) {
+      const fMM = this.amountFormat(this.data.list[i].receivableMoney - this.data.list[i].feesMoney - this.data.list[i].thisReduceMoney)
+      const feesMaxMoney = fMM > 0 ? fMM : 0
+      if (this.data.list[i].edit) {
+        if (this.amountFormat(amount - feesMaxMoney) > 0) {
+          this.data.list[i].thisFeesMoney = feesMaxMoney
+          amount = this.amountFormat(amount - feesMaxMoney)
+        } else {
+          this.data.list[i].thisFeesMoney = amount
+          break
+        }
+      }
+    }
+  }
+
+  private unChangePayAmount = 0 // 第一步的表格中计算得到的不可结转金额
+
+  private get changePayAmount () { // 可用金额-不可结转金额=可结转金额
+    return this.amountFormat(this.changeAmount.amount - this.unChangePayAmount)
+  }
+
+  private get getArrearsSummarie () { // 计算欠费合计：等于每行的应收-已收-减免-收费，小于0时=0
+    return this.selectedRow.reduce((sum: any, v: any, idx: any) => {
+      const rowArrears = v.receivableMoney - v.feesMoney - v.thisReduceMoney - v.thisFeesMoney
+      sum = sum + (rowArrears < 0 ? 0 : rowArrears)
+      return sum
+    }, 0)
+  }
+
+  private getUnChangePayRecordTableSummaries (param: any) {
+    const { columns, data } = param
+    const sumsNumber: any = []
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计'
+        return
+      }
+      const values = data.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return this.amountFormat(prev + curr)
+          } else {
+            return prev
+          }
+        }, 0))
+        sumsNumber[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return this.amountFormat(prev + curr)
+          } else {
+            return prev
+          }
+        }, 0)
+      } else {
+        sums[index] = ''
+      }
+    })
+    this.unChangePayAmount = this.amountFormat(sumsNumber[8] + sumsNumber[9])
+    return sums
+  }
+
+  private receivableMoneySummarie = 0 // 应收合计
+  private feesMoneySummarie = 0 // 已收合计
+  private thisReduceMoneySummarie = 0 // 本次减免合计
+  private thisFeesMoneySummarie = 0 // 本次收费合计
+
+  private getAbnormalTurnOperationTableSummaries (param: any) {
+    const { columns } = param
+    const sumsNumber: any = []
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计（勾选项）'
+        return
+      }
+      const values = this.selectedRow.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return this.amountFormat(prev + curr)
+          } else {
+            return prev
+          }
+        }, 0))
+        sumsNumber[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return this.amountFormat(prev + curr)
+          } else {
+            return prev
+          }
+        }, 0)
+      } else {
+        sums[index] = ''
+      }
+    })
+    this.receivableMoneySummarie = sumsNumber[4]
+    this.feesMoneySummarie = sumsNumber[5]
+    this.thisReduceMoneySummarie = sumsNumber[6]
+    this.thisFeesMoneySummarie = sumsNumber[7]
+    return sums
+  }
+
+  private setUnChangePayRecordTableColSpan () {
+    setTimeout(() => {
+      if (document.querySelector('#unChangePayRecordTable')) {
+        var current = (document as any)
+          .querySelector('#unChangePayRecordTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '6'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+        cell[5].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private setAbnormalTurnOperationTableColSpan () {
+    setTimeout(() => {
+      if (document.querySelector('#abnormalTurnOperationTable')) {
+        var current = (document as any)
+          .querySelector('#abnormalTurnOperationTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '4'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private acceptedUnChangeAmountChange (e: any, index:any) {
+    const item = this.unChangePayRecordList[index]
+    const maxNum = this.amountFormat(item.amount - item.refundAmount)
+    if (e.target.value > maxNum) {
+      e.target.value = maxNum
+      this.unChangePayRecordList[index].acceptedUnChangeAmount = maxNum
+    }
+  }
+
+  private reductionAmountChange (e: any, index:any) {
+    // 最大可分配金额 = 需分配金额 - 除了本行的该列的其他选中行的值之和
+    const allocatableMoney = (this.changeAmount.reductionAmount as any) - this.data.list.reduce((sum: any, v: any, idx: any) => { return idx !== index && this.selectedRow.map((v:any) => { return v.mark }).includes(this.data.list[idx].mark) ? sum + v.thisReduceMoney * 1 : sum }, 0)
+    const item = this.data.list[index]
+    // 本输入框可输入的最大可分配金额 = min(最大可分配金额, 应收)
+    const maxNum = this.amountFormat(item.receivableMoney < allocatableMoney ? item.receivableMoney : allocatableMoney)
+    if (e.target.value > maxNum) {
+      e.target.value = maxNum
+      this.data.list[index].thisReduceMoney = maxNum
+    }
+  }
+
+  private feesMoneyChange (e: any, index:any) {
+    // 最大可分配金额 = 需分配金额 - 除了本行的该列的其他选中行的值之和
+    const allocatableMoney = (this.changePayAmount as any) - this.data.list.reduce((sum: any, v: any, idx: any) => { return idx !== index && this.selectedRow.map((v:any) => { return v.mark }).includes(this.data.list[idx].mark) ? sum + v.thisFeesMoney * 1 : sum }, 0)
+    const item = this.data.list[index]
+    // 本输入框可输入的最大可分配金额 = min(最大可分配金额, 应收-已收)
+    const maxNum = this.amountFormat(item.receivableMoney - item.feesMoney < allocatableMoney ? item.receivableMoney - item.feesMoney : allocatableMoney)
+    if (e.target.value > maxNum) {
+      e.target.value = maxNum
+      this.data.list[index].thisFeesMoney = maxNum
+    }
+  }
+
+  private async getDetail () {
+    await studentApi('stuDetail', {
+      id: this.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.stuInfo = res.object.info
+      } else {
+        this.$message({
+          showClose: !0,
+          duration: 1500,
+          message: res.message,
+          type: 'warning'
+        })
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getStuInfo () {
+    this.loading = !0
+    await this.getDetail().then(async () => {
+      await this.getChangeAmount().then(async () => {
+        await this.getUnChangePayRecordItemList().then(async () => {
+          await this.getStuUnPayItemList()
+        })
+      })
+    }).then(() => {
+      this.fillInputUnChangePayRecordTable()
+      this.loading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getStuUnPayItemList () {
+    await studentApi('getStuUnPayItemList', {
+      stuId: (this.stuInfo as any).id,
+      schoolId: (this.newChangeData as any).schoolId,
+      gradeId: (this.newChangeData as any).gradeId,
+      subjectId: (this.newChangeData as any).subjectId
+    }).then((resStuUnPayItemList: any) => {
+      if (resStuUnPayItemList.code === 10000) {
+        this.data.list = resStuUnPayItemList.object.list.map((v: any, i: any) => {
+          v.id = v.feeItemId
+          v.edit = v.ifMust
+          v.thisFeesMoney = 0
+          v.thisReduceMoney = 0
+          v.mark = i
+          return v
+        })
+        this.emptyBlockShow = !(this.data.list.length > 0)
+      }
+      this.loading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getChangeAmount () {
+    await studentApi('getChangeAmount', {
+      stuId: (this.stuInfo as any).id
+    }).then((resChangeAmount: any) => {
+      if (resChangeAmount.code === 10000) {
+        this.changeAmount = resChangeAmount.object
+        // 当学生年级或者院校发生改变的时候，所有减免金额都不可结转。所有涉及减免金额的计算的减免金额都设为0，不可结转项的减免金额直接划为不可结转减免金额，总减免金额直接化为总不可结转减免金额
+        this.unChangeReductionAmount = !((this.newChangeData as any).schoolId + '' === (this.stuInfo as any).stuSchoolId + '' && (this.newChangeData as any).gradeId + '' === (this.stuInfo as any).stuGradeId + '') ? this.changeAmount.reductionAmount : 0
+        this.changeAmount.reductionAmount = this.unChangeReductionAmount === 0 ? this.changeAmount.reductionAmount : 0
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getUnChangePayRecordItemList () {
+    await studentApi('getUnChangePayRecordItemList', {
+      stuId: (this.stuInfo as any).id,
+      business: (this.newChangeData as any).business,
+      schoolId: (this.newChangeData as any).schoolId,
+      gradeId: (this.newChangeData as any).gradeId,
+      subjectId: (this.newChangeData as any).subjectId
+    }).then(async (resUnChangePayRecord: any) => {
+      if (resUnChangePayRecord.code === 10000) {
+        this.unChangePayRecordList = resUnChangePayRecord.object.list.map((v: any, i: any) => {
+          v.acceptedUnChangeAmount = 0
+          v.unChangeReductionAmount = this.unChangeReductionAmount === 0 ? 0 : v.reductionAmount
+          v.hasReductionAmount = v.reductionAmount
+          v.mark = i
+          return v
+        })
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  // 勾选项初始化方法
+  private setSelection () {
+    this.$nextTick(function () {
+      const selection:any = []
+      this.data.list.forEach((row:any) => {
+        if (row.ifMust && !(row.thisFeesMoney === 0 && row.thisReduceMoney === 0)) {
+          (this.$refs.abnormalTurnOperationTable as any).toggleRowSelection(row, true)
+          selection.push(row)
+        }
+      })
+    })
+  }
+
+  // 数据填充方法
+  private fillInputAbnormalTurnOperationTable () {
+    this.data.list.map((v: any) => {
+      v.thisFeesMoney = 0
+      v.thisReduceMoney = 0
+      return v
+    })
+    // 根据减免金额从大到小，即列表从下往上的减免必选项自动填充金额
+    let reductionAmount = this.changeAmount.reductionAmount
+    for (let i = this.data.list.length - 1; i >= 0; i--) {
+      const reduceMaxMoney = this.data.list[i].receivableMoney
+      if (this.data.list[i].ifMust) {
+        if (this.amountFormat(reductionAmount - reduceMaxMoney) > 0) {
+          this.data.list[i].thisReduceMoney = reduceMaxMoney
+          reductionAmount = this.amountFormat(reductionAmount - reduceMaxMoney)
+        } else {
+          this.data.list[i].thisReduceMoney = reductionAmount
+          break
+        }
+      }
+    }
+    // 根据收费金额从小到大，即列表从上往下的收费必选项自动填充金额
+    let amount = (this.changePayAmount as any)
+    for (let i = 0; i < this.data.list.length; i++) {
+      const fMM = this.amountFormat(this.data.list[i].receivableMoney - this.data.list[i].feesMoney - this.data.list[i].thisReduceMoney)
+      const feesMaxMoney = fMM > 0 ? fMM : 0
+      if (this.data.list[i].ifMust) {
+        if (this.amountFormat(amount - feesMaxMoney) > 0) {
+          this.data.list[i].thisFeesMoney = feesMaxMoney
+          amount = this.amountFormat(amount - feesMaxMoney)
+        } else {
+          this.data.list[i].thisFeesMoney = amount
+          break
+        }
+      }
+    }
+  }
+
+  private fillInputUnChangePayRecordTable () {
+    this.unChangePayRecordList.forEach((v: any, i: any) => {
+      if (v.isNowSub === 1) {
+        this.unChangePayRecordList[i].acceptedUnChangeAmount = this.amountFormat(v.amount - v.refundAmount)
+      }
+    })
+  }
+
+  private unChangePayRecordTableShow = !0
+
+  private abnormalTurnOperationTableShow = !1
+
+  private onStep1 () {
+    this.unChangePayRecordTableShow = !1
+    this.abnormalTurnOperationTableShow = !0
+    this.resetAbnormalTurnOperationTable()
+    this.active = 1
+  }
+
+  private onStep2 () {
+    this.abnormalTurnOperationTableShow = !1
+    this.unChangePayRecordTableShow = !0
+    this.resetUnChangePayRecordTable()
+    this.active = 0
+  }
+
+  private resetUnChangePayRecordTable () {
+    this.setUnChangePayRecordTableColSpan()
+    this.fillInputUnChangePayRecordTable()
+  }
+
+  private resetAbnormalTurnOperationTable () {
+    this.setAbnormalTurnOperationTableColSpan()
+    this.fillInputAbnormalTurnOperationTable()
+    this.setSelection()
+  }
+
+  private async onSubmit () {
+    if (this.changeAmount.reductionAmount > this.receivableMoneySummarie) {
+      this.$message({
+        showClose: !0,
+        duration: 1500,
+        message: '当前减免金额大于应收金额，无法结转',
+        type: 'warning'
+      })
+    } else {
+      this.submitLoading = !0
+      const _data = {
+        stuId: (this.stuInfo as any).id,
+        stuCode: (this.stuInfo as any).stuCode,
+        stuName: (this.stuInfo as any).stuName,
+        oriBusiness: (this.stuInfo as any).stuBusinessId,
+        oriSchoolId: (this.stuInfo as any).stuSchoolId,
+        oriSchoolName: (this.stuInfo as any).stuSchoolName,
+        oriSubjectId: (this.stuInfo as any).stuSubjectId,
+        oriSubjectName: (this.stuInfo as any).stuSubjectName,
+        oriGradeId: (this.stuInfo as any).stuGradeId,
+        oriGradeName: (this.stuInfo as any).stuGradeName,
+        business: (this.newChangeData as any).business,
+        schoolId: (this.newChangeData as any).schoolId,
+        schoolName: (this.newChangeData as any).schoolName,
+        subjectId: (this.newChangeData as any).subjectId,
+        subjectName: (this.newChangeData as any).subjectName,
+        gradeId: (this.newChangeData as any).gradeId,
+        gradeName: (this.newChangeData as any).gradeName,
+        unChangeAmount: this.unChangePayAmount * 100,
+        changeAmount: (this.changeAmount.reductionAmount + this.changePayAmount) * 100,
+        receivableAmount: this.receivableMoneySummarie,
+        payAmount: this.changePayAmount,
+        reductionAmount: this.changeAmount.reductionAmount,
+        arrearsAmount: this.receivableMoneySummarie ? this.amountFormat(this.receivableMoneySummarie - this.feesMoneySummarie - this.thisReduceMoneySummarie - this.thisFeesMoneySummarie) : 0,
+        accountAmount: this.amountFormat(this.changePayAmount - (this.thisFeesMoneySummarie ? this.thisFeesMoneySummarie : 0)),
+        unChangeReductionAmount: this.unChangeReductionAmount * 100,
+        items: this.selectedRow.map((v: any) => {
+          const _v = {
+            schoolYear: v.schoolYear,
+            feeStandardId: v.feeStandardId,
+            feeStandardCode: v.feeStandardCode,
+            feeItemId: v.feeItemId,
+            feeItemName: v.feeItemName,
+            feeMust: v.ifMust,
+            payAmount: v.thisFeesMoney,
+            reductionAmount: v.thisReduceMoney,
+            receivableAmount: v.receivableMoney,
+            arrearsAmount: v.receivableMoney - v.feesMoney - v.thisReduceMoney - v.thisFeesMoney
+          }
+          return _v
+        }),
+        unChangeItems: this.unChangePayRecordList.map((v: any) => {
+          const _v = {
+            business: v.business,
+            schoolId: v.schoolId,
+            schoolName: v.schoolName,
+            subjectId: v.subjectId,
+            subjectName: v.subjectName,
+            gradeId: v.gradeId,
+            gradeName: v.gradeName,
+            feeStandardId: v.feeStandardId,
+            feeStandardCode: v.feeStandardCode,
+            feeItemId: v.feeItemId,
+            feeItemName: v.feeItemName,
+            schoolYear: v.schoolYear,
+            amount: v.amount * 100,
+            payAmount: v.payAmount * 100,
+            refundAmount: v.refundAmount * 100,
+            reductionAmount: v.reductionAmount * 100,
+            settleAmount: v.settleAmount * 100,
+            unChangeAmount: v.acceptedUnChangeAmount * 100,
+            surplusRefundAmount: v.surplusRefundAmount * 100,
+            unChangeReductionAmount: v.unChangeReductionAmount * 100,
+            ifNowSub: v.isNowSub
+          }
+          return _v
+        })
+      }
+      if (this.changePayAmount === 0 && this.changeAmount.reductionAmount === 0 && this.amountFormat(this.changePayAmount - (this.thisFeesMoneySummarie ? this.thisFeesMoneySummarie : 0)) === 0) {
+        this.$confirm('当前结转金额为0，是否保存', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning',
+          customClass: 'message-top'
+        }).then(() => {
+          this.onClose()
+          this.$emit('changestubaseinfo')
+          this.submitLoading = !1
+        }).catch(() => {
+          this.$message({
+            showClose: !0,
+            duration: 1500,
+            type: 'info',
+            message: '已取消'
+          })
+          this.submitLoading = !1
+        })
+      } else {
+        await studentApi('changeInsert', {
+          ..._data
+        }).then((res: any) => {
+          if (res.code === 10000) {
+            this.onClose()
+            this.$emit('changestubaseinfo')
+          } else {
+            this.$alert(res.message, '提示', {
+              confirmButtonText: '确定',
+              customClass: 'message-top',
+              type: 'error'
+            })
+          }
+          this.submitLoading = !1
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+      }
+    }
+  }
+
+  private reset () {
+    this.active = 0
+    this.loading = !1
+    this.HistoryFlowDetailDialogVisible = !1
+    this.unChangePayRecordList = []
+    this.data = {
+      info: {},
+      list: []
+    }
+    this.changeAmount = {}
+    this.selectedRow = []
+    this.unChangePayAmount = 0
+    this.unChangePayRecordTableShow = !0
+    this.abnormalTurnOperationTableShow = !1
+    this.emptyBlockShow = !1
+    this.unChangeReductionAmount = 0
+  }
+
+  private constrantArray: any = {
+    business: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.business = await getConstantByGroup('business')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private onClose () {
+    this.reset()
+    this.$emit('update:visible', false)
+  }
+
+  private open () {
+    this.getConstrantList()
+    this.getStuInfo()
+    this.setUnChangePayRecordTableColSpan()
+    this.setAbnormalTurnOperationTableColSpan()
+  }
+}
+</script>
+
+<style lang='scss'>
+.abnormal-turn-operation-dialog-container{
+  .header{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid #e4e4e4;
+  }
+  .line-title {
+    padding: 15px 0;
+  }
+  .line {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    .hs-icon-user {
+        font-size: 22px;
+        font-weight: bold;
+        margin-right: 12px;
+        margin-top: 2px;
+    }
+    .student-name {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    &.auto .static-label{
+      width: auto;
+      font-size: 16px;
+      font-weight: bold;
+    }
+  }
+  section{
+    margin-top: 10px;
+  }
+  .static-item-container{
+    width: 25%;
+    .static-label{
+      width: 150px;
+    }
+  }
+  .status1{
+    color: rgb(19, 206, 102);
+  }
+  .status2{
+    color: #EA4335;
+  }
+  .link{
+    color: #409eff;
+  }
+  .empty-block{
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: #fff;
+    z-index: 999;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    span{
+      margin: 8px 0;
+      font-size: 16px;
+    }
+  }
+  .step{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .content{
+    position: relative;
+  }
+  .line2{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .el-steps--simple{
+    padding: 20px 30%;
+  }
+}
+</style>

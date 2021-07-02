@@ -1,0 +1,154 @@
+<template>
+  <div class="subjectmanage-container">
+    <header>
+      <hs-form ref="form" :model="form" label-width="108px" :inline="true">
+        <hs-form-item label="专业代码">
+          <hs-input
+            size="mini"
+            v-model="form.subjectCode"
+            placeholder="请输入专业代码"
+          ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="专业名称">
+          <hs-input
+            size="mini"
+            v-model="form.subjectName"
+            placeholder="请输入专业名称"
+          ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="学历层次">
+          <dict-select :filterable="!0" :val.sync="form.degree" group-name="subjectDegree"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="学制">
+          <dict-select :filterable="!0" :val.sync="form.len" group-name="subjectLen"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="状态">
+          <dict-select :val.sync="form.subjectState" comm-group-name="state"></dict-select>
+        </hs-form-item>
+        <hs-form-item>
+          <hs-button type="danger" @click="onQuery" size="mini">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['subjectState']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+      </simple-table>
+    </section>
+    <detail-dialog title="详情" :data="datailData" :visible.sync="visible" ></detail-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { subjectSearch, subjectDetail } from '@/api/base'
+@Component({
+  name: 'major-manamge',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class MajorManage extends Vue {
+  private form = {
+    subjectState: 1
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'subjectCode',
+    label: '专业代码'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业名称'
+  },
+  {
+    prop: 'degreeName',
+    label: '学历层次'
+  },
+  {
+    prop: 'lenName',
+    label: '学制'
+  },
+  {
+    prop: 'subjectState',
+    label: '状态'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await subjectSearch({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      subjectState: 1
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private datailData = {}
+
+  private async showDetail (row: any) {
+    await subjectDetail({ id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.datailData = {
+          subjectCode: res.object.subjectCode,
+          subjectName: res.object.subjectName,
+          degreeName: res.object.degreeName,
+          lenName: res.object.lenName
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

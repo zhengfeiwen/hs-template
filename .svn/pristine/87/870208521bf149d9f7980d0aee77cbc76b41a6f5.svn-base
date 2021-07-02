@@ -1,0 +1,104 @@
+<template>
+  <el-table
+    border
+    style="width: 100%"
+    :data="data"
+    :id="id"
+    >
+    <el-table-column :label="title" align="center">
+      <el-table-column v-for="(column, i) in cloumns" :key="i"
+      align="center"
+      :prop="column.prop"
+      :label="column.label"
+      :width="column.width">
+    </el-table-column>
+  </el-table-column>
+  </el-table>
+</template>
+
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import FileSaver from 'file-saver'
+import XLSX from 'xlsx'
+import XLSXS from 'xlsx-style'
+
+@Component({
+  name: 'export-template'
+})
+export default class ExportTemplate extends Vue {
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Array })
+  private data!: any[]
+
+  @Prop({ type: Array })
+  private cloumns!: any[]
+
+  private id = `export-table-${new Date().getTime()}`
+
+  public export () {
+    setTimeout(() => {
+      /* 从表生成工作簿对象 */
+      var wb = XLSX.utils.table_to_book(document.querySelector('#' + this.id))
+      wb = this.setExlStyle(wb)
+      /* 获取二进制字符串作为输出 */
+      var wbout = XLSX.write(wb, {
+        bookType: 'xlsx',
+        bookSST: true,
+        type: 'array'
+      })
+      try {
+        FileSaver.saveAs(
+          // Blob 对象表示一个不可变、原始数据的类文件对象。
+          // Blob 表示的不一定是JavaScript原生格式的数据。
+          // File 接口基于Blob，继承了 blob 的功能并将其扩展使其支持用户系统上的文件。
+          // 返回一个新创建的 Blob 对象，其内容由参数中给定的数组串联组成。
+          new Blob([wbout], { type: 'application/octet-stream' }),
+          // 设置导出文件名称
+          `${this.title}.xlsx`
+        )
+      } catch (e) {
+        if (typeof console !== 'undefined') { console.log(e, wbout) }
+      }
+      return wbout
+    }, 500)
+  }
+
+  private setExlStyle (data: any) {
+    const borderAll = { // 单元格外侧框线
+      top: {
+        style: 'thin'
+      },
+      bottom: {
+        style: 'thin'
+      },
+      left: {
+        style: 'thin'
+      },
+      right: {
+        style: 'thin'
+      }
+    }
+    data['!cols'] = []
+    for (const key in data) {
+      if (data[key] instanceof Object) {
+        data[key].s = {
+          border: borderAll,
+          alignment: {
+            horizontal: 'center', // 水平居中对齐
+            vertical: 'center'
+          },
+          font: {
+            sz: 11
+          },
+          bold: true,
+          numFmt: 0
+        }
+        data['!cols'].push({ wpx: 115 })
+      }
+    }
+    return data
+  }
+}
+</script>

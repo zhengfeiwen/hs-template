@@ -1,0 +1,26 @@
+
+.hs-form{
+  .hs-form-item{
+    margin-bottom: 12px !important;
+    margin-right: 12px !important;
+    .hs-form-item__label{
+      width: 108px;
+    }
+    .hs-form-item__content{
+      min-width: 198px !important;
+    }
+  }
+}
+header+section{
+  margin-top: 10px;
+}
+.hs-button--mini {
+  padding: 9px 10px !important;
+}
+.search .hs-form-item__content .hs-button{
+  margin-left: 96px;
+}
+.image-dashed{
+  border: 2px dashed #e6e6e6;
+  padding: 3px;
+}

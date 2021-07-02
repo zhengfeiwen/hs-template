@@ -1,0 +1,52 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+const studentConfig: any = {
+  stuList: { url: '/fcs/pre/stu/list' }, // 学生列表
+  stuListCount: { url: '/fcs/pre/stu/list/count' }, // 学生列表
+  stuDetail: { url: '/fcs/stu/common/detail' }, // 学生详情
+  stuInsert: { url: '/fcs/pre/stu/insert' }, // 学生新增
+  stuUpdate: { url: '/fcs/pre/stu/update' }, // 学生修改
+  stuInsertCheck: { url: '/fcs/stu/sch/roll/insert/check/unique' }, // 唯一性验证
+  stuEnable: { url: '/fcs/stu/sch/roll/enable' }, // 学生启用
+  stuDisable: { url: '/fcs/stu/sch/roll/disable' }, // 学生禁用
+  stuSourceTree: { url: '/fcs/studentSource/tree' }, // 学生来源下拉数据
+  insertExistence: { url: '/fcs/stu/sch/roll/data/call/back/list' }, // 新增回调生源列表
+  insertCheckVerifyStudentModify: { url: '/fcs/stu/sch/roll/insert/check/verify/student/modify' }, // 校验学生回调数据是否能修改-学生来源
+  resetPwd: { url: '/fcs/pre/stu/reset/pwd' }, // 重置密码
+  import: { url: '/fcs/pre/stu/batch/update/import/excel' }, // 批量导入修改
+  export: { url: '/fcs/pre/stu/export/list', responseType: 'blob', headers: { responseData: 'all' } }, // 导出列表
+  exportPhoto: { url: '/fcs/pre/stu/export/photo', responseType: 'blob', headers: { responseData: 'all' } }, // 导出照片
+  schRollUpdate: { url: '/fcs/pre/stu/update/roll' }, // 学生-批量修改学籍
+  stuCommonTesOrgId: { url: '/fcs/stu/common/query/tes/orgId' } // 学生-学生-根据用户ID获取招生组织ID..
+}
+
+export const api: any = {}
+
+Object.keys(studentConfig).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${studentConfig[key].url}`,
+      method: 'post',
+      data: params,
+      headers: studentConfig[key].headers,
+      responseType: studentConfig[key].responseType
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const studentApi = (key: any, params: any = {}) => {
+  if (api[key]) {
+    return api[key](params)
+  } else {
+    throw Error('不存在该方法：' + key)
+  }
+}

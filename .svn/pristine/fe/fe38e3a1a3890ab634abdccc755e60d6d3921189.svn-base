@@ -1,0 +1,207 @@
+<!-- 新增 -->
+<template>
+  <el-dialog custom-class="min-width-dialog-2" title="代理结算" :visible.sync="visibleSync" width="60%" :close-on-click-modal="!1" @open="open" append-to-body>
+    <div class="proxy-settlement-add-container">
+      <hs-table ref="hsTable" :data="data.list" :border="!0" header-row-class-name="header-style">
+        <hs-table-column prop="stuName" label="学生姓名"></hs-table-column>
+        <hs-table-column prop="schoolName" width="170" label="院校名称【学习类型】">
+          <template slot-scope="scope">
+            <span>{{scope.row.schoolName}}[{{scope.row.studyName}}]</span>
+          </template>
+        </hs-table-column>
+        <hs-table-column prop="gradeName" label="年级"></hs-table-column>
+        <hs-table-column prop="subjectName" label="专业"></hs-table-column>
+        <hs-table-column prop="schoolRollStatus" label="学籍状态">
+          <template slot-scope="scope">
+            <span>{{ getSchoolRollStatus(scope.row.schoolRollStatus) }}</span>
+          </template>
+        </hs-table-column>
+        <hs-table-column prop="acceptedMoney" label="已收金额">
+          <template slot-scope="scope">
+            {{ generatingThousandthPer(scope.row.acceptedMoney||0) }}
+          </template>
+        </hs-table-column>
+        <hs-table-column prop="settlementMoney" label="结算金额">
+          <template slot-scope="scope">
+            <el-input v-money size="mini" v-model.trim="data.list[scope.$index].settlementMoney"  @input.native="settlementMoneyChange($event, scope.$index)"></el-input>
+          </template>
+        </hs-table-column>
+      </hs-table>
+      <div class="footer">
+        <static-item label="结算时间" :width="300">
+          <el-date-picker
+            v-model="form.settlementTime"
+            :disabled="!0"
+            type="datetime"
+            format="yyyy-MM-dd HH:mm:ss"
+            size="mini"
+            value-format="timestamp"
+            placeholder="选择日期时间">
+          </el-date-picker>
+        </static-item>
+        <static-item label="结算备注" :width="300">
+          <el-input style="margin: 6px 0;" size="mini" v-model.trim="form.memo"></el-input>
+        </static-item>
+        <el-button type="danger" size="mini" :loading="saveLoading" icon="hs-icon-plus" @click="onSave">结算</el-button>
+        <el-button type="info" plain size="mini" @click="visibleSync = !1" icon="hs-icon-close" >关闭</el-button>
+      </div>
+    </div>
+  </el-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import { settlementApi } from '@/api/settlement'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+import { getConstantDict } from '@/utils/common'
+
+@Component({
+  name: 'feeitem-add',
+  components: {
+    StaticItem
+  }
+})
+
+export default class ProxySettlementAdd extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private generatingThousandthPer (value: any) {
+    return util.generatingThousandthPer(value)
+  }
+
+  @Prop({ type: Array })
+  private params!: []|any
+
+  private data: any = {
+    list: [],
+    totalCount: -1
+  }
+
+  private settlementMoneyChange (e: any, index:any) {
+    const item: any = this.data.list[index]
+    if (e.target.value > item.acceptedMoney) {
+      e.target.value = item.acceptedMoney
+      this.data.list[index].settlementMoney = item.acceptedMoney
+    }
+  }
+
+  private saveLoading = !1
+
+  private form = {
+    memo: '',
+    settlementTime: new Date().getTime()
+  }
+
+  private async onSave () {
+    const params: any = []
+    if (!this.form.settlementTime) {
+      this.$alert('请输入结算时间', { type: 'error' })
+      return
+    }
+    let flag = ''
+    this.data.list.map((v: any) => {
+      console.log(v.settlementMoney)
+      if (!v.settlementMoney || v.settlementMoney === '0') {
+        flag = '请输入结算金额'
+        return
+      }
+      params.push({
+        acceptedMoney: v.acceptedMoney,
+        businessId: v.businessId,
+        businessName: this.getBusinessId(v.businessId),
+        gradeId: v.gradeId,
+        gradeName: v.gradeName,
+        paperworkNumber: v.paperworkNumber,
+        phone: v.phone,
+        proId: v.recommendProxyId,
+        proName: v.userName,
+        schoolId: v.schoolId,
+        schoolName: v.schoolName,
+        settlementMoney: v.settlementMoney,
+        settlementState: v.settlementState,
+        stuId: v.id,
+        stuName: v.stuName,
+        studyId: v.studyId,
+        studyName: v.studyName,
+        subId: v.subjectId,
+        subName: v.subjectName,
+        memo: this.form.memo,
+        settlementTime: this.form.settlementTime
+      })
+    })
+    if (flag) {
+      this.$alert(flag, { type: 'error' })
+      return
+    }
+    await settlementApi('settlementUntreatedInsert', params).then((res: any) => {
+      if (res.code === 10000) {
+        this.$message.success({ message: res.message, showClose: !0, duration: 1500 })
+        this.visibleSync = !1
+        this.$listeners['save-back'] && this.$emit('save-back')
+      } else if (res.code === -10000) {
+        this.$alert(res.message, { type: 'error' })
+      }
+    })
+  }
+
+  private schoolRollStatus = []
+
+  private businessId = []
+
+  private getBusinessId (val: any) {
+    const name: any = this.businessId.filter((v: any) => v.key === val)
+    return name.length === 0 ? val : name[0].value
+  }
+
+  private getSchoolRollStatus (val: any) {
+    const name: any = this.schoolRollStatus.filter((v: any) => v.key === val)
+    return name.length === 0 ? val : name[0].value
+  }
+
+  private async open () {
+    // this.form = Object.assign(this.form)
+    const ids = this.params.map((v: any) => v.id).join(',')
+    this.schoolRollStatus = await getConstantDict('schoolRollStatus')
+    this.businessId = await getConstantDict('businessId')
+    await settlementApi('settlementUntreatedSettlementPage', {
+      ids: ids,
+      ...this.form
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data.list = res.object.list
+        this.data.totalCount = res.object.totalCount
+      }
+    })
+    this.form = {
+      memo: '',
+      settlementTime: new Date().getTime()
+    }
+  }
+}
+</script>
+<style lang="scss">
+  .proxy-settlement-add-container{
+    width: 100%;
+    min-width: 500px;
+    height: 100%;
+    .footer{
+      display: flex;
+      align-items: center;
+      background-color: #FAFAFA;
+      padding: 10px;
+      margin-top: -10px;
+      border-left: 1px solid #EBEEF5;
+      border-right: 1px solid #EBEEF5;
+      border-bottom: 1px solid #EBEEF5;
+      .el-button{
+        margin-left: 10px;
+      }
+    }
+  }
+  .el-picker-panel{
+    z-index: 2025 !important;
+  }
+</style>

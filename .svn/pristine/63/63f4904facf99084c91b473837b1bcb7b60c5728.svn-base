@@ -1,0 +1,226 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog custom-class="min-width-dialog-2 notice-catalog-dialog" append-to-body :title="'内容' + (data.type === 'add' ? '新增' : '编辑')" :visible.sync="visibleSync" width="60%" @close="onClose" :close-on-click-modal="!1" @open="open" >
+    <div class="notice-catalog-container">
+      <el-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+        <el-form-item label="标题名称" prop="catalogTitle">
+          <hs-input size="mini" v-model="form.catalogTitle" placeholder="请输入标题名称" ></hs-input>
+        </el-form-item>
+        <el-form-item label="信息来源" prop="source" class="line">
+          <hs-input size="mini" v-model="form.source" placeholder="请输入信息来源" ></hs-input>
+        </el-form-item>
+        <el-form-item label="内容" prop="catalogContent" class="area line">
+          <tinymce
+            v-if="visibleSync"
+            v-model="form.catalogContent"
+            :height="400"
+            @images-upload-handler="imagesUploadHandler"
+          />
+        </el-form-item>
+        <el-form-item label="附件" class="multi line">
+          <multi-file-upload ref="multiUpload" :loadData.sync="loadData"></multi-file-upload>
+        </el-form-item>
+        <el-form-item label="置顶" prop="top" class="line">
+          <el-radio-group v-model="form.top" size="mini">
+            <el-radio :label="1">是</el-radio>
+            <el-radio :label="0">否</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="发布" prop="open" class="line">
+          <el-radio-group v-model="form.open" size="mini">
+            <el-radio :label="1">是</el-radio>
+            <el-radio :label="0">否</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="danger" size="mini" @click="onSave">确认</hs-button>
+      <hs-button type="info" plain size="mini" @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import { settingApi } from '@/api/settingmanage'
+import setting from '@/settings'
+import Tinymce from '@/components/Tinymce/index.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import MultiFileUpload from '@/components/busi/custom/multifileupload.vue'
+
+@Component({
+  name: 'add-dialog',
+  components: {
+    DictSelect,
+    MultiFileUpload,
+    Tinymce
+  }
+})
+
+export default class AddDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: Object })
+  private data!: object|any
+
+  private form = {
+    id: '',
+    catalogTitle: '',
+    source: '',
+    catalogContent: '',
+    top: '',
+    open: '',
+    atts: []
+  }
+
+  private loadData: any = []
+
+  private rules = {
+    catalogTitle: [
+      { required: true, message: '请输入标题名称', trigger: 'blur' }
+    ],
+    source: [
+      { required: true, message: '请输入消息来源', trigger: 'blur' }
+    ],
+    catalogContent: [
+      { required: true, message: '请输入内容', trigger: 'blur' }
+    ],
+    top: [
+      { required: true, message: '请选择是否指定', trigger: 'blur' }
+    ],
+    open: [
+      { required: true, message: '请选择是否发布', trigger: 'blur' }
+    ]
+  }
+
+  private onSave () {
+    this.form.atts = (this.$refs.multiUpload as any).datas.filter((v: any) => v.status === 5).map((item: any) => {
+      return {
+        originalName: item.originalFileName,
+        currentName: item.newFileName,
+        path: item.savePath,
+        size: item.fileSize,
+        suffixName: item.fileSuffix
+      }
+    });
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      const data = this.data.type === 'add' ? {
+        catalogTitle: this.form.catalogTitle,
+        source: this.form.source,
+        catalogContent: this.form.catalogContent,
+        top: this.form.top,
+        open: this.form.open,
+        atts: this.form.atts,
+        catalogId: this.data.catalogId
+      } : {
+        id: this.form.id,
+        catalogTitle: this.form.catalogTitle,
+        source: this.form.source,
+        catalogContent: this.form.catalogContent,
+        top: this.form.top,
+        atts: this.form.atts,
+        catalogId: this.data.catalogId
+      }
+      if (this.data.type === 'add') {
+        await settingApi('addNotice', data).then((res: any) => {
+          if (res.code === 10000) {
+            this.$message.success({ message: res.message, showClose: !0, duration: 1500 })
+            this.visibleSync = !1
+            this.$listeners['save-back'] && this.$emit('save-back')
+          } else if (res.code === -10000) {
+            this.$alert(res.message, '提示', { type: 'error' })
+          }
+        })
+      } else {
+        await settingApi('updateNotice', data).then((res: any) => {
+          if (res.code === 10000) {
+            this.$message.success({ message: res.message, showClose: !0, duration: 1500 })
+            this.visibleSync = !1
+            this.$listeners['save-back'] && this.$emit('save-back')
+          } else if (res.code === -10000) {
+            this.$alert(res.message, '提示', { type: 'error' })
+          }
+        })
+      }
+    })
+  }
+
+  private async imagesUploadHandler (blobInfo: any, succFun: any, failFun: any) {
+    var formData: any = new FormData()
+    formData.append('parentFolder', 'lb/schoolDetail')
+    formData.append('file', blobInfo.blob(), blobInfo.filename())
+    await settingApi('fileUploadPost', formData).then((res: any) => {
+      if (res.success) {
+        const path = setting.ossIp + '/' + res.fileInfos[0].savePath
+        succFun(path)
+      } else {
+        failFun()
+      }
+    })
+  }
+
+  private open () {
+    if (this.data.type === 'add') {
+      this.form = {
+        id: '',
+        catalogTitle: '',
+        source: '',
+        catalogContent: '',
+        top: '',
+        open: '',
+        atts: []
+      }
+    } else {
+      console.log(this.form, this.data)
+      this.form = Object.assign(this.form, this.data)
+      this.loadData = this.data.atts.map((item: any) => {
+        return {
+          originalFileName: item.originalName,
+          newFileName: item.currentName,
+          savePath: item.path,
+          fileSize: item.size,
+          fileSuffix: item.suffixName,
+          name: item.originalName,
+          status: 5,
+          id: item.id
+        }
+      });
+      (this.$refs.multiUpload as any).datas = this.data.atts.map((item: any) => {
+        return {
+          originalFileName: item.originalName,
+          newFileName: item.currentName,
+          savePath: item.path,
+          fileSize: item.size,
+          fileSuffix: item.suffixName,
+          name: item.originalName,
+          status: 5,
+          id: item.id
+        }
+      })
+    }
+  }
+
+  private onClose () {
+    (this.$refs.multiUpload as any).clear()
+  }
+}
+</script>
+<style lang="scss">
+.notice-catalog-dialog{
+  .hs-dialog__body{
+    overflow: auto;
+    padding: 10px;
+    .notice-catalog-container{
+      width: 100%;
+      min-width: 600px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+}
+</style>

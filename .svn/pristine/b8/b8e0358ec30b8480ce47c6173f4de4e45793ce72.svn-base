@@ -1,0 +1,41 @@
+.grademanage-container{
+  height: 100%;
+  width: 90%;
+}
+
+.flex-column{
+  display: flex;
+  flex-direction: column;
+}
+
+.inner-sidebar {
+  border-right: 1px dashed #ddd;
+  margin-right:20px;
+  padding-right:20px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.bs-item{
+  padding:8px 10px;
+  border-radius: 4px;
+}
+
+.inner-sidebar .active {
+  background-color: #4285F4;
+  color: #fff;
+}
+
+.bs-item:hover {
+  background-color: #4285F4;
+  color: #fff;
+  
+} 
+
+.profile {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+

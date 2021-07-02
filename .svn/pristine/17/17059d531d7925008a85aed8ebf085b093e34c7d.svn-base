@@ -1,0 +1,96 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+const noticeConfig: any = {
+  catalogList: { url: '/fcs/noticeCatalog/list' }, // 栏目列表
+  catalogListCount: { url: '/fcs/noticeCatalog/count' }, // 栏目列表总数
+  catalogDetail: { url: '/fcs/noticeCatalog/detail' }, // 栏目详情
+  addCatalog: { url: '/fcs/noticeCatalog/add' }, // 新增
+  removeCatalog: { url: '/fcs/noticeCatalog/delete' }, // 删除
+  updateCatalog: { url: '/fcs/noticeCatalog/update' }, // 编辑
+  enableCatalog: { url: '/fcs/noticeCatalog/enable' }, // 启用
+  disableCatalog: { url: '/fcs/noticeCatalog/disable' }, // 禁用
+  enableNotice: { url: '/fcs/notice/enable' }, // 启用
+  disableNotice: { url: '/fcs/notice/disable' }, // 禁用
+  addNotice: { url: '/fcs/notice/add' }, // 新增
+  removeNotice: { url: '/fcs/notice/delete' }, // 删除
+  updateNotice: { url: '/fcs/notice/update' }, // 编辑
+  noticeOpen: { url: '/fcs/notice/open' }, // 发布
+  noticeList: { url: '/fcs/notice/list' }, // 栏目列表
+  noticeListCount: { url: '/fcs/notice/list/count' }, // 栏目列表总数
+  reportDirectionsInsertInput: { url: '/fcs/reportDirections/insertInput' }, // 报表说明新增
+  reportDirectionsDelete: { url: '/fcs/reportDirections/delete' }, // 报表说明删除
+  reportDirectionsUpdateInput: { url: '/fcs/reportDirections/updateInput' }, // 报表说明修改
+  reportDirectionsDetail: { url: '/fcs/reportDirections/detail' }, // 报表说明详情
+  reportOptionList: { url: '/fcs/reportDirections/getOptionKeyList' }, // 报表说明字典列表
+  reportOptionListCount: { url: '/fcs/reportDirections/getOptionKeyCount' }, // 报表说明总数
+  fileUploadPost: { url: '/core/oss/file/fileUploadPost' } // 上传文件
+}
+
+const optionConfig: any = {
+  optionDetail: { url: '/fcs/option/detail' }, // 字典详情
+  optionTypesTree: { url: '/fcs/option/optionTypesTree' }, // 字典类型树
+  optionList: { url: '/fcs/option/list' }, // 字典配置列表
+  optionListCount: { url: '/fcs/option/list/count' } // 字典配置列表总数
+}
+
+const centerUserConfig: any = {
+  centerUserInsert: { url: '/fcs/centerUser/insert' }, // 中心用户新增
+  centerUserDetail: { url: '/fcs/centerUser/detail' }, // 中心用户详情
+  centerUserDelete: { url: '/fcs/centerUser/delete' }, // 中心用户删除
+  centerUserListCount: { url: '/fcs/centerUser/list/count' }, // 中心用户列表条数
+  centerUserList: { url: '/fcs/centerUser/list' }, // 中心用户列表
+  centerUserUserList: { url: '/fcs/centerUser/user/list' } // 中心用户弹窗列表
+
+}
+
+const userConfig: any = {
+  removeUser: { url: '/fcs/user/delete' }, // 删除用户
+  userList: { url: '/fcs/user/list' }, // 用户列表
+  userListCount: { url: '/fcs/user/list/count' }, // 用户列表总数
+  addUser: { url: '/fcs/user/add' }, // 新增用户
+  optionListCount: { url: '/fcs/option/list/count' } // 字典配置列表总数
+}
+
+const studentConfig: any = {
+  payList: { url: '/fcs/pay/list' }, // 缴费列表
+  payListCount: { url: '/fcs/user/list/count' }, // 缴费总数
+  payDetail: { url: '/fcs/pay/detail' }, // 缴费详情
+  addUser: { url: '/fcs/user/add' }, // 新增用户
+  studentCenterUpdate: { url: '/fcs/student/center/update' } // 新增中心用户
+}
+
+const systemConfig: any = {
+  operateLogDetail: { url: '/core/operateLog/detail' }, // 获取日志详情
+  operateLogList: { url: '/core/operateLog/list' }, // 获取日志列表
+  operateLogListCount: { url: '/core/operateLog/count' }, // 获取日志总数
+  smsTemplateList: { url: '/core/operateLog/list' }, // 获取短信模板列表
+  smsTemplateDetail: { url: '/core/operateLog/detail' }, // 获取短信模板详情
+  smsTemplateListCount: { url: '/core/operateLog/count' } // 获取短信模板总数
+}
+
+const settingConfig: any = Object.assign(noticeConfig, optionConfig, userConfig, studentConfig, systemConfig, centerUserConfig)
+
+export const api: any = {}
+
+Object.keys(settingConfig).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${settingConfig[key].url}`,
+      method: 'post',
+      data: params,
+      headers: settingConfig[key].headers,
+      responseType: settingConfig[key].responseType
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const settingApi = (key: any, params: any = {}) => api[key](params)

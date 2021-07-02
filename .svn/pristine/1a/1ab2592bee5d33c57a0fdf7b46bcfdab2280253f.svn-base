@@ -1,0 +1,560 @@
+<template>
+  <div class="refund-container">
+    <header>
+      <div class="line">
+        <i class="hs-icon-user" /><span class="student-name">{{ data.info.stuName }}</span>
+      </div>
+      <div class="line">
+        <static-item label="性别" :width="300"> {{ data.info.stuSexName }}</static-item>
+        <static-item label="证件号" :width="300">{{ data.info.stuPaperworkNumber }}</static-item>
+      </div>
+      <div class="line">
+        <static-item label="学校" :width="300" align="flex-start"> {{ data.info.stuSchoolName }}</static-item>
+        <static-item label="专业" :width="300" align="flex-start">{{ data.info.stuSubjectName }}</static-item>
+        <static-item label="年级" :width="200" align="flex-start"> {{ data.info.stuGradeName }}</static-item>
+        <static-item label="学制" :width="200" align="flex-start"> {{ data.info.subLenName }}年</static-item>
+      </div>
+      <div class="line" v-show="action !== 'add'">
+        <static-item label="流水号" :width="300" align="flex-start"> {{ data.info.billNo }}</static-item>
+        <static-item label="创建时间" :width="300" align="flex-start">{{ data.info.createTime ? dayjs(data.info.createTime).format('YYYY年MM月DD日') : '' }}</static-item>
+        <static-item label="流水状态" :width="200" align="flex-start">
+          <span class="red" v-if="data.info.statusName === '无效'">{{ data.info.statusName }}</span>
+          <span class="green" v-if="data.info.statusName === '正常'">{{ data.info.statusName }}</span>
+        </static-item>
+        <static-item label="操作人" :width="200" align="flex-start"> {{ data.info.createName }}</static-item>
+      </div>
+    </header>
+    <section>
+      <div class="line">
+        <static-item required label="是否退学" :width="300">
+          <dict-select v-show="action !== 'view'" :val.sync="form.outSchool" comm-group-name="radio"></dict-select>
+          <span v-show="action === 'view'"> {{ form.outSchoolName }}</span>
+        </static-item>
+        <static-item required label="退费时间" :width="600">
+          <el-date-picker
+            v-show="action !== 'view'"
+            v-model="form.payTime"
+            type="datetime"
+            format="yyyy-MM-dd HH:mm"
+            value-format="timestamp"
+            size="mini"
+            placeholder="选择日期时间">
+          </el-date-picker>
+          <span v-show="action === 'view'"> {{ form.payTimeName }}</span>
+          <span v-show="action === 'view'"> {{ params.payTimeName ? dayjs(params.payTimeName).format('YYYY年MM月DD日') : '' }}</span>
+        </static-item>
+        <static-item label="缴费类型" :width="300" v-show="action !== 'add'">
+          <span> {{ data.info.payTypeName }}</span>
+        </static-item>
+      </div>
+      <div class="line">
+        <hs-table
+        ref="hsTable"
+        id="editAbletrendsTable"
+        :data="data.list"
+        :border="!0"
+        @selection-change="selectionChange"
+        header-row-class-name="header-style">
+          <hs-table-column v-if="action === 'add'" align="center" header-align="center" type="selection" width="55"></hs-table-column>
+          <hs-table-column prop="schoolName" label="缴费院校"></hs-table-column>
+          <hs-table-column prop="gradeName" label="缴费年级"></hs-table-column>
+          <hs-table-column prop="subjectName" label="缴费专业"></hs-table-column>
+          <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+          <hs-table-column prop="schoolYear" label="学年">
+            <template slot-scope="scope">
+              {{ schoolYearName(scope.row.schoolYear) }}
+            </template>
+          </hs-table-column>
+          <hs-table-column prop="feeMust" label="必缴">
+            <template slot-scope="scope">
+              {{ scope.row.feeMust === 1 ? '必缴' : '非必缴'}}
+            </template>
+          </hs-table-column>
+          <hs-table-column prop="receivableAmount" :formatter="formatterMoney" label="应收"></hs-table-column>
+          <hs-table-column prop="acceptedAmount" :formatter="formatterMoney" label="已收"></hs-table-column>
+          <hs-table-column prop="alreadyReductionAmount" :formatter="formatterMoney" label="已减免"></hs-table-column>
+          <hs-table-column prop="alreadyRefundAmount" :formatter="formatterMoney" label="已退"></hs-table-column>
+          <hs-table-column prop="refundAmount" label="本次退费">
+            <template slot-scope="scope">
+              <span v-if="!data.list[scope.$index].edit">{{ generatingThousandthPer(data.list[scope.$index].refundAmount) }}</span>
+              <hs-input v-else v-money size="mini" @input.native="refundAmountChange($event, scope.$index)" v-model.trim="data.list[scope.$index].refundAmount"></hs-input>
+            </template>
+          </hs-table-column>
+          <hs-table-column prop="yetf" label="余额退费">
+           <template slot="header">
+              <div style="text-align:center;">
+                <span>余额退费</span><br/>
+                <span style="opacity: 0.5;">{{ generatingThousandthPer(data.personInfo.balance || 0) }}</span>
+              </div>
+            </template>
+            <template slot-scope="scope">
+              <span v-if="!data.list[scope.$index].edit">{{ generatingThousandthPer(data.list[scope.$index].surplusRefundAmount) }}</span>
+              <hs-input :disabled="data.personInfo.balance === 0" v-else v-money size="mini" v-model.trim="data.list[scope.$index].feeRefundAmount" @input.native="feeRefundAmountChange($event, scope.$index)"></hs-input>
+            </template>
+          </hs-table-column>
+        </hs-table>
+      </div>
+      <div class="line auto">
+        <el-tooltip class="item" effect="dark" content="勾选项本次退款=本次退费+余额退费" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="本次退款" :width="350">{{ generatingThousandthPer(totalRefundAmount || 0) }}</static-item>
+        <el-tooltip class="item" effect="dark" content="本次退款后，个人账户余额剩余金额" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="剩余余额" :width="650">{{ generatingThousandthPer(totalFeeRefundAmount || 0)}}<span style="color: red;margin-left: 10px;">{{ enghtAccount(totalFeeRefundAmount) }}</span></static-item>
+      </div>
+      <div class="line">
+        <static-item label="单据摘要" :width="900" align="flex-start">
+          <hs-input v-if="action !== 'view'" size="mini" type="textarea" maxlength="200" show-word-limit :rows="3" resize="none" v-model="form.remark" placeholder="请输入单据摘要" ></hs-input>
+          <span v-else>{{ form.remark }}</span>
+        </static-item>
+      </div>
+    </section>
+    <footer><hs-button type="primary" v-show="action !== 'view'" :disabled="!data.list.length" @click="onFund" size="mini">{{ action === 'add' ? '退费' : '保存' }}</hs-button></footer>
+    <div class="empty-block" v-if="!1">
+      <img src="../../../../assets/statics/pics/empty.png" alt="">
+      <span>当前学年暂无可收的收费标准</span>
+      <hs-link type="primary" @click="toStandard">前往设置></hs-link>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+import dayjs from 'dayjs'
+import { collectApi } from '@/api/collect'
+import { commonApi } from '@/api/common'
+import { MessageBox } from 'element-ui'
+import { getConstantDict } from '@/utils/common'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'refund',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    Coverlap,
+    StaticItem,
+    DrawerSelect
+  }
+})
+export default class Refund extends Vue {
+  private dayjs = dayjs
+
+  private activeName = 'reduce'
+
+  get isEmpty () {
+    return this.data.list.length === 0
+  }
+
+  private params: any = util.getRouterParams()
+
+  private form: any = {
+    outSchool: 0,
+    remark: '',
+    payTime: (new Date()).getTime()
+  }
+
+  get action () {
+    return this.params.action
+  }
+
+  private generatingThousandthPer (num: any) {
+    return util.generatingThousandthPer(num)
+  }
+
+  get totalRefundAmount () {
+    return this.selectedRow.reduce((sum: any, i: any, v: any) => sum + v[i].refundAmount * 1, 0) + this.selectedRow.reduce((sum: any, i: any, v: any) => sum + v[i].feeRefundAmount * 1, 0) || this.data.info.refundAmount
+  }
+
+  private enghtAccount (account: any) {
+    return account < 0 ? '个人账户余额小于本次余额退款总额，请重新输入' : ''
+  }
+
+  get totalFeeRefundAmount () {
+    return this.data.personInfo.balance - this.selectedRow.reduce((sum: any, i: any, v: any) => sum + v[i].feeRefundAmount * 1, 0) || this.data.info.feeRefundAmount
+  }
+
+  private data: any = {
+    info: {},
+    personInfo: {},
+    list: [{}]
+  }
+
+  private selectedRow = []
+
+  private schoolYears = []
+
+  private schoolYearName (schoolYear: any) {
+    const res: any = this.schoolYears.filter((v: any) => v.key === schoolYear)
+    if (res.length > 0) return res[0].value
+    return schoolYear
+  }
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+    const len = this.data.list.length
+    for (let i = 0; i < len; i++) {
+      this.data.list[i].edit = !1
+      this.selectedRow.map((v: any) => {
+        if (v.id === this.data.list[i].id) {
+          this.data.list[i].edit = !0
+        }
+      })
+    }
+  }
+
+  private refundAmountChange (e: any, index:any) {
+    const item = this.data.list[index]
+    if (e.target.value > (item.acceptedAmount - item.alreadyRefundAmount)) {
+      e.target.value = item.acceptedAmount - item.alreadyRefundAmount
+      this.data.list[index].refundAmount = item.acceptedAmount - item.alreadyRefundAmount
+    }
+  }
+
+  private feeRefundAmountChange (e: any, index:any) {
+    const max = this.data.list.reduce((sum: any, i: any, v: any) => {
+      if (i !== index) return sum + v[i].feeRefundAmount * 1
+      return sum
+    }, 0)
+    if (e.target.value > (this.data.personInfo.balance - max)) {
+      e.target.value = this.data.personInfo.balance - max
+      this.data.list[index].refundAmount = this.data.personInfo.balance - max
+    }
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private async initAddData () {
+    await commonApi('stuCommonDetail', {
+      id: this.params.id
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data.info = res.object.info
+      }
+    })
+    await commonApi('stuCommonAccountDetail', {
+      id: this.params.id
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data.personInfo = res.object.info
+      }
+    })
+    await collectApi('getRefundItem', {
+      stuId: this.params.id
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data.list = res.object.list.map((v: any) => {
+          v.feeRefundAmount = ''
+          return v
+        })
+        // this.$nextTick(() => {
+        //   if (this.action !== 'view') {
+        //     this.data.list.forEach((row: any) => {
+        //       row.feeMust && (this.$refs.hsTable as any).toggleRowSelection(row)
+        //     })
+        //   }
+        // })
+      }
+    })
+  }
+
+  private async initDetailData () {
+    await commonApi('stuCommonDetail', {
+      id: this.params.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data.info = {
+          refundAmount: '',
+          feeRefundAmount: '',
+          remark: '',
+          ...res.object.info
+        }
+      }
+    })
+    await commonApi('stuCommonAccountDetail', {
+      id: this.params.stuId
+    }).then(async (res: any) => {
+      if (res.code === 10000) {
+        this.data.personInfo = res.object.info
+        const feesStatus = await getConstantByGroup('feesStatus')
+        await collectApi('refundAlreadyProcessDetail', {
+          id: this.params.id
+        }).then((res: any) => {
+          if (res.code === 10000) {
+            const outSchoolDict: any = {
+              0: '否',
+              1: '是'
+            }
+            // eslint-disable-next-line eqeqeq
+            const feesStatusList = feesStatus.filter((v: any) => v.key == res.object.info.status)
+            this.data.info.refundAmount = res.object.info.refundAmount // 退款金额
+            this.data.info.feeRefundAmount = this.data.personInfo.balance - res.object.info.accountPay // 剩余余额
+            this.data.info.remark = res.object.info.remark
+            this.data.info.billNo = res.object.info.billNo
+            this.data.info.createName = res.object.info.createName
+            this.data.info.createTime = res.object.info.createTime
+            this.data.info.statusName = feesStatusList.length > 0 ? feesStatusList[0].value : res.object.info.status
+            this.data.info.payTypeName = res.object.info.payTypeName
+            this.data.list = res.object.info.items
+            this.form.remark = res.object.info.remark
+            this.form.outSchool = res.object.info.outSchool
+            this.form.outSchoolName = outSchoolDict[res.object.info.outSchool]
+            this.form.payTime = res.object.info.payTime
+            this.form.payTimeName = res.object.info.payTime ? dayjs(res.object.info.payTime).format('YYYY年MM月DD日') : ''
+            this.$nextTick(() => {
+              if (this.action !== 'view') {
+                this.data.list.forEach((row: any) => {
+                  row.feeMust && (this.$refs.hsTable as any).toggleRowSelection(row)
+                })
+              }
+            })
+          }
+        })
+      }
+    })
+  }
+
+  private async refundAlreadyProcessInsert () {
+    const params: any = {
+      balance: this.data.personInfo.balance || 0,
+      items: []
+    }
+    this.selectedRow.map((v: any) => {
+      params.items.push({
+        stuId: this.data.info.id,
+        stuCode: this.data.info.stuCode,
+        stuName: this.data.info.stuName,
+        business: this.params.business,
+        schoolId: this.data.info.schoolId,
+        schoolName: this.data.info.schoolName,
+        subjectId: this.data.info.subjectId,
+        subjectName: this.data.info.subjectName,
+        gradeId: this.data.info.gradeId,
+        gradeName: this.data.info.gradeName,
+        feeStandardCode: v.feeStandardCode,
+        feeStandardId: v.feeStandardId,
+        feeItemId: v.feeItemId,
+        feeItemName: v.feeItemName,
+        feeRangeBegin: v.feeRangeBegin,
+        feeRangeEnd: v.feeRangeEnd,
+        feeMust: v.feeMust,
+        acceptedAmount: v.acceptedAmount,
+        receivableAmount: v.receivableAmount,
+        alreadyReductionAmount: v.alreadyReductionAmount,
+        refundAmount: v.refundAmount * 1,
+        alreadyRefundAmount: v.alreadyRefundAmount,
+        arrearsAmount: v.arrearsAmount,
+        balanceAmount: v.feeRefundAmount * 1
+      })
+    })
+    await collectApi('refundUntreatedVerifyRefund', params).then(async (res: any) => {
+      if (res.code === -10000) {
+        if (res.message) {
+          const message = res.message.replace(/;/g, '</br>')
+          this.$alert(message, { type: 'error', dangerouslyUseHTMLString: !0 })
+        }
+      } else {
+        const paramsInsert: any = {
+          stuId: this.data.info.id,
+          outSchool: this.form.outSchool,
+          payRecord: {
+            stuId: this.data.info.id,
+            stuCode: this.data.info.stuCode,
+            stuName: this.data.info.stuName,
+            business: this.params.business,
+            schoolId: this.data.info.stuSchoolId,
+            schoolName: this.data.info.stuSchoolName,
+            subjectId: this.data.info.stuSubjectId,
+            subjectName: this.data.info.stuSubjectName,
+            gradeId: this.data.info.stuGradeId,
+            gradeName: this.data.info.stuGradeName,
+            schoolYear: this.data.info.schoolYear,
+            payTime: this.form.payTime,
+            refundAmount: this.totalRefundAmount * 100,
+            remark: this.form.remark,
+            accountAmount: this.totalFeeRefundAmount * 100,
+            items: []
+          }
+        }
+        this.selectedRow.map((v: any) => {
+          paramsInsert.payRecord.items.push({
+            stuId: this.data.info.id,
+            stuCode: this.data.info.stuCode,
+            stuName: this.data.info.stuName,
+            business: this.params.business,
+            schoolId: this.data.info.stuSchoolId,
+            schoolName: this.data.info.stuSchoolName,
+            gradeId: this.data.info.stuGradeId,
+            gradeName: this.data.info.stuGradeName,
+            subjectId: this.data.info.stuSubjectId,
+            subjectName: this.data.info.stuSubjectName,
+            feeStandardId: v.feeStandardId,
+            feeStandardCode: v.feeStandardCode,
+            feeItemId: v.feeItemId,
+            feeItemName: v.feeItemName,
+            feeMust: v.feeMust,
+            receivableAmount: v.receivableAmount * 100,
+            acceptedAmount: v.acceptedAmount * 100,
+            alreadyreductionAmount: v.alreadyreductionAmount * 100 || 0,
+            alreadyRefundAmount: v.alreadyRefundAmount * 100,
+            arrearsAmount: v.arrearsAmount * 100,
+            refundAmount: v.refundAmount * 100,
+            surplusRefundAmount: v.feeRefundAmount * 100
+          })
+        })
+        await collectApi('refundAlreadyProcessInsert', paramsInsert).then((res: any) => {
+          if (res.code === 10000) {
+            MessageBox.confirm(
+              res.message, '成功', {
+                confirmButtonText: '确定',
+                showCancelButton: !1
+              }).then(async () => {
+              this.$router.back()
+            })
+          } else {
+            this.$alert(res.message, { type: 'error' })
+          }
+        })
+      }
+    })
+  }
+
+  private async refundAlreadyProcessUpdate () {
+    await collectApi('refundAlreadyProcessUpdate', {
+      remark: this.form.remark,
+      payTime: this.form.payTime,
+      outSchool: this.form.outSchool,
+      id: this.params.id,
+      stuId: this.params.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        MessageBox.confirm(
+          res.message, '成功', {
+            confirmButtonText: '确定',
+            showCancelButton: !1
+          }).then(async () => {
+          this.$router.back()
+        })
+      } else {
+        this.$alert(res.message, { type: 'error' })
+      }
+    })
+  }
+
+  private onFund () {
+    if (this.totalFeeRefundAmount < 0) {
+      this.$alert('个人账户余额小于本次余额退款总额，请重新输入', { type: 'error' })
+      return
+    }
+    if (this.form.outSchool !== 0 && this.form.outSchool !== 1) {
+      this.$alert('请选择是否退学', { type: 'error' })
+      return
+    }
+    if (this.form.payTime === -1) {
+      this.$alert('请选择退费时间', { type: 'error' })
+      return
+    }
+    this.action === 'add' && this.refundAlreadyProcessInsert()
+    this.action === 'edit' && this.refundAlreadyProcessUpdate()
+  }
+
+  private async initData () {
+    this.params = util.getRouterParams()
+    this.form = {
+      outSchool: 0,
+      remark: '',
+      payTime: (new Date()).getTime()
+    }
+    this.schoolYears = await getConstantDict('schoolYear')
+    this.action === 'add' && this.initAddData()
+    this.action !== 'add' && this.initDetailData()
+  }
+
+  async activated () {
+    await this.initData()
+  }
+
+  async mounted () {
+    await this.initData()
+  }
+}
+</script>
+<style lang="scss">
+  .refund-container{
+    width: calc(100% - 10px);
+    height: 100%;
+    header{
+      width: 100%;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #e4e4e4;
+      .line{
+        .hs-icon-user{
+          font-size: 22px;
+          font-weight: bold;
+          margin-right: 12px;
+          margin-top: 2px;
+        }
+        .student-name{
+          font-size: 20px;
+          font-weight: bold;
+        }
+        width: 100%;
+        display: flex;
+        margin-bottom: 12px;
+      }
+    }
+    section{
+      width: 100%;
+      .line{
+        display: flex;
+        align-items: center;
+        margin-top: 20px;
+        .header-style{
+          th {
+            background-color: #F5F7FA;
+          }
+        }
+        .hs-icon-question{
+          font-size: 16px;
+          margin-right: 6px;
+        }
+        &.auto .static-label{
+          font-size: 16px;
+          font-weight: bold;
+        }
+      }
+    }
+    footer{
+      width: 100%;
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+    }
+    .empty-block{
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-color: #fff;
+      z-index: 999;
+      height: 100%;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      span{
+        margin: 8px 0;
+        font-size: 16px;
+      }
+    }
+  }
+</style>

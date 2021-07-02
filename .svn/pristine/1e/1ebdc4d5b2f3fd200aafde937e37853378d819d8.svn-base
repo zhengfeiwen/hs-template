@@ -1,0 +1,36 @@
+.abnormal-turn-record-container{
+    .ul-info{
+        display: flex;
+        list-style:none;
+        li{
+            margin-right: 30px;
+            color: #606266;
+            font-weight: bold;
+            font-size: 14px;
+            span{
+                color: #333;
+                font-weight: normal;
+            }
+        }
+    }
+    .title-2{
+        margin-top: 30px;
+        color: #333;
+    }
+    .ul-money{
+        padding-left: 0;
+        display: flex;
+        list-style:none;
+        justify-content: space-between;
+        li{
+            margin-right: 30px;
+            color: #606266;
+            font-weight: bold;
+            font-size: 14px;
+            span{
+                color: #333;
+                font-weight: normal;
+            }
+        }
+    }
+}

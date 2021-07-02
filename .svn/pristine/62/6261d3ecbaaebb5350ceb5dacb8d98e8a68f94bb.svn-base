@@ -1,0 +1,305 @@
+<template>
+  <div class="abnormal-turn-operation-dialog-container">
+    <el-dialog title="异动结转操作" :visible.sync="visible" :before-close="onClose" @open="open()">
+      <div class="header">
+        <div class="line">
+          <i class="hs-icon-user" /><span class="student-name">{{ stuInfo.stuName }}</span>
+        </div>
+        <div class="line">
+          <static-item label="业务">{{ stuInfo.businessName }}</static-item>
+          <static-item label="所在学校">{{ stuInfo.stuSchoolName }}</static-item>
+          <static-item label="所在年级">{{ stuInfo.stuGradeName }}</static-item>
+          <static-item label="所在专业">{{ stuInfo.stuSubjectName }}</static-item>
+          <hs-button class="btn" type="text" size="small" @click="HistoryFlowDetailDialogVisible = true">历史流水记录></hs-button>
+        </div>
+        <div class="line">
+          第一步：请先确认不可结转金额：<span></span>元
+          <hs-button type="text" size="mini" @click="CannotTurnAmountDialogVisible = true">查看详情></hs-button>
+        </div>
+      </div>
+      <div>
+        <div class="line-title">第二步：分配可结转金额</div>
+        <hs-table
+          ref="hsTable"
+          id="abnormalTurnOperationTable"
+          style="flex: inherit;"
+          :data="data.list"
+          :border="!0"
+          :show-summary="!0"
+          :summary-method="getSummaries"
+          @selection-change="selectionChange"
+          header-row-class-name="header-style">
+            <hs-table-column align="center" header-align="center" type="selection"></hs-table-column>
+            <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+            <hs-table-column prop="schoolYearName" label="学年"></hs-table-column>
+            <hs-table-column prop="ifMust" label="必缴">
+              <template slot-scope="scope">
+                {{ scope.row.ifMust === 1 ? '必缴' : '非必缴' }}
+              </template>
+            </hs-table-column>
+            <hs-table-column prop="receivableAmount" :formatter="formatterMoney" label="应收"></hs-table-column>
+            <hs-table-column prop="reduceMoney" label="本次减免" width="155">
+              <template slot-scope="scope">
+                <span v-if="!data.list[scope.$index].edit">{{ generatingThousandthPer(data.list[scope.$index].reduceMoney) }}</span>
+                <hs-input v-else style="width: 120px;" @input.native="reductionAmountChange($event, scope.$index)" v-money size="mini" @click="change(scope.$index)" v-model.trim="data.list[scope.$index].reduceMoney"></hs-input>
+              </template>
+            </hs-table-column>
+        </hs-table>
+      </div>
+      <div class="empty-block" v-if="data.list.length == 0">
+        <img src="../../../../../../../assets/statics/pics/empty.png" alt="">
+        <span>当前学年暂无可收的收费标准</span>
+        <hs-link type="primary" @click="toStandard">前往设置></hs-link>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="onClose">关  闭</el-button>
+      </div>
+    </el-dialog>
+    <HistoryFlowDetailDialog :stuId="stuId" :visible.sync="HistoryFlowDetailDialogVisible"></HistoryFlowDetailDialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { studentApi } from '@/api/studentcenter'
+import StaticItem from '@/components/busi/staticitem.vue'
+import HistoryFlowDetailDialog from '@/views/student/studentmanage/StudentBaseInfo/BaseInfo/ChangeStuBaseInfoDialog/AbnormalTurnOperationDialog/historyFlowDetailDialog.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable,
+    StaticItem,
+    HistoryFlowDetailDialog
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private amount = 0
+
+  private loading = !1
+
+  private HistoryFlowDetailDialogVisible = !1
+
+  private CannotTurnAmountDialogVisible = !1
+
+  private stuInfo: any = {}
+
+  private data:any = {
+    info: {},
+    list: []
+  }
+  
+  private selectedRow = []
+
+  private generatingThousandthPer (num: any) {
+    return util.generatingThousandthPer(num)
+  }
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+    const len = this.data.list.length
+    for (let i = 0; i < len; i++) {
+      this.data.list[i].edit = !1
+      this.selectedRow.map((v: any) => {
+        if (v.id === this.data.list[i].id) {
+          this.data.list[i].edit = !0
+        }
+      })
+    }
+  }
+
+  private getSummaries (param: any) {
+    const { columns } = param
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计（勾选项）'
+        return
+      }
+      const values = this.selectedRow.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0))
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      if (this.$el.querySelector('#abnormalTurnOperationTable')) {
+        var current = (this.$el as any)
+          .querySelector('#abnormalTurnOperationTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '4'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private reductionAmountChange (e: any, index:any) {
+    const item = this.data.list[index]
+    if (e.target.value > item.receivableAmount) {
+      e.target.value = item.receivableAmount
+      this.data.list[index].reduceMoney = item.receivableAmount
+    }
+  }
+
+  private async getStuInfo () {
+    this.loading = !0
+    await studentApi('stuDetail', {
+      id: this.stuId
+    }).then(async (resStu: any) => {
+      if (resStu.code === 10000) {
+        this.stuInfo = resStu.object.info
+        await studentApi('getUnChangePayRecordItemList', {
+          stuId: this.stuId,
+          schoolId: resStu.object.info.stuSchoolId,
+          gradeId: resStu.object.info.stuGradeId,
+          subjectId: resStu.object.info.stuSubjectId
+        }).then((resUnChangePayRecord: any) => {
+          if (resUnChangePayRecord.code === 10000) {
+            console.log(resUnChangePayRecord)
+            this.getStuUnPayItemList()
+            this.getChangeAmount()
+          }
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+        this.loading = !1
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getStuUnPayItemList () {
+    await studentApi('getStuUnPayItemList', {
+      stuId: this.stuId
+    }).then(async (resStuUnPayItemList: any) => {
+      if (resStuUnPayItemList.code === 10000) {
+        this.data.list = resStuUnPayItemList.object.list.map((v: any) => {
+          v.id = v.feeItemId
+          return v
+        })
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+  
+  private async getChangeAmount () {
+    await studentApi('getChangeAmount', {
+      stuId: this.stuId,
+      schoolId: this.stuInfo.stuSchoolId,
+      gradeId: this.stuInfo.stuGradeId,
+      subjectId: this.stuInfo.stuSubjectId
+    }).then(async (resChangeAmount: any) => {
+      if (resChangeAmount.code === 10000) {
+        
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  private open () {
+    this.getStuInfo()
+    this.setColSpan()
+  }
+}
+</script>
+
+<style lang='scss'>
+.abnormal-turn-operation-dialog-container{
+    .header{
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #e4e4e4;
+    }
+    .line-title {
+      padding: 15px 0;
+    }
+    .line {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        .hs-icon-user {
+            font-size: 22px;
+            font-weight: bold;
+            margin-right: 12px;
+            margin-top: 2px;
+        }
+        .student-name {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        &.auto .static-label{
+          font-size: 16px;
+          font-weight: bold;
+        }
+    }
+    section{
+      margin-top: 10px;
+    }
+    .static-item-container{
+      width: 25%;
+      .static-label{
+        width: 150px;
+      }
+    }
+  .status1{
+    color: rgb(19, 206, 102);
+  }
+  .status2{
+    color: #EA4335;
+  }
+  .link{
+    color: #409eff;
+  }
+  .empty-block{
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: #fff;
+    z-index: 999;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    span{
+      margin: 8px 0;
+      font-size: 16px;
+    }
+  }
+}
+</style>

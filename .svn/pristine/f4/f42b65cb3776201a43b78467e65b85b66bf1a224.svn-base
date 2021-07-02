@@ -1,0 +1,70 @@
+<template>
+  <hs-dialog title="选择学生" :visible.sync="visibleSync" width="50%" :close-on-click-modal="!1">
+    <div class="batchimport-addstudent-container">
+      <el-transfer :titles="['收费学生名单', '本次收费学生名单']" filterable v-model="value" :data="data"></el-transfer>
+    </div>
+    <template slot="footer">
+      <hs-button type="primary" @click="onSubmit" size="mini" icon="hs-icon-plus">添加</hs-button>
+      <hs-button @click="visibleSync = !1">关闭</hs-button>
+    </template>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+import { Vue, Component, PropSync, Prop } from 'vue-property-decorator'
+@Component({
+  name: 'batchimport-addstudent'
+})
+export default class BatchimportAddstudent extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: Array })
+  private data!: any[]
+
+  private value = []
+
+  // private datas: any[] = [{
+  //   key: 1,
+  //   label: '郑斐文1',
+  //   studentName: '郑斐文1',
+  //   stuPaperworkNumber: 1111111111
+  // },
+  // {
+  //   key: 2,
+  //   label: '郑斐文2',
+  //   studentName: '郑斐文2',
+  //   stuPaperworkNumber: 22222222222
+  // },
+  // {
+  //   key: 3,
+  //   label: '郑斐文3',
+  //   studentName: '郑斐文3',
+  //   stuPaperworkNumber: 3333333333
+  // },
+  // {
+  //   key: 4,
+  //   label: '郑斐文4',
+  //   studentName: '郑斐文4',
+  //   stuPaperworkNumber: 444444444
+  // }]
+
+  private onSubmit () {
+    const res = this.data.filter((v: any) => this.value.includes(v.key as never))
+    this.$listeners.save && this.$emit('save', res)
+    this.visibleSync = !1
+  }
+}
+</script>
+<style lang="scss">
+  .batchimport-addstudent-container{
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    .el-transfer{
+      margin: auto auto;
+    }
+  }
+</style>

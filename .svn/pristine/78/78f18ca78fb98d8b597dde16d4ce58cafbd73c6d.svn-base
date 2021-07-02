@@ -1,0 +1,64 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+/**
+*学生列表
+* @param data
+*/
+export const stuList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/sch/roll/list`,
+    method: 'post',
+    data
+  })
+
+/**
+*学生列表
+* @param data
+*/
+export const stuDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/sch/roll/detail`,
+    method: 'post',
+    data
+  })
+
+/**
+*缴费流水列表
+* @param data
+*/
+export const feesList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/fees/list`,
+    method: 'post',
+    data
+  })
+
+/**
+*缴费流水明细列表
+* @param data
+*/
+export const feesItemList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/fees/item/list`,
+    method: 'post',
+    data
+  })
+
+/**
+*缴费流水列表总数
+* @param data
+*/
+export const feesListCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/fees/list/count`,
+    method: 'post',
+    data
+  })
+export const studentcenter = {
+  stuList: stuList,
+  stuDetail: stuDetail,
+  feesList: feesList,
+  feesItemList: feesItemList,
+  feesListCount: feesListCount
+}

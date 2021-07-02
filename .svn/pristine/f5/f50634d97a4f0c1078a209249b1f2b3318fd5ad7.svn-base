@@ -1,0 +1,126 @@
+import { VuexModule, Module, Action, Mutation, getModule } from 'vuex-module-decorators'
+import { getRightInfo } from '@/api/right'
+import { LocalStorage } from '@/utils/storage'
+import { RightRoute, UserInfo, OpType } from '@/utils/types'
+import store from '@/store'
+import { UserModule } from './user'
+
+export interface IRightInfo {
+  accessroutes: RightRoute[]
+  rpcUser: object
+  userInfo: UserInfo
+  opRight: OpType
+  rpcUserRoleNames: String
+  rpcRightMarkSet: any[]
+}
+
+@Module({ dynamic: true, store, name: 'right' })
+class Right extends VuexModule implements IRightInfo {
+  KEYS = {
+    ROUTE: 'route_key',
+    RPC_USER: 'rpc_key',
+    USER_INFO: 'user_info_key',
+    OP_RIGHT: 'op_right',
+    RPC_USER_ROLE_NAMES: 'rpc-user-role-names',
+    RPC_RIGHT_MARK_SET: 'rpc-right-mark-set'
+  }
+
+  rpcUserRoleNames = ''
+
+  rpcRightMarkSet = []
+
+  accessroutes: RightRoute[] = []
+  rpcUser: object = {}
+  userInfo: UserInfo = {
+    id: -1,
+    userName: '',
+    userAlias: ''
+  }
+
+  opRight = {
+    opType: '',
+    opCode: ''
+  }
+
+  get userinfo () {
+    return this.userInfo
+  }
+
+  @Mutation
+  private SET_RPC_USER_ROLE_NAMES (rpcUserRoleNames: string) {
+    this.rpcUserRoleNames = rpcUserRoleNames
+  }
+
+  @Mutation
+  private SET_RPC_RIGHT_MARK_SET (rpcRightMarkSet: []) {
+    this.rpcRightMarkSet = rpcRightMarkSet
+  }
+
+  @Mutation
+  private SET_ACCESSROUTES (accessroutes: RightRoute[]) {
+    this.accessroutes = accessroutes
+  }
+
+  @Mutation
+  private SET_RPCUSER (rpcUser: object) {
+    this.rpcUser = rpcUser
+  }
+
+  @Mutation
+  private SET_USERINFO (userInfo: UserInfo) {
+    this.userInfo = userInfo
+  }
+
+  @Mutation
+  private SET_OPRIGHT (opRight: OpType) {
+    this.opRight = opRight
+  }
+
+  @Action
+  public async getRightInfo () {
+    // 判断是否已经获取过权限了
+    const routes = LocalStorage.getObj(this.KEYS.ROUTE)
+    if (!routes || routes.length === 0) {
+      const userRpcId = LocalStorage.getObj('user_rpc_id')
+      const sysTypes = LocalStorage.getObj('sysTypes')
+      if (!userRpcId && !sysTypes) {
+        await UserModule.Login({ userAlias: '', password: '' })
+      }
+      const res: any = await getRightInfo({})
+      if (res.code === -10000) {
+        // 清空重新登录
+        UserModule.ResetToken()
+        return
+      }
+      this.SET_ACCESSROUTES(res.object.accessRoutes)
+      this.SET_RPCUSER(res.object.rpcUser)
+      this.SET_USERINFO(res.object.rpcUser)
+      this.SET_RPC_USER_ROLE_NAMES(res.object.rpcUserRoleNames)
+      this.SET_RPC_RIGHT_MARK_SET(res.object.rpcRightMarkSet)
+
+      LocalStorage.setObj(this.KEYS.ROUTE, res.object.accessRoutes)
+      LocalStorage.setObj(this.KEYS.RPC_USER, res.object.rpcUser)
+      LocalStorage.setObj(this.KEYS.USER_INFO, res.object.rpcUser)
+      LocalStorage.setObj(this.KEYS.RPC_USER_ROLE_NAMES, res.object.rpcUserRoleNames)
+      LocalStorage.setObj(this.KEYS.RPC_RIGHT_MARK_SET, res.object.rpcRightMarkSet)
+    } else {
+      this.SET_ACCESSROUTES(routes)
+      this.SET_RPCUSER(LocalStorage.getObj(this.KEYS.RPC_USER))
+      this.SET_USERINFO(LocalStorage.getObj(this.KEYS.USER_INFO))
+      this.SET_RPC_RIGHT_MARK_SET(LocalStorage.getObj(this.KEYS.RPC_RIGHT_MARK_SET))
+      this.SET_RPC_USER_ROLE_NAMES(LocalStorage.getObj(this.KEYS.RPC_USER_ROLE_NAMES))
+    }
+  }
+
+  @Action
+  public ResetAccessRoutes () {
+    this.SET_ACCESSROUTES([])
+    this.SET_RPCUSER([])
+    this.SET_USERINFO({ id: NaN, userName: '', userAlias: '' })
+    LocalStorage.remove(this.KEYS.ROUTE)
+    LocalStorage.remove(this.KEYS.RPC_USER)
+    LocalStorage.remove(this.KEYS.USER_INFO)
+  }
+}
+
+export const RightModule = getModule(Right)

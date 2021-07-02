@@ -1,0 +1,83 @@
+<template>
+  <div class="home_container">
+    <!-- <hs-button type="danger" @click="clear">清空测试数据</hs-button> -->
+  </div>
+</template>
+
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
+
+@Component({
+  name: 'dashboard'
+})
+export default class extends Vue {
+  private clear () {
+    console.log(localStorage)
+    localStorage.clear()
+    this.$message('清空缓存测试数据成功')
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.home_container{
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  .home_recommend{
+    height: 35%;
+    width: 100%;
+    .el-carousel__item{
+      height: 100%;
+      color: #475669;
+      font-size: 14px;
+      opacity: 0.75;
+      padding: 7px;
+      .el-card{
+        height: 100%;
+        width: 80%;
+        box-sizing: border-box;
+        margin: 5px;
+        img{
+          height: 100%;
+          width: 100%;
+          box-sizing: border-box;
+          padding: 2px;
+        }
+      }
+    }
+  }
+  .home_desc{
+    height: 10%;
+    width: 100%;
+  }
+  .home_body{
+    height: 55%;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content:space-between;
+    .el-card{
+      width: calc(33% - 1px);
+      .api{
+        width: 100%;
+        .el-input{
+          width: 100% !important;
+          .el-input__suffix{
+            user-select: none;
+          }
+        }
+      }
+    }
+  }
+}
+.hs-button{
+  height: 60px;
+  width: 160px;
+  margin: auto auto;
+  font-size: 20px;
+}
+</style>

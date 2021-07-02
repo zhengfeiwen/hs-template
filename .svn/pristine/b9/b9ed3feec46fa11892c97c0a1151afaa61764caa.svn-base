@@ -1,0 +1,48 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+const apiUrl = setting.apiUrl
+
+/**
+* 字典详情
+* @param data
+*/
+export const optionDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/option/detail`,
+    method: 'post',
+    data
+  })
+
+/**
+* 字典类型树
+* @param data
+*/
+export const optionTypesTree = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/option/optionTypesTree`,
+    method: 'post',
+    data
+  })
+
+/**
+* 字典配置列表
+* @param data
+*/
+export const optionList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/option/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 字典配置总数
+* @param data
+*/
+export const optionCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/option/count`,
+    method: 'post',
+    data
+  })

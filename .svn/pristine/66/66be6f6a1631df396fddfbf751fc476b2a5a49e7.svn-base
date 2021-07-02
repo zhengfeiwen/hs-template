@@ -1,0 +1,67 @@
+<template>
+  <simple-container-column @on-query="onQuery" @on-reset="onReset" :menuName="menuName" :custom="!0" :prop="{ 'left-size': 'mini'}">
+    <template slot="left">
+      <drawer-select :data="businessList" :value.sync="curBusiness"></drawer-select>
+    </template>
+    <component v-if="flag" :is="componentId" :params="{ business: { ...curBusiness } }"></component>
+  </simple-container-column>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Watch } from 'vue-property-decorator'
+import SimpleContainerColumn from '@/components/container/column/index.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import FullReduce from './fulltime/index.vue'
+import PartReduce from './parttime/index.vue'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'fcsReduceManageMenu',
+  components: {
+    DrawerSelect,
+    SimpleContainerColumn,
+    FullReduce,
+    PartReduce
+  }
+})
+export default class ReduceManage extends Vue {
+  private businessList = []
+
+  // 重新渲染组件
+  private flag = !0
+
+  private businessDict: any = {
+    1: 'FullReduce',
+    2: 'PartReduce',
+    3: 'FullReduce',
+    4: 'FullReduce',
+    5: 'FullReduce'
+  }
+
+  @Watch('curBusiness', { deep: !0 })
+  private curBusinessChange () {
+    this.flag = !1
+    setTimeout(() => {
+      this.flag = !0
+    })
+  }
+
+  get componentId () {
+    return this.businessDict[this.curBusiness.key] || 'FullTime'
+  }
+
+  private curBusiness: any = {}
+
+  private async initData () {
+    this.businessList = await getConstantByGroup('businessType', { update: !0 })
+    this.curBusiness = this.businessList[0]
+  }
+
+  async activated () {
+    await this.initData()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

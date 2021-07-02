@@ -1,0 +1,222 @@
+<template>
+  <div class="reduce-container">
+    <header>
+      <div class="line">
+        <i class="hs-icon-user" /><span class="student-name">郑斐文{{ data.userName }}</span>
+      </div>
+      <div class="line">
+        <static-item label="性别" :width="300"> {{ data.sexName }}</static-item>
+        <static-item label="证件号" :width="300">{{ data.cardId }}</static-item>
+      </div>
+      <div class="line">
+        <static-item label="学校" :width="300"> {{ data.schoolName }}</static-item>
+        <static-item label="专业" :width="300" align="flex-start"> dasdasdasdasdasdasdasdasdasdasdasdasdasdasdas{{ data.subjectName }}</static-item>
+        <static-item label="年级" :width="200"> {{ data.gradeName }}</static-item>
+        <static-item label="学制" :width="200"> {{ data.lenName }}</static-item>
+      </div>
+    </header>
+    <section>
+      <div class="line">
+        <static-item label="减免时间" :width="600">
+          <el-date-picker
+            v-model="form.date"
+            type="datetime"
+            size="mini"
+            placeholder="选择日期时间">
+          </el-date-picker>
+        </static-item>
+      </div>
+      <div class="line">
+         <hs-table
+            id="editAbletrendsTable"
+            :data="list"
+            :border="!0"
+            :show-summary="!0"
+            :summary-method="getSummaries"
+            style="width: 100%"
+            header-row-class-name="header-style">
+              <hs-table-column align="center" header-align="center" type="selection" width="55"></hs-table-column>
+              <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+              <hs-table-column prop="len" label="学年"></hs-table-column>
+              <hs-table-column prop="must" label="必缴"></hs-table-column>
+              <hs-table-column prop="ys" :formatter="formatterMoney" label="应收"></hs-table-column>
+              <hs-table-column prop="yjm" :formatter="formatterMoney" label="已减免"></hs-table-column>
+              <hs-table-column prop="jm" label="本次减免">
+                <template slot-scope="scope">
+                  <hs-input v-money size="mini" @click="change(scope.$index)" v-model.trim="list[scope.$index].jm"></hs-input>
+                </template>
+              </hs-table-column>
+          </hs-table>
+      </div>
+      <div class="line"></div>
+      <div class="line"></div>
+    </section>
+    <footer><hs-button type="primary" @click="onQuery" size="mini">减免</hs-button></footer>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'reduce',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    Coverlap,
+    StaticItem,
+    DrawerSelect
+  }
+})
+export default class Reduce extends Vue {
+  private activeName = 'reduce'
+
+  private data: any = util.getRouterParams()
+
+  private form = {
+    data: '',
+    workInfo: {}
+  }
+
+  private list = [
+    {
+      feeItemName: '收费项目',
+      len: '',
+      must: '',
+      ys: '',
+      yjm: 11111,
+      jm: 100
+    },
+    {
+      feeItemName: '收费项目',
+      len: '',
+      must: '',
+      ys: '',
+      yjm: 2,
+      jm: 100
+    },
+    {
+      feeItemName: '收费项目',
+      len: '',
+      must: '',
+      ys: '',
+      yjm: 3,
+      jm: 100
+    },
+    {
+      feeItemName: '收费项目',
+      len: '',
+      must: '',
+      ys: '',
+      yjm: 4,
+      jm: 100
+    }
+  ]
+
+  private getSummaries (param: any) {
+    const { columns, data } = param
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计（勾选项）'
+        return
+      }
+      const values = data.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0))
+      } else {
+        sums[index] = ''
+      }
+    })
+
+    return sums
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      if (this.$el.querySelector('#editAbletrendsTable')) {
+        var current = (this.$el as any)
+          .querySelector('#editAbletrendsTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '5'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private change (row: any) {
+    // do
+  }
+
+  mounted () {
+    this.setColSpan()
+  }
+}
+</script>
+<style lang="scss">
+  .reduce-container{
+    width: calc(100% - 10px);
+    height: 100%;
+    header{
+      width: 100%;
+      height: 120px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #d6d6d6;
+      .line{
+        .hs-icon-user{
+          font-size: 22px;
+          font-weight: bold;
+          margin-right: 12px;
+          margin-top: 2px;
+        }
+        .student-name{
+          font-size: 20px;
+          font-weight: bold;
+        }
+        width: 100%;
+        display: flex;
+        margin-bottom: 12px;
+      }
+    }
+    section{
+      width: 100%;
+      height: calc(100% - 180px);
+      .line{
+        .header-style{
+          th {
+            background-color: #d6d6d6;
+          }
+        }
+      }
+    }
+    footer{
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+  }
+</style>

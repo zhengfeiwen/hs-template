@@ -1,0 +1,60 @@
+import { RouteConfig } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+const Student: RouteConfig = {
+  path: '/student',
+  component: Layout,
+  redirect: 'noredirect',
+  name: 'fcsEnrollmentMenu',
+  meta: {
+    permission: 'fcsEnrollmentMenu',
+    title: 'student',
+    icon: 'peoples'
+  },
+  children: [{
+    path: 'student-search/index',
+    component: () => import(/* webpackChunkName: "studentSearch" */ '@/views/student/studentsearch/index.vue'),
+    name: 'fcsStudentSearchMenu',
+    meta: {
+      title: 'studentsearch',
+      permission: 'fcsStudentSearchMenu',
+      noCache: true,
+      icon: 'people'
+    }
+  },
+  {
+    path: 'student-manage/detail',
+    component: () => import(/* webpackChunkName: "reducePay" */ '@/views/student/studentmanage/index.vue'),
+    name: 'studentdetail',
+    meta: {
+      title: 'studentdetail',
+      activeMenu: '/student/student-search/index',
+      hidden: !0,
+      noCache: true
+    }
+  },
+  {
+    path: 'prestudent-search/index',
+    component: () => import(/* webpackChunkName: "studentSearch" */ '@/views/student/prestudentsearch/index.vue'),
+    name: 'fcsStudentPrepSearchMenu',
+    meta: {
+      title: 'studentmanage',
+      permission: 'fcsStudentPrepSearchMenu',
+      noCache: true,
+      icon: 'peoples'
+    }
+  },
+  {
+    path: 'prestudent-manage/detail',
+    component: () => import(/* webpackChunkName: "reducePay" */ '@/views/student/prestudentmanage/index.vue'),
+    name: 'prestudentdetail',
+    meta: {
+      title: 'prestudentdetail',
+      activeMenu: '/student/prestudent-search/index',
+      hidden: !0,
+      noCache: true
+    }
+  }]
+}
+
+export default Student

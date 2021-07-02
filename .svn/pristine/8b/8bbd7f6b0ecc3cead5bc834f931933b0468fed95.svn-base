@@ -1,0 +1,294 @@
+<template>
+  <div class="flowdetail-container">
+    <tree-table row-ey="id" :tableData="tableData" :columns="columns" @expand-change="expandChange" :children-columns="childrenColumns" @query="onQuery" :loading="loading">
+      <template slot="custom_statusName" slot-scope="{ scope }">
+        <span class="t" v-if="scope.row.status === 1">{{ scope.row.statusName }}</span>
+        <span class="f" v-else>{{ scope.row.statusName }}</span>
+      </template>
+      <template slot="custom_payType" slot-scope="{ scope }">
+        <span>{{ payTypeKeyToName(scope.row.payType)}}</span>
+      </template>
+      <template slot="operator" slot-scope="{ scope }">
+        <hs-button
+         v-permission="['fcsStuPayInfo']"
+          size="mini"
+          type="text"
+          @click="showDetail(scope.$index, scope.row)">详情</hs-button>
+      </template>
+    </tree-table>
+    <CollectDetail :flowId="flowId" :isAmateur="isAmateur" :visible.sync="DetailVisible.CollectDetailVisible"></CollectDetail>
+    <RefundDetail :flowId="flowId" :isAmateur="isAmateur" :visible.sync="DetailVisible.RefundDetailVisible"></RefundDetail>
+    <PrepaidDetail :flowId="flowId" :isAmateur="isAmateur" :visible.sync="DetailVisible.PrepaidDetailVisible"></PrepaidDetail>
+    <ReduceDetail :flowId="flowId" :isAmateur="isAmateur" :visible.sync="DetailVisible.ReduceDetailVisible"></ReduceDetail>
+  </div>
+</template>
+
+<script lang="ts">
+import dayjs from 'dayjs'
+import util from '@/utils/busi/util'
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import { cellCallbackParams } from 'hs-elementui/src/utils/types/table'
+import CollectDetail from '@/views/collect/components/flowdetail/collectDetail/index.vue'
+import RefundDetail from '@/views/collect/components/flowdetail/refundDetail/index.vue'
+import PrepaidDetail from '@/views/collect/components/flowdetail/prepaidDetail/index.vue'
+import ReduceDetail from '@/views/collect/components/flowdetail/reduceDetail/index.vue'
+import { studentApi } from '@/api/studentcenter'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import TreeTable from '@/components/busi/table/tree-table.vue'
+@Component({
+  name: 'demo20',
+  components: {
+    TreeTable,
+    CollectDetail,
+    PrepaidDetail,
+    ReduceDetail,
+    RefundDetail
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private flowId = ''
+
+  private isAmateur = !1
+
+  private DetailVisible = {
+    CollectDetailVisible: false,
+    RefundDetailVisible: false,
+    PrepaidDetailVisible: false,
+    ReduceDetailVisible: false
+  }
+
+  private loading = !1
+
+  private pagerCount = 5
+
+  private tableData: any = {
+    list: [],
+    totalCount: -1
+  }
+
+  private columns = [{
+    prop: 'billNo',
+    label: '流水号'
+  }, {
+    prop: 'tradeTypeName',
+    label: '类型'
+  }, {
+    prop: 'money',
+    label: '本次金额'
+  }, {
+    prop: 'payType',
+    label: '收款方式',
+    custom: !0
+  }, {
+    prop: 'payTime',
+    label: '缴费时间'
+  }, {
+    prop: 'createTime',
+    label: '创建时间'
+  }, {
+    prop: 'createName',
+    label: '操作人'
+  }, {
+    prop: 'statusName',
+    label: '流水状态',
+    custom: !0
+  }, {
+    prop: 'remark',
+    label: '摘要'
+  }]
+
+  private childrenColumns = [{
+    prop: 'schoolName',
+    label: '缴费院校'
+  }, {
+    prop: 'businessName',
+    label: '业务'
+  }, {
+    prop: 'gradeName',
+    label: '年级'
+  }, {
+    prop: 'subjectName',
+    label: '缴费专业'
+  }, {
+    prop: 'feeItemName',
+    label: '收费项目'
+  }, {
+    prop: 'schoolYearName',
+    label: '学年'
+  }, {
+    prop: 'payAmount',
+    label: '本次收费'
+  }, {
+    prop: 'reductionAmount',
+    label: '本次减免'
+  }, {
+    prop: 'refundAmount',
+    label: '本次退费'
+  }]
+
+  private typeToName = ['收款', '退款', '预付款', '减免']
+
+  private typeToNameEn = ['payAmount', 'refundAmount', 'payAmount', 'reductionAmount']
+
+  private moneyFormatter (row: any, column: any) {
+    return util.generatingThousandthPer([row[column.property]])
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private constrantArray: any = {
+    tradeType: [],
+    feesStatus: [],
+    business: [],
+    payType: [],
+    schoolYear: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.tradeType = await getConstantByGroup('tradeType')
+    this.constrantArray.feesStatus = await getConstantByGroup('feesStatus')
+    this.constrantArray.business = await getConstantByGroup('business')
+    this.constrantArray.payType = await getConstantByGroup('payType')
+    this.constrantArray.schoolYear = await getConstantByGroup('schoolYear')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private payTypeKeyToName (payType: string) {
+    const payTypeArr: any[] = []
+    payType.split('|').forEach((item: string) => {
+      payTypeArr.push(this.getValueByConstrantArray('payType', Number(item)))
+    })
+    return payTypeArr.join('/')
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    await studentApi('feesList', {
+      stuId: this.stuId,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.tableData.list = res.object.list.map((v: any) => {
+        v.tradeTypeName = this.getValueByConstrantArray('tradeType', v.tradeType)
+        v.money = util.generatingThousandthPer(v[this.typeToNameEn[v.tradeType - 1]])
+        v.moneyName = this.typeToNameEn[v.tradeType - 1]
+        v.statusName = v.status === 1 ? '正常' : v.status === 2 ? '作废' : '已结转'
+        v.payTime = v.payTime ? this.timeConvert(v.payTime) : v.payTime
+        v.createTime = v.createTime ? this.timeConvert(v.createTime) : v.createTime
+        v.children = []
+        return v
+      })
+      this.tableData.totalCount = res.object.totalCount
+      this.loading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  // 页数变化
+  private handleSizeChange (val: any) {
+    this.pagination.pageSize = val
+    this.pagination.currentPage = this.pagination.currentPage || 1
+    this.onQuery()
+  }
+
+  // 翻页
+  private handleCurrentChange (val: any) {
+    this.pagination.currentPage = val
+    this.pagination.pageSize = this.pagination.pageSize || 10
+    this.onQuery()
+  }
+
+  private tableRowClassName (table: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { row, rowIndex } = table
+    if (rowIndex === 1) {
+      return 'warning-row'
+    } else if (rowIndex === 3) {
+      return ''
+    }
+    return ''
+  }
+
+  private indexMethod (index: number) {
+    return index * 2
+  }
+
+  private filterHandler (value: any, row: any, column: any) {
+    const property = column.property
+    return row[property] === value
+  }
+
+  private async expandChange (row: any) {
+    await studentApi('feesItemList', { recordId: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.tableData.list.map((v: any, index: any) => {
+          if (v.id === row.id) {
+            res.object.list.map((v: any) => {
+              v.payAmount = util.generatingThousandthPer(v.payAmount)
+              v.reductionAmount = util.generatingThousandthPer(v.reductionAmount)
+              v.refundAmount = util.generatingThousandthPer(v.refundAmount)
+              this.tableData.list[index].children.push(v)
+            })
+          }
+        })
+      }
+    })
+  }
+
+  private async showDetail (index: any, row: any) {
+    // await gradeDetail({ id: row.id }).then((res: any) => {
+    //   if (res.code === 10000) {
+    //     this.CollectDetailVisible = !0
+    //     this.detailData = {
+    //       gradeCode: res.object.gradeCode,
+    //       gradeName: res.object.gradeName,
+    //       gradeState: res.object.gradeState
+    //     }
+    //   }
+    // })
+    this.flowId = row.id
+    this.isAmateur = row.business === 2 ? !0 : !1
+    if (row.tradeType === 1) {
+      this.DetailVisible.CollectDetailVisible = !0
+    } else if (row.tradeType === 2) {
+      this.DetailVisible.RefundDetailVisible = !0
+    } else if (row.tradeType === 3) {
+      this.DetailVisible.PrepaidDetailVisible = !0
+    } else if (row.tradeType === 4) {
+      this.DetailVisible.ReduceDetailVisible = !0
+    }
+  }
+
+  private arraySpanMethod = function (cellCallbackParams: cellCallbackParams) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { row, column, rowIndex, columnIndex } = cellCallbackParams
+    return row.hasChildren ? (columnIndex === 0 ? [1, 9] : columnIndex === 9 ? [1, 1] : [0, 0]) : (columnIndex === 9 ? [0, 0] : [1, 1])
+  }
+
+  private timeConvert (timeStamp: number) {
+    return dayjs(timeStamp).format('YYYY-MM-DD HH:mm')
+  }
+
+  mounted () {
+    this.getConstrantList()
+    this.loading = !0
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

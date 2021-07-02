@@ -1,0 +1,33 @@
+<template>
+  <div class="detail-container">
+    detail
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+@Component({
+  name: 'detail',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    Coverlap,
+    DrawerSelect
+  }
+})
+export default class Detail extends Vue {
+  private activeName = 'reduce'
+}
+</script>
+<style lang="scss">
+  .detail-container{
+    width: 100%;
+    height: 100%;
+  }
+</style>

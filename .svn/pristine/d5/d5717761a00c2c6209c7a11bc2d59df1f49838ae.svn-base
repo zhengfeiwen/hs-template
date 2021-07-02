@@ -1,0 +1,157 @@
+<template>
+  <div class="multi-file-upload-container"
+    v-loading="loading"
+    element-loading-text="文件上传中"
+    element-loading-spinner="hs-icon-loading"
+  >
+    <hs-plupload
+      ref="uploader"
+      browseButton="browseButton_multi"
+      :url="postUrl"
+      @inputUploader="inputUploader"
+      :headers="{ token: token, accept: 'application/json' }"
+      :multipart-params="{'parentFolder': 'fcs/notice/'+ nowTime()}"
+      :FileUploaded="FileUploaded"
+      :UploadComplete="UploadComplete"
+      :Error="error"
+      :filters="{
+        max_file_size : '20mb'
+      }"
+    />
+    <hs-button type="danger" :disabled="loading" size="mini" id="browseButton_multi">选择文件</hs-button>
+    <hs-button type="danger" :disabled="!allowUpload" size="mini" @click="up.start();loading = !0">开始上传</hs-button>
+    <hs-tag
+      :type="tag.status !== 5 ? 'info' : 'success'"
+      class="single-file"
+      :title="tag.name"
+      v-for="tag in datas"
+      :key="tag.id"
+      :closable="!0"
+      @close="deleteFile(tag.id, tag.name)">
+      <i class="hs-icon-document">&nbsp;{{ tag.name }}</i><span v-if="tag.status === 4" style="color: red;">失败</span><span v-if="tag.status === 5" style="color: #67c23a;">成功</span>
+    </hs-tag>
+  </div>
+</template>
+<script lang='ts'>
+import { UserModule } from '@/store/modules/user'
+import { Component, Prop, Vue, Watch } from 'vue-property-decorator'
+import dayjs from 'dayjs'
+
+@Component({
+  name: 'multi-file-upload'
+})
+export default class MulitiFileUpload extends Vue {
+  @Prop({ type: Array })
+  private loadData!: object|any
+
+  get token () {
+    return UserModule.token
+  }
+
+  get postUrl () {
+    return `${process.env.VUE_APP_BASE_API}api/core/oss/file/fileUploadPost`
+  }
+
+  private loading = !1
+
+  private serverConfigUrl = ''
+  private files = []
+  private up: any = {}
+  public datas:any[] = []
+  get status () {
+    const files = this.files.length > 0 ? this.files[0] : null
+    return files ? (files as any).status : null
+  }
+
+  private nowTime () {
+    return dayjs().format('YYYYMMDD')
+  }
+
+  @Watch('files', { deep: !0 })
+  private handler () {
+    const names = this.datas.map((v: any) => v.name)
+    this.files.map((e: any) => {
+      if (!names.includes(e.name)) {
+        this.datas.push({
+          name: e.name,
+          size: e.size,
+          status: e.status,
+          id: e.id
+        })
+      }
+    })
+  }
+
+  get allowUpload () {
+    if (!this.datas || this.datas.length === 0) return !1
+    return this.datas.filter((v) => v.status !== 5).length
+  }
+
+  private FileUploaded (up: any, files: any, res: any) {
+    const response = JSON.parse(res.response)
+    if (response.success) {
+      const _files: any = response.fileInfos
+      this.datas.map((e: any) => {
+        if (_files[0].originalFileName === e.name) {
+          e.status = files.status
+          e.originalFileName = _files[0].originalFileName
+          e.newFileName = _files[0].newFileName
+          e.savePath = _files[0].savePath
+          e.fileSize = _files[0].fileSize
+          e.fileSuffix = _files[0].fileSuffix
+        }
+      })
+    }
+  }
+
+  private UploadComplete () {
+    this.loading = !1
+  }
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private deleteFile (id: any) {
+    const file = this.up.getFile(id)
+    !!file && this.up.removeFile(file)
+    this.datas = this.datas.filter((v: any) => v.id !== id)
+  }
+
+  private error (up: any, res: any) {
+    if (res.code === -600) {
+      this.$message.error({ message: '上传文件大小不能超过20MB!', showClose: !0 })
+    } else {
+      this.$message.error({ message: res.message, showClose: !0 })
+    }
+  }
+
+  public clear () {
+    this.datas.map((v: any) => {
+      const file = this.up.getFile(v.id)
+      !!file && this.up.removeFile(file)
+    })
+    this.datas = []
+  }
+
+  mounted () {
+    this.datas = this.loadData
+  }
+}
+</script>
+<style lang="scss">
+.multi-file-upload-container{
+  width: 100% !important;
+  height: calc(100% - 20px);
+  padding: 10px;
+  overflow: auto;
+  .single-file{
+    width: 100%;
+    display: flex;
+    margin-top: 6px;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+</style>

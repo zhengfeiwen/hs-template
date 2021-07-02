@@ -1,0 +1,20 @@
+// 创建随机的36位token
+const randomToken = function () {
+  return Math.random().toString(36).substr(2, 5) + new Date().getTime() + Math.random().toString(36).substr(2, 6)
+}
+
+export const createToken = () => randomToken()
+
+export const typeName = (val: any) => Object.prototype.toString.call(val).slice(8, -1).toLowerCase()
+
+export const isType = (val: any, typeName:any) => Object.prototype.toString.call(val).slice(8, -1).toLowerCase() === typeName
+
+export const urlParamsParse = (params: string) => {
+  let _params = params.split('&')
+  let res: any = {}
+  _params.map((v: any) => {
+    const item = v.split('=')
+    res[item[0]] = item[1]
+  })
+  return res
+}

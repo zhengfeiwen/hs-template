@@ -1,0 +1,363 @@
+<template>
+  <simple-container-column @on-query="onQuery" @on-reset="onReset" :menuName="menuName">
+    <template slot="left">
+      <tree v-if="treeif" url="/fcs/noticeCatalog/tree" :props="{ children: 'children', label: 'name' }" @node-click="handleNodeClick"></tree>
+    </template>
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="标题">
+          <hs-input
+            size="mini"
+            v-model="form.catalogTitle"
+            placeholder="请输入标题"
+          ></hs-input>
+        </el-form-item>
+        <el-form-item label="来源">
+          <hs-input
+            size="mini"
+            v-model="form.source"
+            placeholder="请输入来源"
+          ></hs-input>
+        </el-form-item>
+        <el-form-item label="发布时间">
+          <el-date-picker
+          v-model="timePicker"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          value-format="timestamp"
+          size="mini"
+          @change="timeChange">
+        </el-date-picker>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table :index="!0" :isCheckbox="!0" @selection-change="selectionChange" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['open']">
+        <template slot="custom_open" slot-scope="{ scope }">
+          <hs-switch
+            :disabled="!stateDisabled"
+            v-model="scope.row.open"
+            :active-value="1"
+            :inactive-value="0"
+            @change="changeState(scope.row)"
+            active-color="#1c2e52"
+            inactive-color="#d9d9d9">
+          </hs-switch>
+        </template>
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsNoticeUpdate']"
+            @click.native.prevent="onEdit(scope.row)"
+            type="text"
+            size="small">
+            编辑
+          </hs-button>
+          <hs-button
+            v-permission="['fcsNoticeDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="danger" @click="onAdd" v-permission="['fcsNoticeInsert']" icon="hs-icon-plus" size="mini">新增</hs-button>
+          <hs-button type="info" @click="onRemove" v-permission="['fcsNoticeDelete']" icon="hs-icon-minus" size="mini">删除</hs-button>
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible"></detail-dialog>
+    <add-dialog :data="addData" :visible.sync="visibleAdd" @save-back="onQuery"></add-dialog>
+  </simple-container-column>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from './detaildialog.vue'
+import AddDialog from './add/index.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import SimpleContainerColumn from '@/components/container/column/index.vue'
+import { settingApi } from '@/api/settingmanage'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import { checkPermission } from '@/utils/permission'
+
+@Component({
+  name: 'fcsNoticeManageMenu',
+  components: {
+    SimpleContainerColumn,
+    SimpleTable,
+    DetailDialog,
+    AddDialog,
+    Tree
+  }
+})
+export default class BusiManage extends Vue {
+  get stateDisabled () {
+    return checkPermission(['fcsNoticeOpen', 'fcsNoticeUnopen'])
+  }
+
+  private treeif = false
+
+  private form: any = {
+  }
+
+  private loading = !1
+
+  private treeSelectData = {
+    dataType: '',
+    id: ''
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  get pickerOptions () {
+    return util.pickerOptions
+  }
+
+  // 临时存放时间戳数组
+  private timePicker: any[] = []
+
+  private timeChange () {
+    this.form.beginOpenTime = this.timePicker ? this.timePicker[0] : ''
+    this.form.endOpenTime = this.timePicker ? this.timePicker[1] : ''
+  }
+
+  private columns = [{
+    prop: 'catalogTitle',
+    label: '标题'
+  },
+  {
+    prop: 'source',
+    label: '信息来源'
+  },
+  {
+    prop: 'openTime',
+    label: '发布时间',
+    format: 'date'
+  },
+  {
+    prop: 'createName',
+    label: '创建人',
+    disabled: !0
+  },
+  {
+    prop: 'open',
+    label: '是否发布',
+    custom: !0
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await settingApi('noticeList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private visibleAdd = !1
+
+  private visible = !1
+
+  private onReset () {
+    this.form = {
+    }
+    this.timePicker = []
+    this.onQuery()
+  }
+
+  private menuName = ''
+
+  handleNodeClick (data: any) {
+    this.form.catalogId = data.id
+    this.treeSelectData.dataType = data.dataType
+    this.treeSelectData.id = data.id
+    this.menuName = data.name
+    this.onQuery()
+  }
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await settingApi('noticeDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          catalogTitle: res.object.info.catalogTitle,
+          source: res.object.info.source,
+          catalogContent: res.object.info.catalogContent,
+          atts: res.object.info.atts,
+          topName: this.getValueByConstrantArray('yesOrNo', res.object.info.top),
+          openName: this.getValueByConstrantArray('yesOrNo', res.object.info.open)
+        }
+      }
+    })
+  }
+
+  private async changeState (row: any) {
+    const _data = {
+      id: row.id
+    }
+    if (row.open === 0) {
+      row.open = 1
+      this.$confirm('提示：确定要取消已发布的文章？', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }).then(async () => {
+        await settingApi('disableNotice', {
+          ..._data
+        }).then((res: any) => {
+          res.code === 10000 && this.onQuery(this.pagination)
+          this.$message({
+            showClose: !0,
+            message: res.message,
+            type: res.code === 10000 ? 'success' : 'error'
+          })
+          row.open = 0
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+      }).catch(() => {
+        row.open = 1
+      })
+    } else {
+      await settingApi('enableNotice', {
+        ..._data
+      }).then((res: any) => {
+        res.code === 10000 && this.onQuery(this.pagination)
+        this.$message({
+          showClose: !0,
+          message: res.message,
+          type: res.code === 10000 ? 'success' : 'error'
+        })
+      }).catch((err: any) => {
+        console.log('err', err)
+      })
+    }
+  }
+
+  private async onEdit (row: any) {
+    if (row.open === 0) {
+      await settingApi('noticeDetail', { id: row.id }).then((res: any) => {
+        if (res.code === 10000) {
+          this.addData = {
+            type: 'edit',
+            ...res.object.info
+          }
+        }
+      }).then((res: any) => {
+        this.visibleAdd = !0
+      })
+    } else {
+      this.$alert('不可编辑已发布的内容', '消息', {
+        confirmButtonText: '确定',
+        type: 'warning'
+      })
+    }
+  }
+
+  private addData: any = {}
+
+  private onAdd () {
+    if (this.treeSelectData.dataType === 'root' || !this.treeSelectData.id) {
+      this.$alert('请选择左边的管理内容', '消息', {
+        confirmButtonText: '确定',
+        type: 'warning'
+      })
+      return
+    }
+    this.visibleAdd = !0
+    this.addData = {
+      catalogId: this.treeSelectData.id,
+      type: 'add'
+    }
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onRemove () {
+    // 删除
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择栏目')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    this.$alert('提示：是否删除所选栏目', '删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      const canDetele = !this.selectedRow.some((v: any) => {
+        return v.open === 1
+      })
+      if (canDetele) {
+        await settingApi('removeNotice', {
+          ids: ids.join(',')
+        }).then((res: any) => {
+          if (res.code === 10000) {
+            this.$message.success({ message: res.message, showClose: !0 })
+            this.onQuery()
+          }
+        })
+      } else {
+        this.$alert('不可删除已发布的内容', '消息', {
+          confirmButtonText: '确定',
+          type: 'warning'
+        })
+      }
+    })
+  }
+
+  private constrantArray: any = {
+    yesOrNo: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.yesOrNo = await getConstantByGroup('yesOrNo')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  activated () {
+    this.getConstrantList()
+    this.onQuery()
+    this.treeif = false
+    setTimeout(() => {
+      this.treeif = true
+    }, 50)
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

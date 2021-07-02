@@ -1,0 +1,185 @@
+<template>
+  <div class="schoolyear-container">
+    <header>
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+        <hs-form-item label="学习类型">
+          <dict-select ref="study" @change="changeStudy" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.studyId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="院校">
+          <dict-select ref="school" @change="changeSchool" :option="options.school" :prop="{ key: 'id', value: 'schoolName' }" :val.sync="form.schoolId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="年级">
+          <dict-select ref="grade" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId"></dict-select>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table :index="!0" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" :pagination.sync="pagination" @query="onQuery" :dicts="['studyState', 'businessId']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            :disabled="scope.row.studyCode === '600006'"
+            @click.native.prevent="onEdit(scope.row)"
+            type="text"
+            size="small">
+            编辑
+          </hs-button>
+        </template>
+      </simple-table>
+    </section>
+    <add-dialog :visible.sync="visible" :data="addData" @save-back="onQuery"></add-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import AddDialog from './add/index.vue'
+import util from '@/utils/busi/util'
+import { schoolYearList, schoolYearCount, schoolYearDetail } from '@/api/base'
+@Component({
+  name: 'study-type-manage',
+  components: {
+    SimpleTable,
+    AddDialog,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class StudyTypeManage extends Vue {
+  private form: any = {
+    studyId: '',
+    schoolId: '',
+    gradeId: ''
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [{}],
+    totalCount: 0
+  }
+
+  private options = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {}
+    },
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+        studyId: -1
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        schoolId: -1
+      }
+    }
+  }
+
+  private changeStudy () {
+    this.options.school.data.studyId = this.form.studyId
+    this.form.schoolId = ''
+    this.form.gradeId = '';
+    (this.$refs.school as any).getList()
+  }
+
+  private changeSchool () {
+    this.options.grade.data.schoolId = this.form.schoolId
+    this.form.gradeId = '';
+    (this.$refs.grade as any).getList()
+  }
+
+  private columns = [{
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级'
+  },
+  {
+    prop: 'startDate',
+    label: '学年开始时间',
+    format: 'date'
+  },
+  {
+    prop: 'endData',
+    label: '学年结束时间',
+    format: 'date'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await schoolYearList({
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      await schoolYearCount({
+        ...form
+      }).then((resCnt: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = resCnt.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      studyId: '',
+      schoolId: '',
+      gradeId: ''
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private addData = {}
+
+  private async onEdit (row: any) {
+    await schoolYearDetail({ id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.addData = {
+          ...res.object.info
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

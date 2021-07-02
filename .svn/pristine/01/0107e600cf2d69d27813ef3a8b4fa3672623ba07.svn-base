@@ -1,0 +1,714 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="activeName === 'dealed'" :menuName="params.business.value">
+    <template slot="title">
+      <div class="title-right">
+        <hs-tabs v-model="activeName">
+          <hs-tab-pane label="待处理" name="undeal"></hs-tab-pane>
+          <hs-tab-pane label="已处理" name="dealed"></hs-tab-pane>
+        </hs-tabs>
+      </div>
+    </template>
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="学习类型">
+          <dict-select ref="study" @change="studyChange" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.studyId"></dict-select>
+        </el-form-item>
+        <el-form-item label="院校">
+          <dict-select ref="school" @change="schoolChange" :option="options.school" :prop="{ key: 'id', value: 'schoolName' }" :val.sync="form.schoolId" clearable ></dict-select>
+        </el-form-item>
+        <el-form-item label="年级">
+          <dict-select ref="grade" @change="gradeChange" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId" clearable ></dict-select>
+        </el-form-item>
+        <el-form-item label="专业">
+          <dict-select ref="subject" @change="subjectChange" format="subject" :option="options.subject" :prop="{ key: 'id', value: 'showValue' }" :val.sync="form.subjectId"></dict-select>
+        </el-form-item>
+        <el-form-item label="学生姓名">
+          <hs-input size="mini" v-model="form.stuName" placeholder="请输入学生姓名" clearable></hs-input>
+        </el-form-item>
+        <el-form-item label="助记码">
+          <hs-input size="mini" v-model="form.mnemonicCode" placeholder="请输入助记码" clearable></hs-input>
+        </el-form-item>
+        <el-form-item label="身份证号">
+          <hs-input size="mini" v-model="form.idCard" placeholder="请输入身份证号" clearable></hs-input>
+        </el-form-item>
+        <!-- <el-form-item label="学籍状态">
+          <dict-select :val.sync="form.schoolRollStatus" constant-group-name="schoolRollStatus" clearable :include="[0, 1]"></dict-select>
+        </el-form-item> -->
+        <el-form-item label="操作人" :class="isDealed">
+          <hs-input size="mini" v-model="form.createName" placeholder="请输入操作人" ></hs-input>
+        </el-form-item>
+        <el-form-item label="缴费时间" :class="isDealed">
+          <el-date-picker
+            range-separator="至"
+            value-format="timestamp"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            :picker-options="pickerOptions"
+            type="daterange"
+            format="yyyy-MM-dd HH:mm"
+            :default-time="['00:00:00','23:59:59']"
+            v-model="form.payTime"
+            @change="payTimeChange"
+            size="mini">
+          </el-date-picker>
+        </el-form-item>
+        <el-form-item label="创建时间" :class="isDealed">
+          <el-date-picker
+            range-separator="至"
+            value-format="timestamp"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            :picker-options="pickerOptions"
+            type="daterange"
+            format="yyyy-MM-dd HH:mm"
+            :default-time="['00:00:00','23:59:59']"
+            v-model="form.createTime"
+            @change="createTimeChange"
+            size="mini">
+          </el-date-picker>
+        </el-form-item>
+
+        <el-form-item label="流水号" :class="isDealed">
+          <hs-input size="mini" v-model="form.billNo" placeholder="请输入流水号" clearable></hs-input>
+        </el-form-item>
+        <el-form-item label="流水状态" :class="isDealed">
+          <dict-select :val.sync="form.status" constant-group-name="feesStatus" :exclude=[3]></dict-select>
+        </el-form-item>
+        <el-form-item label="学习类型">
+          <dict-select ref="study" @change="studyChange" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.studyId"></dict-select>
+        </el-form-item>
+        <el-form-item label="所属中心">
+          <dict-select ref="center" @change="centerChange" :option="options.center" :prop="{ key: 'id', value: 'centerName' }" :val.sync="form.centerId"></dict-select>
+        </el-form-item>
+        <el-form-item label="学生来源" :class="isUndeal">
+          <el-cascader :show-all-levels="!1" size="mini" v-model="form.stuSource" :props="{ emitPath: !1, checkStrictly: !1, label: 'optionValue', value: 'optionKey' }" :options="stuSourceData"></el-cascader>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table @selection-change="handleSelectionChange"
+      :class="isUndeal" :isCheckbox="false" :data="tableData" :columns="undealColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="add" :dicts="['stuSex','schoolRollStatus']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+          v-permission="['fcsParttimeColUnProcessedInsert']"
+            @click.native.prevent="add(scope.row)"
+            type="text"
+            size="small">
+            收费
+          </hs-button>
+        </template>
+        <template slot="action-block">
+          <hs-button type="danger" icon="hs-icon-plus" v-permission="['fcsParttimePay']" @click="batchCollect" size="mini">批量收费</hs-button>
+        </template>
+      </simple-table>
+      <simple-table @column-set-save="columnSetSave" :operator="{ width: 120 }" @selection-change="handleSelectionChange"
+        :class="isDealed" :isCheckbox="true" :data="tableDataDealed" :columns="dealedColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="view"  :dicts="['feesStatus','openInvoice']">
+        <template slot="custom_payType" slot-scope="{ scope }">
+          {{ initPayType(scope.row.payType) }}
+        </template>
+        <template slot="operator" slot-scope="{ scope }" >
+            <hs-button
+              @click.native.prevent="view(scope.row)"
+              type="text"
+              size="small">
+              查看
+            </hs-button>
+            <hs-button
+            v-permission="['fcsParttimeColProcessedUpdate']"
+              @click.native.prevent="edit(scope.row)"
+              type="text"
+              size="small">
+              编辑
+            </hs-button>
+        </template>
+        <template slot="action-block">
+          <hs-button type="info" v-permission="['fcsParttimeColProcessedInvalid']"  :disabled="selectList.length===0" icon="hs-icon-close" @click="onInvalid" size="mini" >作废</hs-button>
+          <hs-button type="danger" v-permission="['fcsParttimeColProcessedExport']"  icon="hs-icon-download" @click="onExport" size="mini" >导出</hs-button>
+          <hs-button type="danger" v-permission="['fcsFeePrint']"  :disabled="selectList.length!==1" icon="hs-icon-tickets" @click="onPrint" size="mini" >打印</hs-button>
+          <hs-button type="danger" v-permission="['fcsOpenInvoice']" :disabled="selectList.length===0" icon="hs-icon-c-scale-to-original" @click="onOpen" size="mini" >开票</hs-button>
+        </template>
+      </simple-table>
+    </template>
+    <print-receipt
+      :receiptVisible="receiptVisible"
+      :handleClose="receiptClose"
+      :collectFeesCode="turnoverID"
+      @callback="receiptClose"
+    />
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Watch, Prop } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import util from '@/utils/busi/util'
+import PrintReceipt from '@/components/PrintReceipt/index.vue'// 打印小票
+import { commonApi, getList } from '@/api/common'
+import SimpleContainer from '@/components/container/index.vue'
+import { collectApi } from '@/api/collect'
+import { isEmpty } from 'xe-utils'
+import { getConstantDict } from '@/utils/common'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import { LocalStorage } from '@/utils/storage'
+import dayjs from 'dayjs'
+@Component({
+  name: 'collect-manage',
+  components: {
+    SimpleContainer,
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    DrawerSelect,
+    PrintReceipt
+  }
+})
+
+export default class collectManage extends Vue {
+  @Prop({ type: Object })
+  private params!: object|any
+
+  private loading = false
+  private form: any = {
+    studyId: null,
+    business: this.params.business.key,
+    schoolId: null,
+    gradeId: null,
+    subjectId: null,
+    createTime: '',
+    createStartTime: '',
+    createEndTime: '',
+    payTime: '',
+    payStartTime: '',
+    payEndTime: ''
+  }
+
+  // 业务ID
+  private businessList: any = []
+  private curBusiness = {
+    key: '',
+    value: ''
+  }
+
+   private stuSourceData: any = []
+
+  // 多选数据
+  private selectList:any = []
+
+  private activeName = 'undeal'
+
+  get isDealed () {
+    return this.activeName === 'dealed' ? '' : 'display-hidden'
+  }
+
+  get isUndeal () {
+    return this.activeName === 'undeal' ? '' : 'display-hidden'
+  }
+
+  // tab监听
+  @Watch('activeName')
+  private activeNameChange () {
+    this.tableData = {
+      list: [],
+      totalCount: -1
+    }
+    this.tableDataDealed = {
+      list: [],
+      totalCount: -1
+    }
+    this.onQuery()
+  }
+
+  // ----------------------------表格相关 start
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private tableDataDealed = {
+    list: [],
+    totalCount: -1
+  }
+
+  // 待处理列表
+  private undealColumns = [
+    {
+      prop: 'stuName',
+      label: '学生姓名'
+    },
+    {
+      prop: 'stuSex',
+      label: '性别'
+    },
+    {
+      prop: 'studyName',
+      label: '学习类型'
+    },
+    {
+      prop: 'schoolName',
+      label: '院校名称'
+    },
+    {
+      prop: 'gradeName',
+      label: '年级'
+    },
+    {
+      prop: 'subjectName',
+      label: '专业名称'
+    },
+    {
+      prop: 'idCard',
+      label: '证件后6位',
+      format: 'str:-6'
+    },
+    {
+      prop: 'schoolRollStatus',
+      label: '学籍状态'
+    }
+  ]
+
+  // 支付类型
+  private payTypes: any = {}
+  private initPayType (payType: any) {
+    return payType ? payType.split('|').map((v: any) => this.payTypes[v]).join('|') : ''
+  }
+
+  // 已处理列表
+  private dealedColumns = [
+    {
+      prop: 'billNo',
+      label: '流水号'
+    },
+    {
+      prop: 'stuName',
+      label: '学生姓名'
+    },
+    {
+      prop: 'stuStudyName',
+      label: '学习类型'
+    },
+    {
+      prop: 'schoolName',
+      label: '院校名称'
+    },
+    {
+      prop: 'gradeName',
+      label: '年级'
+    },
+    {
+      prop: 'subjectName',
+      label: '专业'
+    },
+    {
+      prop: 'centerName',
+      label: '所属中心',
+      hidden: true
+    },
+    {
+      prop: 'stuSourceName',
+      label: '学生来源'
+    },
+    {
+      prop: 'receivableAmount',
+      label: '本次应收',
+      format: 'money'
+    },
+    {
+      prop: 'payAmount',
+      label: '本次收费',
+      format: 'money'
+    },
+    {
+      prop: 'arrearsAmount',
+      label: '本次欠费',
+      format: 'money'
+    },
+    {
+      prop: 'accountAmount',
+      label: '本次产生余额',
+      format: 'money'
+    },
+    {
+      prop: 'payType',
+      label: '付款方式',
+      custom: !0
+    },
+    {
+      prop: 'createName',
+      label: '操作人'
+    },
+    {
+      prop: 'payTime',
+      label: '缴费时间',
+      format: 'date'
+    },
+    {
+      prop: 'createTime',
+      label: '创建时间',
+      format: 'date'
+    },
+    {
+      prop: 'feesStatus',
+      label: '状态',
+      export: 'statusName',
+      'style-format': {
+        f: [2],
+        t: [1, 3]
+      }
+    },
+    {
+      prop: 'printNum',
+      label: '打印次数'
+    },
+    {
+      prop: 'openInvoice',
+      label: '开票',
+      export: 'openInvoiceName'
+    },
+    {
+      prop: 'abnormalStateName',
+      label: '是否异动'
+    }
+  ]
+  // ----------------------------表格相关 end
+
+  // 院校专业年级等联动
+  private options: any = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {
+        businessId: this.params.business.key
+      }
+    },
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+        businessId: this.params.business.key
+      }
+    },
+    grade: {
+      url: '/fcs/scg/gra/sub/getGradeSelect',
+      data: {}
+    },
+    subject: {
+      url: '/fcs/scg/gra/sub/getSubjectSelect',
+      data: {}
+    },
+    center: {
+      url: '/fcs/center/getCenterSelect',
+      data: {}
+    }
+  }
+
+  private pagination: any = { currentPage: '1', pageSize: '10' }
+  // 查询
+  private async onQuery (pagination: any = null) {
+    this.loading = true
+    !pagination && (this.pagination.currentPage = 1)
+    const form = util.trimForm({ ...this.form })
+    if (this.activeName === 'dealed') { // 已处理
+      if (isEmpty(this.payTypes)) {
+        const payType = await getConstantDict('payType')
+        payType.map((v: any) => {
+          this.payTypes[v.key] = v.value
+        })
+      }
+      await collectApi('ptPayList', { ...form, ...this.pagination }).then(async (res: any) => {
+        this.loading = false
+        this.tableDataDealed.list = res.object.list.map((v: any) => {
+          v.feesStatus = v.status
+          return v
+        })
+        this.tableDataDealed.totalCount = res.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = false
+      })
+    } else { // 待处理
+      await collectApi('ptUnPayList', { ...form, ...this.pagination }).then(async (res: any) => {
+        this.loading = false
+        this.tableData.list = res.object.list.map((v: any) => {
+          v.idCard = (v.idCard.length > 17) ? v.idCard.substring(v.idCard.length - 6, v.idCard.length) : v.idCard
+          return v
+        })
+        this.tableData.totalCount = res.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = false
+      })
+    }
+    this.loading = false
+  }
+
+  // 创建时间
+  private createTimeChange () {
+    this.form.createStartTime = this.form.createTime ? this.form.createTime[0] : ''
+    this.form.createEndTime = this.form.createTime ? this.form.createTime[1] : ''
+  }
+
+  // 缴费时间
+  private payTimeChange () {
+    this.form.payStartTime = this.form.payTime ? this.form.payTime[0] : ''
+    this.form.payEndTime = this.form.payTime ? this.form.payTime[1] : ''
+  }
+
+  // 重置
+  private onReset () {
+    this.form = {
+      studyId: '',
+      business: this.params.business.key,
+      schoolId: '',
+      gradeId: '',
+      subjectId: '',
+      createTime: '',
+      createStartTime: '',
+      createEndTime: '',
+      payTime: '',
+      payStartTime: '',
+      payEndTime: ''
+    }
+    this.options.school.data.studyId = this.form.studyId || null
+    this.options.grade.data.schoolId = this.form.schoolId || null
+    this.options.subject.data.grade = this.form.stuGradeId || null
+    this.options.subject.data.schoolId = this.form.schoolId || null;
+    (this.$refs.school as any).getList();
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+    this.pagination = {
+      currentPage: 1,
+      pageSize: 10
+    }
+    this.onQuery()
+  }
+
+  private studyChange () {
+    this.form.schoolId = ''
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.options.school.data.studyId = this.form.studyId || null;
+    (this.$refs.school as any).getList()
+  }
+
+  private schoolChange () {
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.options.grade.data.schoolId = this.form.schoolId || null
+    this.options.subject.data.schoolId = this.form.schoolId || null;
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+  }
+
+  private gradeChange () {
+    this.form.subjectId = ''
+    this.options.subject.data.gradeId = this.form.gradeId || null;
+    (this.$refs.subject as any).getList()
+  }
+
+  // 多选
+  private handleSelectionChange (selection:any) {
+    this.selectList = selection
+  }
+
+  private turnoverID = '' // 流水ID
+  // 打印小票显示
+  private receiptVisible = false
+  // 打印小票相关
+  private receiptClose () { this.receiptVisible = false }
+  private visible = false
+  private onPrint () {
+    this.receiptVisible = true
+    this.turnoverID = this.selectList[0].payRecordId
+  }
+
+  // 作废
+  private async onInvalid () {
+    this.$confirm('确认要作废该数据?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      this.loading = true
+      const ids = this.selectList.map((v: any) => v.payRecordId)
+      await collectApi('ptPayInvalid', ids).then((res:any) => {
+        if (res.code === 10000) {
+          this.$message.success({ message: '作废成功', showClose: !0 })
+        } else {
+          this.$message.error({ message: res.message, showClose: !0 })
+        }
+      })
+      this.onQuery()
+      this.loading = false
+    }).catch(() => {
+      console.log('catch error')
+      this.loading = false
+    })
+  }
+
+  //  开票
+  private async onOpen () {
+    this.$confirm('确认要开票该数据?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      this.loading = true
+      const ids = this.selectList.map((v: any) => v.payRecordId)
+      await commonApi('openInvoice', ids).then((res:any) => {
+        if (res.code === 10000) {
+          this.$message.success({ message: '开票成功', showClose: !0 })
+        } else {
+          this.$message.error({ message: res.message, showClose: !0 })
+        }
+      })
+      this.onQuery()
+      this.loading = false
+    }).catch(() => {
+      console.log('catch error')
+      this.loading = false
+    })
+  }
+
+  // 已处理列设置
+  private columnSetSave (columns:any) {
+    this.dealedColumns = columns
+  }
+
+  // 导出
+  private async onExport () {
+    const menuName = LocalStorage.getObj('menu-name')
+    this.$confirm('确认要导出' + menuName + '数据?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      const exportNotify = this.$notify({
+        title: '',
+        duration: 0,
+        customClass: 'export-notify',
+        dangerouslyUseHTMLString: true,
+        message: `<i class="hs-icon-loading"></i>正在导出‘${menuName}’数据....`,
+        showClose: !0
+      })
+      this.loading = true
+      let exportHeads = JSON.parse(JSON.stringify(this.dealedColumns))
+      exportHeads = exportHeads.filter((item:any) => !item.hidden)
+      exportHeads = exportHeads.map(function (item:any) {
+        if (item.prop === 'feesStatus') {
+          item.prop = 'status'
+        }
+        return item
+      })
+      const form = util.trimForm({ ...this.form })
+      const { data, headers } = await collectApi('ptPayExport', { ...form, exportHeads })
+      if (!data) {
+        return
+      }
+      util.exportData(data, this.params.business.value + menuName + '-' + dayjs(new Date()).format('YYYYMMDD') + '.' + headers['content-file-suffix'])
+      exportNotify.close()
+      this.$notify.success({
+        title: '',
+        duration: 5000,
+        customClass: 'export-notify',
+        dangerouslyUseHTMLString: true,
+        message: `‘${menuName}’数据导出完成`,
+        showClose: !0
+      })
+      this.loading = false
+    }).catch(() => {
+      console.log('catch error')
+      this.loading = false
+    })
+  }
+
+  // 批量收费
+  private batchCollect () {
+    if (Number(this.curBusiness.key) === 0) {
+      this.$alert('请选择业务', { type: 'error' })
+      return
+    }
+    this.$router.push({
+      name: 'collectbatchimport',
+      params: Object.assign({ businessId: this.params.business.key })
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  // 新增操作
+  private async add (row: any) {
+    this.$router.push(
+      { name: 'ptcollectmanagedetail', params: { info: row, type: 'add' } },
+      () => { this.loading = false })
+  }
+
+  // 修改操作
+  private async edit (row: any) {
+    this.$router.push(
+      { name: 'ptcollectmanagedetail', params: { info: row, type: 'edit' } },
+      () => { this.loading = false })
+  }
+
+  // 查看操作
+  private async view (row: any) {
+    this.$router.push(
+      { name: 'ptcollectmanagedetail', params: { info: row, type: 'view' } },
+      () => { this.loading = false })
+  }
+
+  private constrantArray: any = {
+    businessType: [],
+    subjectLen: [],
+    subjectDegree: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.businessType = await getConstantByGroup('businessType')
+    this.constrantArray.subjectLen = await getConstantByGroup('subjectLen')
+    this.constrantArray.subjectDegree = await getConstantByGroup('subjectDegree')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private stuSourceDict: any = []
+  private async initData () {
+    this.businessList = await getConstantByGroup('businessType', { update: !0 })
+    await this.getConstrantList()
+    this.curBusiness = this.businessList[0]
+    await commonApi('studentSourceTree').then((res: any) => {
+      if (res.code === 10000) {
+        this.stuSourceData = res.object.list
+      }
+    })
+    this.stuSourceDict = await getConstantByGroup('stuSource', { update: !0 })
+    await this.onQuery()
+  }
+
+  mounted () {
+    this.loading = !0
+    this.initData()
+  }
+
+  activated () {
+    this.loading = !0
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "../../collect";
+::v-deep .el-tabs__nav {
+  float: right;
+}
+.display-hidden{
+  display: none !important;
+}
+</style>

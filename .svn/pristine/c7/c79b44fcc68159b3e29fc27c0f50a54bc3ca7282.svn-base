@@ -1,0 +1,72 @@
+import { objFormatDict, objFormatMoney, objFormatTrim } from './apidatautils'
+import { getConstantByGroup } from './dicts/constdict'
+
+// 创建随机的36位token
+const randomToken = function () {
+  return Math.random().toString(36).substr(2, 5) + new Date().getTime() + Math.random().toString(36).substr(2, 6)
+}
+
+export const createToken = () => randomToken()
+
+export const typeName = (val: any) => Object.prototype.toString.call(val).slice(8, -1).toLowerCase()
+
+export const isType = (val: any, typeName: any) => Object.prototype.toString.call(val).slice(8, -1).toLowerCase() === typeName
+
+export const isEmpty = (val: any) => {
+  if (isType(val, 'null')) return !0
+  if (isType(val, 'function')) return !0
+  if (isType(val, 'undefined')) return !0
+  if (isType(val, 'string') && val.trim().length === 0) return !0
+  if (isType(val, 'array') && val.length === 0) return !0
+  if (isType(val, 'object') && Object.keys(val).length === 0) return !0
+  if (isType(val, 'number') && isNaN(val)) return !0
+  if (isType(val, 'string') && val.length === 0) return !0
+  return !1
+}
+
+export const spectialTrim = (val: any, option = { stringNull: '-1', numberNull: -1 }) => {
+  if (isType(val, 'string') && val === option.stringNull) return ''
+  if (isType(val, 'number') && val === option.numberNull) return ''
+  return val
+}
+
+export const urlParamsParse = (params: string) => {
+  const _params = params.split('&')
+  const res: any = {}
+  _params.map((v: any) => {
+    const item = v.split('=')
+    res[item[0]] = item[1]
+  })
+  return res
+}
+
+export const getConstantDict = async (groupName: any, backcall: any = null, params: any = {}) => {
+  const res = await getConstantByGroup(groupName, params)
+  backcall && backcall(res)
+  return res
+}
+export const getConstantDictVal = async (groupName: any, key: any, backcall: any = null, params: any = {}) => {
+  const dict = await getConstantByGroup(groupName, params)
+  let res = ''
+  if (!isEmpty(key) && dict && dict.length > 0) {
+    res = dict.filter((v: any) => v.key === key)[0].value
+  }
+  backcall && backcall(res)
+  return res
+}
+
+// 数组数据标准化工厂入口
+export const arrayFormat = (list: any, type: any, option: any = {}) => {
+  if (list.length === 0) return list
+  if (type === 'money') return list.map((obj: any) => objFormatMoney(obj, option))
+  if (type === 'dict') return list.map((obj: any) => objFormatDict(obj, option))
+  if (type === 'trim') return list.map((obj: any) => objFormatTrim(obj))
+}
+
+// 对象数据标准化工厂入口
+export const objectFormat = (obj: any, type: any, option: any = {}) => {
+  if (!obj || Object.keys(obj).length === 0) return obj
+  if (type === 'money') return objFormatMoney(obj, option)
+  if (type === 'dict') return objFormatDict(obj, option)
+  if (type === 'trim') return objFormatTrim(obj)
+}

@@ -1,0 +1,27 @@
+import { RouteConfig } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+const Settlement: RouteConfig = {
+  path: '/settlement',
+  component: Layout,
+  redirect: 'noredirect',
+  name: 'fcsSettlementMenu',
+  meta: {
+    permission: 'fcsSettlementMenu',
+    title: 'settlement',
+    icon: 'database'
+  },
+  children: [{
+    path: 'proxysettlement/index',
+    component: () => import(/* webpackChunkName: "fcsProxySettlementMenu" */ '@/views/settlement/proxysettlement/index.vue'),
+    name: 'fcsProxySettlementMenu',
+    meta: {
+      title: 'proxysettlement',
+      permission: 'fcsProxySettlementMenu',
+      noCache: true,
+      icon: 'package'
+    }
+  }]
+}
+
+export default Settlement

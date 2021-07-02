@@ -1,0 +1,100 @@
+<template>
+  <div class="student-baseinfo-container">
+    <div class="title">
+      <span>异动结转记录</span><el-button type="primary" size="mini">补异动结转</el-button>
+    </div>
+    <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolState']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="showDetail(scope.row)"
+            type="primary"
+            size="small">
+            详情
+          </hs-button>
+          <hs-button
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            作废
+          </hs-button>
+        </template>
+    </simple-table>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import util from '@/utils/busi/util'
+import { businessList } from '@/api/base'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private form = {
+    gradeState: 1
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [{
+      businessName: '1',
+      originalValue: '1',
+      newValue: '1'
+    }],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'businessName',
+    label: '操作账号'
+  },
+  {
+    prop: 'originalValue',
+    label: '操作员'
+  },
+  {
+    prop: 'newValue',
+    label: '操作时间'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await businessList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      gradeState: 1
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+}
+</script>
+
+<style lang='scss'>
+</style>

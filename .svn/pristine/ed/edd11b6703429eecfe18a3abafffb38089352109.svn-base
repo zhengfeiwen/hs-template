@@ -1,0 +1,268 @@
+<template>
+  <div class="history-flow-detail-dialog-container">
+    <el-dialog append-to-body :close-on-click-modal="!1" title="历史流水记录" :visible.sync="visible" width="70%" :before-close="onClose" @open="open()">
+      <tree-table :operator="null" row-key="billNo" :tableData="tableData" :columns="columns" @expand-change="expandChange" :children-columns="childrenColumns" @query="onQuery" :loading="loading">
+        <template slot="custom_statusName" slot-scope="{ scope }">
+          <span class="t" v-if="scope.row.status === 1">{{ scope.row.statusName }}</span>
+          <span class="f" v-else>{{ scope.row.statusName }}</span>
+        </template>
+      </tree-table>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="info" size="mini" plain @click="onClose">关闭</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import dayjs from 'dayjs'
+import TreeTable from '@/components/busi/table/tree-table.vue'
+import util from '@/utils/busi/util'
+import { cellCallbackParams } from 'hs-elementui/src/utils/types/table'
+import { studentApi } from '@/api/studentcenter'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    TreeTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuInfo!: object;
+
+  @Prop({ default: false }) private newChangeData!: object|any;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private loading = !1
+
+  private tableData: any = {
+    list: [],
+    totalCount: 0
+  }
+
+  private constrantArray: any = {
+    tradeType: [],
+    feesStatus: [],
+    business: [],
+    payType: [],
+    schoolYear: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.tradeType = await getConstantByGroup('tradeType')
+    this.constrantArray.feesStatus = await getConstantByGroup('feesStatus')
+    this.constrantArray.business = await getConstantByGroup('business')
+    this.constrantArray.payType = await getConstantByGroup('payType')
+    this.constrantArray.schoolYear = await getConstantByGroup('schoolYear')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private typeToName = ['收款', '退款', '预付款', '减免']
+
+  private typeToNameEn = ['payAmount', 'refundAmount', 'payAmount', 'reductionAmount']
+
+  private moneyFormatter (row: any, column: any) {
+    return util.generatingThousandthPer([row[column.property]])
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private columns = [{
+    prop: 'billNo',
+    label: '流水号'
+  }, {
+    prop: 'tradeTypeName',
+    label: '类型'
+  }, {
+    prop: 'money',
+    label: '本次金额'
+  }, {
+    prop: 'payTypeName',
+    label: '收款方式'
+  }, {
+    prop: 'payTime',
+    label: '缴费时间'
+  }, {
+    prop: 'createTime',
+    label: '创建时间'
+  }, {
+    prop: 'createName',
+    label: '操作人'
+  }, {
+    prop: 'statusName',
+    label: '流水状态',
+    custom: !0
+  }, {
+    prop: 'remark',
+    label: '摘要'
+  }]
+
+  private childrenColumns = [{
+    prop: 'schoolName',
+    label: '缴费院校'
+  }, {
+    prop: 'businessName',
+    label: '业务'
+  }, {
+    prop: 'gradeName',
+    label: '年级'
+  }, {
+    prop: 'subjectName',
+    label: '缴费专业'
+  }, {
+    prop: 'feeItemName',
+    label: '收费项目'
+  }, {
+    prop: 'schoolYearName',
+    label: '学年'
+  }, {
+    prop: 'payAmount',
+    label: '本次收费'
+  }, {
+    prop: 'reductionAmount',
+    label: '本次减免'
+  }, {
+    prop: 'refundAmount',
+    label: '本次退费'
+  }]
+
+  private async expandChange (row: any) {
+    await studentApi('getStuPayRecordHistoryItem', {
+      business: this.newChangeData.business,
+      schoolId: this.newChangeData.schoolId,
+      gradeId: this.newChangeData.gradeId,
+      subjectId: this.newChangeData.subjectId,
+      recordId: row.payRecordId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.tableData.list.map((v: any, index: any) => {
+          if (v.billNo === row.billNo) {
+            res.object.list.map((v: any) => {
+              v.payAmount = util.generatingThousandthPer(v.payAmount)
+              v.reductionAmount = util.generatingThousandthPer(v.reductionAmount)
+              v.refundAmount = util.generatingThousandthPer(v.refundAmount)
+              this.tableData.list[index].children.push(v)
+            })
+          }
+        })
+      }
+    })
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    await studentApi('getStuPayRecordHistory', {
+      stuId: (this.stuInfo as any).id,
+      business: this.newChangeData.business,
+      schoolId: this.newChangeData.schoolId,
+      gradeId: this.newChangeData.gradeId,
+      subjectId: this.newChangeData.subjectId,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.tableData.list = res.object.list.map((v: any) => {
+        v.tradeTypeName = this.getValueByConstrantArray('tradeType', v.tradeType)
+        v.money = util.generatingThousandthPer(v[this.typeToNameEn[v.tradeType - 1]])
+        v.moneyName = this.typeToNameEn[v.tradeType - 1]
+        v.statusName = v.status === 1 ? '正常' : v.status === 2 ? '作废' : '已结转'
+        v.payTime = v.payTime ? this.timeConvert(v.payTime) : v.payTime
+        v.createTime = v.createTime ? this.timeConvert(v.createTime) : v.createTime
+        v.children = []
+        return v
+      })
+      this.tableData.totalCount = res.object.totalCount
+      this.loading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private load = async (tree:any, treeNode:any, resolve:any) => {
+    await studentApi('getStuPayRecordHistoryItem', {
+      business: this.newChangeData.business,
+      schoolId: this.newChangeData.schoolId,
+      gradeId: this.newChangeData.gradeId,
+      subjectId: this.newChangeData.subjectId,
+      recordId: tree.payRecordId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        resolve(res.object.list.map((v: any) => {
+          return { ...v, rowId: tree.payRecordId + ':' + v.id }
+        }))
+      }
+    })
+  }
+
+  private arraySpanMethod = function (cellCallbackParams: cellCallbackParams) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { row, column, rowIndex, columnIndex } = cellCallbackParams
+    return row.hasChildren ? (columnIndex === 0 ? [1, 9] : columnIndex === 9 ? [1, 1] : [0, 0]) : (columnIndex === 9 ? [0, 0] : [1, 1])
+  }
+
+  private timeConvert (timeStamp: number) {
+    return dayjs(timeStamp).format('YYYY-MM-DD HH:mm')
+  }
+
+  private reset () {
+    this.pagination = {
+      currentPage: 1,
+      pageSize: 10
+    }
+    this.loading = !1
+    this.tableData = {
+      list: [],
+      totalCount: 0
+    }
+  }
+
+  private onClose () {
+    this.reset()
+    this.$emit('update:visible', false)
+  }
+
+  private open () {
+    this.getConstrantList()
+    this.loading = !0
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang='scss'>
+.history-flow-detail-dialog-container{
+  .hs-table .el-table th{
+    background-color: rgba(250, 250, 250, 1);
+  }
+  .flow-li{
+    &>span{
+      margin-right: 30px;
+      .blue{
+        color: #4285F4;
+        font-weight: bold;
+      }
+    }
+    .status1{
+      color: rgb(19, 206, 102);
+    }
+    .status2{
+      color: #EA4335;
+    }
+  }
+  .isNow{
+    border-radius: 999999px;
+    background-color: rgb(248, 175, 29);
+    color: #333;
+    width: 14px;
+    height: 14px;
+  }
+}
+</style>

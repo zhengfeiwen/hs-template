@@ -1,0 +1,100 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog :v-else="title" :visible.sync="visibleSync" width="60%" :close-on-click-modal="!1" @open="open">
+    <div class="detail-container">
+      <hs-form label-width="98px" :inline="true" class="border-style">
+        <hs-form-item :label="column.label" v-for="(column, i) in columns" :key="i">
+          <template v-if="column.type === 'file'">
+            <hs-table :data="column.value" border style="width: 100%">
+              <hs-table-column prop="originalName" label="文件名"> </hs-table-column>
+              <hs-table-column prop="size" label="大小" width="150"> </hs-table-column>
+              <hs-table-column fixed="right" label="操作" width="100">
+                <template slot-scope="scope">
+                  <hs-button @click="download(scope.row)" type="text" size="mini">下载</hs-button>
+                </template>
+              </hs-table-column>
+            </hs-table>
+          </template>
+          <div v-else-if="column.type === 'tinymce'" class="tinymce" v-html="column.value"></div>
+          <span v-else>{{ column.value }}</span>
+        </hs-form-item>
+      </hs-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="default" @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import { saveAs } from 'file-saver'
+import setting from '@/settings'
+
+@Component({
+  name: 'detail-dialog'
+})
+
+export default class DetailDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private data!: object|any
+
+  private columns = [
+    {
+      label: '标题名称',
+      key: 'catalogTitle'
+    },
+    {
+      label: '信息来源',
+      key: 'source'
+    },
+    {
+      label: '内容',
+      key: 'catalogContent',
+      type: 'tinymce'
+    },
+    {
+      label: '附件',
+      key: 'atts',
+      type: 'file'
+    },
+    {
+      label: '置顶',
+      key: 'topName'
+    },
+    {
+      label: '发布',
+      key: 'openName'
+    }]
+
+  private open () {
+    this.columns = this.columns.map((v: any) => {
+      v.value = this.data[v.key]
+      return v
+    })
+  }
+
+  private download (file: any) {
+    saveAs(setting.ossIp + '/' + file.path, file.originalName)
+  }
+}
+</script>
+<style lang="scss" scoped>
+  .detail-container{
+    width: 100%;
+    min-width: 500px;
+    padding: 10px;
+    height: 60vh;
+    overflow: auto;
+    .hs-form.border-style .hs-form-item{
+      height: auto;
+    }
+  }
+</style>

@@ -1,0 +1,78 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+/**
+ * 获取日志详情
+ * @param data
+ */
+export const operateLogDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/core/operateLog/detail`,
+    method: 'post',
+    data
+  })
+
+/**
+* 获取日志列表
+* @param data
+*/
+export const operateLogList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/core/operateLog/list`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取日志总数
+ * @param data
+ */
+export const operateLogCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/core/operateLog/count`,
+    method: 'post',
+    data
+  })
+///
+/**
+* 获取短信模板列表
+* @param data
+*/
+export const smsTemplateList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/core/operateLog/list`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取短信模板总数
+ * @param data
+ */
+export const smsTemplateCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/core/operateLog/count`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取短信模板详情
+ * @param data
+ */
+export const smsTemplateDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/core/operateLog/detail`,
+    method: 'post',
+    data
+  })
+
+export const system = {
+  operateLogDetail: operateLogDetail,
+  operateLogList: operateLogList,
+  operateLogCount: operateLogCount,
+  smsTemplateList: smsTemplateList,
+  smsTemplateCount: smsTemplateCount,
+  smsTemplateDetail: smsTemplateDetail
+}

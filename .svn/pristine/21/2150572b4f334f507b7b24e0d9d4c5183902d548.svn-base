@@ -1,0 +1,208 @@
+<template>
+  <div class="abnormal-turn-record-container">
+    <div class="title">
+      <span class="subtitle">异动结转记录</span>
+      <span><el-button type="danger" @click="onSupplementChange" :loading="supplementLoading" element-loading-spinner="el-icon-loading" size="mini">补异动结转</el-button></span>
+    </div>
+    <simple-table :columnable="!1" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolState']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsChangeDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="danger"
+            size="small">
+            详情
+          </hs-button>
+          <span style="width: 30px;min-height: 10px;padding-left: 15px;display: inline-block;">
+            <hs-button
+              v-permission="['fcsChangeInvalid']"
+              v-if="scope.row.status == 1"
+              :disabled="scope.row.voidable == 0"
+              @click.native.prevent="invalidate(scope.row)"
+              type="text"
+              size="small">
+              作废
+            </hs-button>
+          </span>
+        </template>
+    </simple-table>
+    <AbnormalTurnRecordDialog :abnormalTurnRecordId="abnormalTurnRecordId" :visible.sync="AbnormalTurnRecordDialogFormVisible"></AbnormalTurnRecordDialog>
+    <AbnormalTurnOperationDialog @changestubaseinfo="onQuery" :stuId="stuId" :newChangeData="newChangeData" :visible.sync="abnormalTurnOperationDialogVisible"></AbnormalTurnOperationDialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import AbnormalTurnRecordDialog from '@/views/student/components/StudentBaseInfo/AbnormalTurnRecord/AbnormalTurnRecordDialog/index.vue'
+import AbnormalTurnOperationDialog from '@/views/student/components/AbnormalTurnOperationDialog/appendAbnormalTurnOperationDialog.vue'
+import { studentApi } from '@/api/studentcenter'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable,
+    AbnormalTurnRecordDialog,
+    AbnormalTurnOperationDialog
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private loading = !1
+
+  private abnormalTurnRecordId = 0
+
+  private stuInfo: any = {}
+
+  private newChangeData: any = {}
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private supplementLoading = !1
+
+  private columns = [{
+    prop: 'userAlias',
+    label: '操作账号'
+  },
+  {
+    prop: 'createName',
+    label: '操作员'
+  },
+  {
+    prop: 'createTime',
+    label: '操作时间',
+    format: 'timeSecond'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    !pagination && (this.pagination.currentPage = 1)
+    await studentApi('changeList', {
+      stuId: this.stuId,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      let latest = 1
+      this.tableData.list = res.object.list.map((v: any) => {
+        if (v.status === 1) {
+          v.voidable = latest
+          latest = 0
+        } else {
+          v.voidable = 0
+        }
+        return v
+      })
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private async onSupplementChange () {
+    this.supplementLoading = !0
+    await studentApi('stuDetail', {
+      id: this.stuId
+    }).then(async (res: any) => {
+      if (res.code === 10000) {
+        this.stuInfo = res.object.info
+        await studentApi('changeGetStuPayRecordList', {
+          stuId: this.stuId,
+          business: this.stuInfo.stuBusinessId,
+          schoolId: this.stuInfo.stuSchoolId,
+          gradeId: this.stuInfo.stuGradeId,
+          subjectId: this.stuInfo.stuSubjectId
+        }).then(async (resChangeGetStuPayRecordList: any) => {
+          const billNoArr = resChangeGetStuPayRecordList.object.list.map((item: any) => {
+            return item.billNo
+          })
+          if (billNoArr.length > 0) {
+            this.newChangeData = {
+              business: this.stuInfo.stuBusinessId,
+              schoolId: this.stuInfo.stuSchoolId,
+              schoolName: this.stuInfo.stuSchoolName,
+              subjectId: this.stuInfo.stuSubjectId,
+              subjectName: this.stuInfo.stuSubjectName,
+              gradeId: this.stuInfo.stuGradeId,
+              gradeName: this.stuInfo.stuGradeName
+            }
+            this.abnormalTurnOperationDialogVisible = !0
+          } else {
+            this.$alert('不存在可结转流水', '提示', {
+              confirmButtonText: '确定',
+              customClass: 'message-top',
+              type: 'error'
+            })
+          }
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+      }
+    }).catch((err: any) => {
+      this.supplementLoading = !1
+      console.log('err', err)
+    })
+    this.supplementLoading = !1
+  }
+
+  private invalidate (row: any) {
+    this.$confirm('确定作废异动结转，作废后专业与流水回退上一个版本中？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      await studentApi('changeInvalid', {
+        id: row.id
+      }).then((res: any) => {
+        this.$message({
+          showClose: !0,
+          duration: 1500,
+          message: res.message,
+          type: res.code === 10000 ? 'success' : 'error'
+        })
+        this.$emit('fresh')
+      }).catch((err: any) => {
+        console.log('err', err)
+      })
+    }).catch(() => {
+      this.$message({
+        showClose: !0,
+        duration: 1500,
+        type: 'info',
+        message: '已取消作废操作'
+      })
+    })
+  }
+
+  private AbnormalTurnRecordDialogFormVisible = false
+
+  private abnormalTurnOperationDialogVisible = false
+
+  private showDetail (row: any) {
+    this.abnormalTurnRecordId = row.id
+    this.AbnormalTurnRecordDialogFormVisible = true
+  }
+
+  private currentPage = 1
+
+  public load () {
+    this.loading = !0
+    this.onQuery()
+  }
+
+  mounted () {
+    this.load()
+  }
+}
+</script>
+
+<style lang='scss'>
+@import "./index";
+</style>

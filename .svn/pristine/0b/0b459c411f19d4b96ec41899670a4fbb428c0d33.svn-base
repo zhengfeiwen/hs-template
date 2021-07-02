@@ -1,0 +1,148 @@
+import { RouteConfig } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+const Base: RouteConfig = {
+  path: '/base',
+  component: Layout,
+  redirect: 'noredirect',
+  name: 'fcsBaseMenu',
+  meta: {
+    permission: 'fcsBaseMenu',
+    title: 'base',
+    icon: 'database'
+  },
+  children: [{
+    path: 'businesssearch/index',
+    component: () => import(/* webpackChunkName: "businessSearch" */ '@/views/base/businesssearch/index.vue'),
+    name: 'fcsBusiMenu',
+    meta: {
+      title: 'businesssearch',
+      permission: 'fcsBusiMenu',
+      noCache: true,
+      icon: 'package'
+    }
+  },
+  {
+    path: 'schoolmanage/index',
+    component: () => import(/* webpackChunkName: "schoolManage" */ '@/views/base/schoolmanage/index.vue'),
+    name: 'schoolManage',
+    meta: {
+      title: 'schoolmanage',
+      permission: 'fcsSchoolMenu',
+      noCache: true,
+      icon: 'university'
+    }
+  },
+  {
+    path: 'gradesearch/index',
+    component: () => import(/* webpackChunkName: "gradeSearch" */ '@/views/base/gradesearch/index.vue'),
+    name: 'fcsGradeMenu',
+    meta: {
+      title: 'gradesearch',
+      permission: 'fcsGradeMenu',
+      noCache: true,
+      icon: 'suitcase'
+    }
+  },
+  {
+    path: 'subjectmanager/index',
+    component: () => import(/* webpackChunkName: "subjectManager" */ '@/views/base/subjectmanager/index.vue'),
+    name: 'fcsSubjectMenu',
+    meta: {
+      title: 'subjectmanager',
+      permission: 'fcsSubjectMenu',
+      noCache: true,
+      icon: 'screen'
+    }
+  },
+  {
+    path: 'business-school/index',
+    component: () => import(/* webpackChunkName: "businessSchool" */ '@/views/base/businessschool/index.vue'),
+    name: 'fcsSclBusinessMenu',
+    meta: {
+      title: 'businessschool',
+      permission: 'fcsSclBusinessMenu',
+      noCache: true,
+      icon: 'package'
+    }
+  },
+  {
+    path: 'school-grade/index',
+    component: () => import(/* webpackChunkName: "schoolGrade" */ '@/views/base/schoolgrade/index.vue'),
+    name: 'fcsSclGradeMenu',
+    meta: {
+      title: 'schoolgrade',
+      permission: 'fcsSclGradeMenu',
+      noCache: true,
+      icon: 'peoples'
+    }
+  },
+  {
+    path: 'school-subject/index',
+    component: () => import(/* webpackChunkName: "schoolSubject" */ '@/views/base/schoolsubject/index.vue'),
+    name: 'fcsSclSubjectMenu',
+    meta: {
+      title: 'schoolsubject',
+      permission: 'fcsSclSubjectMenu',
+      noCache: true,
+      icon: 'screen'
+    }
+  },
+  {
+    path: 'feeitem-manage/index',
+    component: () => import(/* webpackChunkName: "feeitemManage" */ '@/views/base/feeitemmanage/index.vue'),
+    name: 'fcsFeeitemMenu',
+    meta: {
+      title: 'feeitemmanage',
+      permission: 'fcsFeeitemMenu',
+      noCache: true,
+      icon: 'money1'
+    }
+  },
+  {
+    path: 'study-search/index',
+    component: () => import(/* webpackChunkName: "studySearch" */ '@/views/base/studysearch/index.vue'),
+    name: 'fcsStudyMenu',
+    meta: {
+      title: 'studysearch',
+      permission: 'fcsStudyMenu',
+      noCache: true,
+      icon: 'component'
+    }
+  },
+  {
+    path: 'center-search/index',
+    component: () => import(/* webpackChunkName: "centerSearch" */ '@/views/base/centersearch/index.vue'),
+    name: 'fcsCenterMenu',
+    meta: {
+      title: 'centersearch',
+      permission: 'fcsCenterMenu',
+      noCache: true,
+      icon: 'street'
+    }
+  },
+  {
+    path: 'feestandardmanage/index',
+    component: () => import(/* webpackChunkName: "feeStandardManage" */ '@/views/base/feestandardmanage/index.vue'),
+    name: 'fcsFeeStandardMenu',
+    meta: {
+      title: 'feestandardmanage',
+      permission: 'fcsFeeStandardMenu',
+      noCache: true,
+      icon: 'money1'
+    }
+  },
+  {
+    path: 'schoolfeestandard/index',
+    component: () => import(/* webpackChunkName: "schoolfeestandard" */ '@/views/base/schoolfeestandard/index.vue'),
+    name: 'fcsSchFeeStandardMenu',
+    meta: {
+      title: 'schoolfeestandard',
+      permission: 'fcsSchFeeStandardMenu',
+      noCache: true,
+      icon: 'form'
+    }
+  }]
+}
+
+export default Base

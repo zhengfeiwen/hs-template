@@ -1,0 +1,6 @@
+dist/*.js
+src/assets
+tests/unit/coverage
+public/**/*.js
+src/permission.ts
+src/utils/request.ts

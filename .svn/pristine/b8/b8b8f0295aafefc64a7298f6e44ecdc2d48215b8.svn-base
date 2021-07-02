@@ -1,0 +1,30 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+const apiUrl = setting.apiUrl
+
+export const getUserInfo = (data: any) =>
+  request({
+    url: '/users/info',
+    method: 'post',
+    data
+  })
+
+export const login = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/login/login`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+export const logout = () =>
+  request({
+    url: `${apiUrl.api}/fcs/login/logout`,
+    method: 'post'
+  })
+
+export const user = {
+  getUserInfo: getUserInfo,
+  login: login,
+  logout: logout
+}

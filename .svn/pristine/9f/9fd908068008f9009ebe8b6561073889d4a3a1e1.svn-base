@@ -1,0 +1,91 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog append-to-body :title="title" :visible.sync="visibleSync" width="40%" :close-on-click-modal="!1">
+    <div class="table-detail-container">
+      <div class="item item-full" v-for="(item, i) of data" :key="i">
+        <div class="label text-overflow-line" :title="t(i)">{{ t(i) }}</div>
+        <div class="content text-overflow-line">{{ value(item, i) }}</div>
+      </div>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="info" size="mini" plain @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { isEmpty } from 'xe-utils'
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import { t } from './detaildict'
+import { dictMap } from './tabledict'
+import { DICT_MONEY_KEY } from '@/utils/dicts/money'
+import util from '@/utils/busi/util'
+
+@Component({
+  name: 'detail-dialog'
+})
+
+export default class DetailDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private data!: object
+
+  @Prop({ type: Array })
+  private dicts!: any[]
+
+  private iDisable = !1
+
+  private t = t
+
+  private value (item: any, i: any) {
+    let res: any = item || ''
+    if (!isEmpty(this.dicts) && this.dicts.includes(i)) res = dictMap(i, item)
+    if (DICT_MONEY_KEY.includes(i)) res = util.generatingThousandthPer(res)
+    return res
+  }
+}
+</script>
+<style lang="scss">
+  .table-detail-container{
+    width: calc(100% + 10px);
+    height: calc(100% + 30px);
+    margin-top: -30px;
+    margin-left: -10px;
+    display: flex;
+    flex-direction: column;
+    &:first-child{
+      margin: 0;
+    }
+    .item{
+      width: 50%;
+      border: none;
+      display: flex;
+      flex-direction: row;
+      .label{
+        width: 150px;
+        padding: 10px 15px;
+        border: 1px solid #ebeef5;
+        background-color: #f5f7fa;
+        text-align: right;
+        font-size: 12px;
+        font-weight: bolder;
+      }
+      .content{
+        padding: 10px 15px;
+        font-size: 15px;
+        border: 1px solid #ebeef5;
+        width: calc(100% - 160px);
+        margin: 0;
+      }
+    }
+    .item-full{
+      width: 100%;
+    }
+  }
+</style>

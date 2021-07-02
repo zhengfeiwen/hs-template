@@ -1,0 +1,102 @@
+<!-- 业务树形 -->
+<template>
+  <div class="tree-container">
+    <hs-input size="mini" v-model="searchVal" placeholder="请输入关键字进行查询"></hs-input>
+    <hs-tree :highlight-current="!0" ref="tree" v-loading="loading" :filter-node-method="filterNode" :data="data" :props="props" @node-click="handleNodeClick" default-expand-all></hs-tree>
+  </div>
+</template>
+<script lang="ts">
+import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import { getList } from '@/api/common'
+
+@Component({
+  name: 'tree'
+})
+export default class Tree extends Vue {
+  @Prop({ type: String })
+  private url!: string
+
+  private data = []
+
+  @Prop({ type: Object, default: () => ({ children: 'children', label: 'lable' }) })
+  private props!: object
+
+  private handleNodeClick (obj: any, node: any, el: any) {
+    this.$listeners['node-click'] && this.$emit('node-click', obj, node, el)
+  }
+
+  @Watch('searchVal')
+  private searchValChange (val: any) {
+    (this.$refs.tree as any).filter(val)
+  }
+
+  private filterNode (value: any, data: any) {
+    if (!value) return true
+    return data.lable.indexOf(value) !== -1
+  }
+
+  private searchVal = ''
+
+  private loading = !1
+
+  private search () {
+    getList({
+      url: this.url,
+      data: {
+        lable: this.searchVal
+      }
+    }).then((res: any) => {
+      if (res.object) {
+        this.data = res.object.list
+        this.loading = !1
+      }
+    }).catch(err => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  mounted () {
+    this.loading = !0
+    getList({
+      url: this.url,
+      data: {
+        label: this.searchVal
+      }
+    }).then((res: any) => {
+      if (res.object) {
+        this.data = res.object.list
+        this.loading = !1
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+}
+</script>
+
+<style lang="scss">
+.tree-container{
+  overflow: auto;
+  width: 100%;
+  height: 100%;
+  &::-webkit-scrollbar {/*滚动条整体样式*/
+    width: 6px;     /*高宽分别对应横竖滚动条的尺寸*/
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {/*滚动条里面小方块*/
+    border-radius: 10px;
+    -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    background: #535353;
+  }
+  &::-webkit-scrollbar-track {/*滚动条里面轨道*/
+    -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    border-radius: 10px;
+    background: #EDEDED;
+  }
+  .hs-tree-node>.hs-tree-node__children{
+    overflow: inherit;
+  }
+}
+</style>

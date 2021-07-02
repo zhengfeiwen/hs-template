@@ -1,0 +1,74 @@
+.abnormal-turn-record-dialog-container{
+  .el-dialog__body{
+      max-height: 460px;
+      overflow-y: scroll;
+  }
+  .ul-info{
+      display: flex;
+      list-style:none;
+      li{
+          margin-right: 30px;
+          color: #606266;
+          font-weight: bold;
+          font-size: 14px;
+          span{
+              color: #333;
+              font-weight: normal;
+          }
+      }
+  }
+  .title-2{
+      margin-top: 30px;
+      color: #333;
+  }
+  .ul-money{
+      padding-left: 0;
+      display: flex;
+      list-style:none;
+      justify-content: left;
+      li{
+          margin-right: 30px;
+          color: #606266;
+          font-weight: bold;
+          font-size: 14px;
+          span{
+              color: #333;
+              font-weight: normal;
+          }
+      }
+  }
+  .el-collapse{
+      border: 0;
+  }
+  .el-collapse-item__header{
+      font-weight: bold;
+      font-size: 20px;
+  }
+  .line{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    .hs-icon-user {
+        font-size: 22px;
+        font-weight: bold;
+        margin-right: 12px;
+        margin-top: 2px;
+    }
+    .student-name {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    &.auto{
+      line-height: 18px;
+      .static-label{
+        font-size: 16px;
+        font-weight: bold;
+      }
+    }
+  }
+  .dialog-footer{
+    margin-top: 10px;
+    text-align: right;
+  }
+}

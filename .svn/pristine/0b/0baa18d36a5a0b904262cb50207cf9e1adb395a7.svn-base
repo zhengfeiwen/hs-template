@@ -1,0 +1,229 @@
+<template>
+  <div class="abnormal-turn-record-dialog-container">
+    <el-dialog title="异动结转流水记录" :visible.sync="visible" width="70%" :before-close="onClose" @open="open()">
+      <ul class="ul-info">
+        <li>学生姓名：<span>{{stuInfo.userName}}</span></li>
+        <li>业务：<span>{{stuInfo.business}}</span></li>
+        <li>所在学校：<span>{{stuInfo.schoolName}}</span></li>
+        <li>所在年级：<span>{{stuInfo.gradeName}}</span></li>
+        <li>所在专业：<span>{{stuInfo.subjectName}}</span></li>
+      </ul>
+      <el-collapse v-model="activeNames" @change="handleChange">
+        <el-collapse-item title="不可结转金额处理" name="1">
+          <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination="!1" :columnable="!1">
+          </simple-table>
+          <ul class="ul-money">
+            <li>可结转金额：<span>{{money.carriableMoney}}</span></li>
+            <li>可结转减免：<span>{{money.carriableCutdown}}</span></li>
+            <li>不可结转金额：<span>{{money.uncarriableMoney}}</span></li>
+          </ul>
+        </el-collapse-item>
+        <el-collapse-item title="分配可结转金额" name="2">
+          <simple-table :isCheckbox="!1" :data="tableData2" :columns="columns2" :loading="loading2" @query="onQuery2" :pagination="!1" :columnable="!1">
+          </simple-table>
+          <ul class="ul-money">
+            <li>总收款：<span>{{money.totalReceived}}</span></li>
+            <li>个人账户余额：<span>{{money.personalAccountBlance}}</span></li>
+            <li>欠费：<span>{{money.debt}}</span></li>
+          </ul>
+        </el-collapse-item>
+      </el-collapse>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="onClose">关 闭</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private activeNames = ['2']
+
+  private form = {
+    gradeState: 1
+  }
+
+  private stuInfo = {
+    userName: '李梅',
+    business: '全日制',
+    schoolName: '福州大学',
+    gradeName: '2021级',
+    subjectName: '软件工程'
+  }
+
+  private money = {
+    carriableMoney: 123,
+    carriableCutdown: 12300,
+    uncarriableMoney: 1200,
+    totalReceived: 1200,
+    personalAccountBlance: 1000,
+    debt: 123
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [{
+      chargeProject: '1',
+      year: '2021',
+      cutdown: 1,
+      uncarryableCutdown: 2,
+      received: 3,
+      uncarryableReceived: 4
+    },
+    {
+      chargeProject: '1',
+      year: '2021',
+      cutdown: 1,
+      uncarryableCutdown: 2,
+      received: 3,
+      uncarryableReceived: 4
+    }],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'chargeProject',
+    label: '收费项目'
+  },
+  {
+    prop: 'year',
+    label: '学年'
+  },
+  {
+    prop: 'cutdown',
+    label: '已减免',
+    format: 'money'
+  },
+  {
+    prop: 'uncarryableCutdown',
+    label: '减免不可结转',
+    format: 'money'
+  },
+  {
+    prop: 'received',
+    label: '已收',
+    format: 'money'
+  },
+  {
+    prop: 'uncarryableReceived',
+    label: '已收不可结转',
+    format: 'money'
+  }]
+
+  private async onQuery (pagination: any = null) {
+    // this.loading = !0
+    // const form = util.trimForm({ ...this.form })
+    // await baseApi('businessList', {
+    //   ...form,
+    // }).then((res: any) => {
+    //   this.loading = !1
+    //   this.tableData.list = res.object.list
+    //   this.tableData.totalCount = res.object.totalCount
+    // }).catch((err: any) => {
+    //   console.log('err', err)
+    //   this.loading = !1
+    // })
+  }
+
+  private loading2 = !1
+
+  private tableData2 = {
+    list: [{
+      chargeProject: '1',
+      year: '2021',
+      mustPay: 1,
+      shouldCharge: 2,
+      thisRemission: 3,
+      thisCharge: 4
+    },
+    {
+      chargeProject: '1',
+      year: '2021',
+      mustPay: 1,
+      shouldCharge: 2,
+      thisRemission: 3,
+      thisCharge: 4
+    }],
+    totalCount: 0
+  }
+
+  private columns2 = [{
+    prop: 'chargeProject',
+    label: '收费项目'
+  },
+  {
+    prop: 'year',
+    label: '学年'
+  },
+  {
+    prop: 'mustPay',
+    label: '必缴',
+    format: 'money'
+  },
+  {
+    prop: 'shouldCharge',
+    label: '应收',
+    format: 'money'
+  },
+  {
+    prop: 'thisRemission',
+    label: '本次减免',
+    format: 'money'
+  },
+  {
+    prop: 'thisCharge',
+    label: '本次收费',
+    format: 'money'
+  }]
+
+  private async onQuery2 (pagination: any = null) {
+    // this.loading2 = !0
+    // const form = util.trimForm({ ...this.form })
+    // await baseApi('businessList', {
+    //   ...form,
+    //   ...pagination || this.pagination2
+    // }).then((res: any) => {
+    //   this.loading2 = !1
+    //   this.tableData2.list = res.object.list
+    //   this.tableData2.totalCount = res.object.totalCount
+    // }).catch((err: any) => {
+    //   console.log('err', err)
+    //   this.loading2 = !1
+    // })
+  }
+
+  private onReset () {
+    this.form = {
+      gradeState: 1
+    }
+    this.onQuery()
+    this.onQuery2()
+  }
+
+  private currentPage = 1
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  public open (): void {
+    this.onReset()
+  }
+}
+</script>
+
+<style lang='scss'>
+@import "./index";
+</style>

@@ -1,0 +1,11 @@
+.student-baseinfo-container{
+    .title{
+        margin: 10px 0;
+        display: flex;
+    }
+    .title>span{
+        font-size: 20px;
+        font-weight: bold;
+        margin-right: 10px;
+    }
+}

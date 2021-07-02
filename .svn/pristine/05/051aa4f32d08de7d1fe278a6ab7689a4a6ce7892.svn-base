@@ -1,0 +1,277 @@
+<template>
+  <div class="reduce-container">
+    <header>
+      <div class="line">
+        <i class="hs-icon-user" /><span class="student-name">{{ data.stuName }}</span>
+      </div>
+      <div class="line">
+        <static-item label="性别" :width="300"> {{ data.stuSexName }}</static-item>
+        <static-item label="证件号" :width="300">{{ data.stuPaperworkNumber }}</static-item>
+      </div>
+      <div class="line">
+        <static-item label="学校" :width="300" align="flex-start"> {{ data.stuSchoolName }}</static-item>
+        <static-item label="专业" :width="300" align="flex-start">{{ data.stuSubjectName }}</static-item>
+        <static-item label="年级" :width="200" align="flex-start"> {{ data.stuGradeName }}</static-item>
+        <static-item label="学制" :width="200" align="flex-start"> {{ data.subLenName }}年</static-item>
+      </div>
+    </header>
+    <section>
+      <div class="line">
+        <static-item label="减免时间" :width="600">
+          <el-date-picker
+            v-model="form.date"
+            type="datetime"
+            size="mini"
+            placeholder="选择日期时间">
+          </el-date-picker>
+        </static-item>
+      </div>
+      <div class="line">
+          <hs-table
+            id="editAbletrendsTable"
+            :data="data.list"
+            :border="!0"
+             style="flex: inherit;"
+            :show-summary="!0"
+            :summary-method="getSummaries"
+            @selection-change="selectionChange"
+            header-row-class-name="header-style">
+              <hs-table-column align="center" header-align="center" type="selection" width="55"></hs-table-column>
+              <hs-table-column prop="feeItemName" label="收费项目" width="155"></hs-table-column>
+              <hs-table-column prop="schoolYear" label="学年" width="155"></hs-table-column>
+              <hs-table-column prop="ifMust" label="必缴" width="60">
+                <template slot-scope="scope">
+                  {{ scope.row.ifMust === 1 ? '是' : '否' }}
+                </template>
+              </hs-table-column>
+              <hs-table-column prop="account" :formatter="formatterMoney" label="应收" width="155"></hs-table-column>
+              <hs-table-column prop="alreadyReductionAmount" :formatter="formatterMoney" label="已减免" width="155"></hs-table-column>
+              <hs-table-column prop="reductionAmount" label="本次减免" width="155">
+                <template slot-scope="scope">
+                  <span v-if="!data.list[scope.$index].edit">{{ generatingThousandthPer(data.list[scope.$index].reductionAmount) }}</span>
+                  <hs-input v-else style="width: 120px;" v-money size="mini" @click="change(scope.$index)" v-model.trim="data.list[scope.$index].reductionAmount"></hs-input>
+                </template>
+              </hs-table-column>
+          </hs-table>
+      </div>
+      <div class="line auto">
+        <el-tooltip class="item" effect="dark" content="勾选项应收金额合计" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="本次应收" :width="350">{{ totalReceivableAmount }}</static-item>
+        <el-tooltip class="item" effect="dark" content="勾选项历史流水中减免总金额" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="上次已减" :width="350">{{ totalAlreadyReductionAmount }}</static-item>
+        <el-tooltip class="item" effect="dark" content="勾选项当前减免金额之和" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="本次减免" :width="350">{{ titalReductionAmount }}</static-item>
+      </div>
+      <div class="line">
+        <static-item label="单据摘要" :width="900" align="flex-start">
+          <hs-input size="mini" type="textarea" v-model="form.remark" placeholder="请输入单据摘要" ></hs-input>
+        </static-item>
+      </div>
+    </section>
+    <footer><hs-button type="primary" @click="onReduction" size="mini">减免</hs-button></footer>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+import { getReduceItem } from '@/api/collect'
+import { getStuDetail } from '@/api/common'
+import { getConstantDictVal } from '@/utils/common'
+@Component({
+  name: 'reduce',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    Coverlap,
+    StaticItem,
+    DrawerSelect
+  }
+})
+export default class Reduce extends Vue {
+  private activeName = 'reduce'
+
+  private params: any = util.getRouterParams()
+
+  private data:any = {
+    list: []
+  }
+
+  private form = {
+    data: '',
+    workInfo: {}
+  }
+
+  private generatingThousandthPer (num: any) {
+    return util.generatingThousandthPer(num)
+  }
+
+  get totalReceivableAmount () {
+    return util.generatingThousandthPer(this.selectedRow.reduce((sum, any, i: any, v: any) => sum + v[i].account * 1, 0))
+  }
+
+  get totalAlreadyReductionAmount () {
+    return util.generatingThousandthPer(this.selectedRow.reduce((sum, any, i: any, v: any) => sum + v[i].alreadyReductionAmount * 1, 0))
+  }
+
+  get titalReductionAmount () {
+    return util.generatingThousandthPer(this.selectedRow.reduce((sum, any, i: any, v: any) => sum + v[i].reductionAmount * 1, 0))
+  }
+
+  private selectedRow = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+    const len = this.data.list.length
+    for (let i = 0; i < len; i++) {
+      this.data.list[i].edit = !1
+      this.selectedRow.map((v: any) => {
+        if (v.feeItemId === this.data.list[i].feeItemId) {
+          this.data.list[i].edit = !0
+        }
+      })
+    }
+  }
+
+  private getSummaries (param: any) {
+    const { columns } = param
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计（勾选项）'
+        return
+      }
+      const values = this.selectedRow.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0))
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      if (this.$el.querySelector('#editAbletrendsTable')) {
+        var current = (this.$el as any)
+          .querySelector('#editAbletrendsTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '5'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private change (row: any) {
+    // do
+  }
+
+  private onReduction () {
+    // do
+  }
+
+  private async initData () {
+    await getStuDetail({
+      id: this.params.id
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data = res.object.info
+      }
+    })
+    await getReduceItem({
+      stuId: this.params.id,
+      schoolId: this.params.stuSchoolId,
+      subjectId: this.params.stuSubjectId,
+      gradeId: this.params.stuGradeId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data.list = res.object.list
+      }
+    })
+  }
+
+  async mounted () {
+    this.initData()
+    this.setColSpan()
+  }
+}
+</script>
+<style lang="scss">
+  .reduce-container{
+    width: calc(100% - 10px);
+    height: 100%;
+    header{
+      width: 100%;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #e4e4e4;
+      .line{
+        .hs-icon-user{
+          font-size: 22px;
+          font-weight: bold;
+          margin-right: 12px;
+          margin-top: 2px;
+        }
+        .student-name{
+          font-size: 20px;
+          font-weight: bold;
+        }
+        width: 100%;
+        display: flex;
+        margin-bottom: 12px;
+      }
+    }
+    section{
+      width: 100%;
+      height: calc(100% - 180px);
+      .line{
+        display: flex;
+        align-items: center;
+        margin-top: 20px;
+        .header-style{
+          th {
+            background-color: #F5F7FA;
+          }
+        }
+        .hs-icon-question{
+          font-size: 16px;
+          margin-right: 6px;
+        }
+        &.auto .static-label{
+          font-size: 16px;
+          font-weight: bold;
+        }
+      }
+    }
+    footer{
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+  }
+</style>

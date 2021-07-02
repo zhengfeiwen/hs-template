@@ -1,0 +1,256 @@
+<template>
+  <div class="student-baseinfo-container">
+    <div class="title">
+      <span>学生基础信息</span><el-button type="primary" size="mini" @click="stuBaseinfoDialogFormVisible = true">编辑</el-button>
+    </div>
+    <hs-form ref="form" :rules="rules" :model="form" label-width="98px" class="border-style2">
+      <table class="simple-table" border="1">
+        <tr>
+          <td>
+            <hs-form-item label="姓名" prop="userName">
+                {{ form.userName }}
+            </hs-form-item>
+          </td>
+          <td rowspan="4">
+            <hs-form-item class="photo-block" label="照片" prop="photo">
+            <hs-plupload
+              browseButton="browseButton"
+              url="/api/core/oss/file/fileUploadPost"
+              :FilesAdded="filesAdded"
+              :headers="{ token: token, accept: 'application/json' }"
+              :multipart-params="{'parentFolder': 'lb/schoolDetail'}"
+              @inputUploader="inputUploader"
+              :UploadComplete="UploadComplete"
+              :FileUploaded="FileUploaded"
+              :Error="error"
+            />
+            <hs-image v-if="form.image" class="image-dashed" :src="setting.ossIp + '/' + form.image"></hs-image>
+            <hs-link id="browseButton" v-else class="add-image image-dashed" icon="hs-icon-plus">添加照片</hs-link>
+          </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="性别" prop="sexName">
+              {{ form.sexName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="民族" prop="ethnic">
+              {{ form.ethnic }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="业务" prop="businessName">
+              {{ form.businessName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="院校" prop="schoolName">
+              {{ form.schoolName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="专业" prop="subjectName">
+              {{ form.subjectName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="年级" prop="gradeName">
+              {{ form.gradeName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="学籍状态" prop="stuSchoolRollStatusName">
+              {{ form.stuSchoolRollStatusName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="第二学历" prop="secondDegree">
+              {{ form.secondDegree }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="所属中心" prop="centerName">
+              {{ form.centerName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="教学点" prop="point">
+              {{ form.point }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="学生来源" prop="stuentOragin">
+              {{ form.stuentOragin }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="来源名称" prop="oraginName">
+              {{ form.oraginName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="证件类型" prop="cardName">
+              {{ form.cardName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="证件号码" prop="cardId">
+              {{ form.cardId }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="联系电话" prop="phone">
+              {{ form.phone }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="备用手机号" prop="sparePhone">
+              {{ form.sparePhone }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="准考证号" prop="id">
+              {{ form.id }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="学号" prop="no">
+              {{ form.no }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="上门次数" prop="id">
+              {{ form.id }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="缴费状态" prop="payState">
+              {{ form.no }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="家庭住址" prop="address">
+              {{ form.address }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="备注" prop="memo">
+              {{ form.memo }}
+            </hs-form-item>
+          </td>
+        </tr>
+      </table>
+    </hs-form>
+    <ChangeStuBaseInfoDialog :stuId="stuId" :visible.sync="stuBaseinfoDialogFormVisible"></ChangeStuBaseInfoDialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import ChangeStuBaseInfoDialog from '@/views/student/studentmanage/StudentBaseInfo/BaseInfo/ChangeStuBaseInfoDialog/index.vue'
+import setting from '@/settings'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    DictSelect,
+    ChangeStuBaseInfoDialog
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private setting = setting
+
+  private up: any = {}
+
+  private files: any[] = []
+
+  private form: any = {
+    state: 1,
+    userName: '李梅',
+    sexName: '女',
+    ethnic: 'ethnic',
+    businessName: 'businessName'
+  }
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private rules = {
+    userName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    sexName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    ethnic: [
+      { required: true, message: '请选择民族', trigger: 'change' }
+    ],
+    businessName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    schoolName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    gradeName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    centerName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    cardName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    subjectName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    cardId: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    stuSchoolRollStatusName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    // photo: [
+    //   { validator: this.validatePhoto, required: true, message: '请上传照片', trigger: 'change' }
+    // ],
+    point: [
+      { required: true, message: '', trigger: 'blur' }
+    ]
+  }
+
+  private stuBaseinfoDialogFormVisible = false
+}
+</script>
+
+<style lang='scss'>
+</style>

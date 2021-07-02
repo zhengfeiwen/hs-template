@@ -1,0 +1,38 @@
+import { RouteConfig } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+const Student: RouteConfig = {
+  path: '/student',
+  component: Layout,
+  redirect: 'noredirect',
+  name: 'student',
+  meta: {
+    permission: 'student',
+    title: 'student',
+    icon: 'peoples'
+  },
+  children: [{
+    path: 'student-search/index',
+    component: () => import(/* webpackChunkName: "studentSearch" */ '@/views/student/studentsearch/index.vue'),
+    name: 'studentsearch',
+    meta: {
+      title: 'studentsearch',
+      permission: 'studentSearch',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'student-manage/index',
+    component: () => import(/* webpackChunkName: "studentSearch" */ '@/views/student/studentmanage/index.vue'),
+    name: 'studentmanage',
+    meta: {
+      title: 'studentmanage',
+      permission: 'studentmanage',
+      noCache: true,
+      icon: 'guide'
+    }
+  }]
+}
+
+export default Student

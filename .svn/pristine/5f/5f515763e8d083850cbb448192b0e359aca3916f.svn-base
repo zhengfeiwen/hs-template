@@ -1,0 +1,73 @@
+import { DirectiveOptions } from 'vue'
+
+// 千分位
+// 用法
+// <el-input
+//   v-thousands.registeredCapital='form.workInfo'
+//   v-model.trim='form.workInfo.registeredCapital'
+// ></el-input>
+
+export const thousands: DirectiveOptions = {
+  bind (el, binding, vnode: any) {
+    const key = Object.keys(binding.modifiers)[0]
+    // 处理千分位展示
+    const generatingThousandthPer = (num: any) => {
+      if (!num) return ''
+      const num1 = num.split('.')[0]
+      const num2 = num.split('.')[1]
+      const c = num1.toString().replace(/(\d)(?=(?:\d{3})+$)/g, '$1, ')
+      return num.toString().indexOf('.') !== -1 ? c + '.' + num2 : c
+    }
+    // 赋值
+    const assignment = (event: any, value: string, value2?: string) => {
+      binding.value[key] = value
+      vnode.context.$nextTick(() => { event.target.value = generatingThousandthPer(value2 || value) })
+    }
+    // 处理最后一位非法字符
+    const handlerIllegalStr = (str: string) => {
+      while (!(/^[0-9]+.?[0-9]*/.test(str.charAt(str.length - 1)))) {
+        str = str.substr(0, str.length - 1)
+      }
+      return str
+    }
+
+    el.addEventListener('input', (event: any) => {
+      const inp = event.target.value = event.target.value.replace(/,/g, '')
+      assignment(event, inp)
+    })
+
+    // element
+    const input: any = el.querySelector('.hs-input__inner') || el.querySelector('.el-input__inner')
+    if (input) {
+      input.addEventListener('blur', (event: any) => {
+        const val = event.target.value
+        if (!val || !/^[0-9]+.?[0-9]*/.test(val)) return
+        assignment(event, handlerIllegalStr(val.replace(/,/g, '')))
+      })
+    }
+  }
+}
+
+export const money: DirectiveOptions = {
+  bind (el) {
+    const input: any = el.querySelector('.hs-input__inner') || el.querySelector('.el-input__inner')
+    input.addEventListener('input', function () {
+      // 进行验证
+      if (!isMoney(input.value)) {
+        input.value = input.value.substring(0, input.value.length - 1)
+        input.dispatchEvent(new Event('input'))
+      }
+    })
+    const isMoney = (num: any) => {
+      if (num.length === 0) return !0
+      const reg = /^[+-]?((\d*(\.\d{1,})$)|(\d+$))/
+      return reg.test(num) || (num.split('.').length <= 2 && num.substring(num.length - 1) === '.')
+    }
+    if (input) {
+      input.addEventListener('blur', () => {
+        input.value = input.value * 1
+        input.dispatchEvent(new Event('input'))
+      })
+    }
+  }
+}

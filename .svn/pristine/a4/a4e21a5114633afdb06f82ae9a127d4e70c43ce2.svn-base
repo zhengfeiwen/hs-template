@@ -1,0 +1,152 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+const settingConfig: any = {
+  catalogList: { url: '/fcs/noticeCatalog/list' }, // 栏目列表
+  catalogListCount: { url: '/fcs/noticeCatalog/count' }, // 栏目列表总数
+  catalogDetail: { url: '/fcs/noticeCatalog/detail' }, // 栏目详情
+  addCatalog: { url: '/fcs/noticeCatalog/add' }, // 新增
+  removeCatalog: { url: '/fcs/noticeCatalog/delete' }, // 删除
+  updateCatalog: { url: '/fcs/noticeCatalog/update' }, // 编辑
+  enableCatalog: { url: '/fcs/noticeCatalog/enable' }, // 启用
+  disableCatalog: { url: '/fcs/noticeCatalog/disable' }, // 禁用
+  enableNotice: { url: '/fcs/notice/enable' }, // 启用
+  disableNotice: { url: '/fcs/notice/disable' }, // 禁用
+  addNotice: { url: '/fcs/notice/add' }, // 新增
+  removeNotice: { url: '/fcs/notice/delete' }, // 删除
+  updateNotice: { url: '/fcs/notice/update' }, // 编辑
+  noticeOpen: { url: '/fcs/notice/open' }, // 发布
+  noticeList: { url: '/fcs/notice/list' }, // 栏目列表
+  noticeListCount: { url: '/fcs/notice/list/count' }, // 栏目列表总数
+  reportDirectionsInsertInput: { url: '/fcs/reportDirections/insertInput' }, // 报表说明新增
+  reportDirectionsDelete: { url: '/fcs/reportDirections/delete' }, // 报表说明删除
+  reportDirectionsUpdateInput: { url: '/fcs/reportDirections/updateInput' }, // 报表说明修改
+  reportDirectionsDetail: { url: '/fcs/reportDirections/detail' }, // 报表说明详情
+  reportOptionList: { url: '/fcs/reportDirections/getOptionKeyList' }, // 报表说明字典列表
+  reportOptionListCount: { url: '/fcs/reportDirections/getOptionKeyCount' }, // 报表说明总数
+  fileUploadPost: { url: '/core/oss/file/fileUploadPost' } // 上传文件
+}
+
+export const api: any = {}
+
+Object.keys(settingConfig).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${settingConfig[key].url}`,
+      method: 'post',
+      data: params,
+      headers: settingConfig[key].headers
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const settingApi = (key: any, params: any = {}) => api[key](params)
+
+
+/**
+* 删除用户
+* @param data
+*/
+export const removeUser = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/user/delete`,
+    method: 'post',
+    data
+  })
+
+/**
+* 用户列表
+* @param data
+*/
+export const userList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/user/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 用户列表
+* @param data
+*/
+export const userCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/user/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 新增用户
+* @param data
+*/
+export const addUser = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/user/add`,
+    method: 'post',
+    data
+  })
+///
+
+/**
+* 缴费列表
+* @param data
+*/
+export const payList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/pay/list`,
+    method: 'post',
+    data
+  })
+
+/**
+* 缴费总数
+* @param data
+*/
+export const payCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/pay/count`,
+    method: 'post',
+    data
+  })
+
+/**
+* 缴费详情
+* @param data
+*/
+export const payDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/pay/detail`,
+    method: 'post',
+    data
+  })
+///
+/**
+* 缴费详情
+* @param data
+*/
+export const studentCenterUpdate = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/center/update`,
+    method: 'post',
+    data
+  })
+
+export const settingmanage = {
+  removeUser: removeUser,
+  userList: userList,
+  userCount: userCount,
+  addUser: addUser,
+  payList: payList,
+  payCount: payCount,
+  payDetail: payDetail,
+  studentCenterUpdate: studentCenterUpdate
+}

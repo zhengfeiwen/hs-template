@@ -1,0 +1,90 @@
+<template>
+  <div class="student-baseinfo-container">
+    <div class="title">
+      <span>变更记录</span>
+    </div>
+    <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolState']">
+    </simple-table>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import util from '@/utils/busi/util'
+import { businessList } from '@/api/base'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private form = {
+    gradeState: 1
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'businessName',
+    label: '字段'
+  },
+  {
+    prop: 'originalValue',
+    label: '原值'
+  },
+  {
+    prop: 'newValue',
+    label: '新值'
+  },
+  {
+    prop: 'operator',
+    label: '操作人员'
+  },
+  {
+    prop: 'updateTime',
+    label: '更新时间'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await businessList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      gradeState: 1
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+}
+</script>
+
+<style lang='scss'>
+</style>

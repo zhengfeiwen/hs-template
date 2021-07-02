@@ -1,0 +1,160 @@
+import { RouteConfig } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+const Collect: RouteConfig = {
+  path: '/collect',
+  component: Layout,
+  redirect: 'noredirect',
+  name: 'fcsChargeMenu',
+  meta: {
+    permission: 'fcsChargeMenu',
+    title: 'collect',
+    icon: 'table'
+  },
+  children: [{
+    path: 'collect-manage-auth/index',
+    component: () => import(/* webpackChunkName: "collectManageAuth" */ '@/views/collect/collectmanageauth/index.vue'),
+    name: 'fcsCollectManageAuthMenu',
+    meta: {
+      title: 'collectmanageauth',
+      permission: 'fcsCollectManageAuthMenu',
+      noCache: true,
+      icon: 'plus-square'
+    }
+  },
+  {
+    path: 'collect-manage-auth/detail',
+    component: () => import(/* webpackChunkName: "agentdetail" */ '@/views/collect/collectmanageauth/detail/index.vue'),
+    name: 'collectmanagedetail',
+    meta: {
+      title: 'collectmanagedetail',
+      activeMenu: '/collect/collect-manage-auth/index',
+      hidden: true,
+      icon: 'guide',
+      noCache: true
+    }
+  },
+  {
+    path: 'collect-batchimport/index',
+    component: () => import(/* webpackChunkName: "collectBatchImport" */ '@/views/collect/collectmanageauth/batchimport/index.vue'),
+    name: 'collectbatchimport',
+    meta: {
+      title: 'collectbatchimport',
+      activeMenu: '/collect/collect-manage-auth/index',
+      hidden: !0,
+      noCache: true
+    }
+  },
+  {
+    path: 'prepaid-manage-auth/index',
+    component: () => import(/* webpackChunkName: "prepaidManageAuth" */ '@/views/collect/prepaidmanageauth/index.vue'),
+    name: 'fcsPrepaidManageAuthMenu',
+    meta: {
+      title: 'prepaidmanageauth',
+      permission: 'fcsPrepaidManageAuthMenu',
+      noCache: true,
+      icon: 'plus-square-o'
+    }
+  },
+  {
+    path: 'prepaid-pay/index',
+    component: () => import(/* webpackChunkName: "reducePay" */ '@/views/collect/prepaidmanageauth/pay/index.vue'),
+    name: 'prepaidpay',
+    meta: {
+      title: 'prepaidpay',
+      activeMenu: '/collect/prepaid-manage-auth/index',
+      hidden: !0,
+      noCache: true
+    }
+  },
+  {
+    path: 'prepaid-batchimport/index',
+    component: () => import(/* webpackChunkName: "reduceBatchImport" */ '@/views/collect/prepaidmanageauth/batchimport/index.vue'),
+    name: 'prepaidbatchimport',
+    meta: {
+      title: 'prepaidbatchimport',
+      activeMenu: '/collect/prepaid-manage-auth/index',
+      hidden: !0,
+      noCache: true
+    }
+  },
+  {
+    path: 'prepaid-batchimport/index',
+    component: () => import(/* webpackChunkName: "prepaidBatchImport" */ '@/views/collect/prepaidmanageauth/batchimport/index.vue'),
+    name: 'prepaidbatchimport',
+    meta: {
+      title: 'prepaidbatchimport',
+      activeMenu: '/collect/prepaid-manage-auth/index',
+      hidden: !0,
+      noCache: true
+    }
+  },
+  {
+    path: 'reduce-manage-auth/index',
+    component: () => import(/* webpackChunkName: "reduceManageAuth" */ '@/views/collect/reducemanageauth/index.vue'),
+    name: 'fcsReduceManageMenu',
+    meta: {
+      title: 'reducemanageauth',
+      permission: 'fcsReduceManageMenu',
+      noCache: true,
+      icon: 'minus-aquare'
+    }
+  },
+  {
+    path: 'reduce-pay/index',
+    component: () => import(/* webpackChunkName: "reducePay" */ '@/views/collect/reducemanageauth/pay/index.vue'),
+    name: 'reducepay',
+    meta: {
+      title: 'reducepay',
+      activeMenu: '/collect/reduce-manage-auth/index',
+      hidden: !0,
+      noCache: true
+    }
+  },
+  {
+    path: 'reduce-batchimport/index',
+    component: () => import(/* webpackChunkName: "reduceBatchImport" */ '@/views/collect/reducemanageauth/batchimport/index.vue'),
+    name: 'reducebatchimport',
+    meta: {
+      title: 'reducebatchimport',
+      activeMenu: '/collect/reduce-manage-auth/index',
+      hidden: !0,
+      noCache: true
+    }
+  },
+  {
+    path: 'refund-manage/index',
+    component: () => import(/* webpackChunkName: "refundManage" */ '@/views/collect/refundmanage/index.vue'),
+    name: 'fcsRefundManageAuthMenu',
+    meta: {
+      title: 'refundmanage',
+      permission: 'fcsRefundManageAuthMenu',
+      noCache: true,
+      icon: 'minus-aquare-o'
+    }
+  },
+  {
+    path: 'refund-pay/index',
+    component: () => import(/* webpackChunkName: "refundPay" */ '@/views/collect/refundmanage/pay/index.vue'),
+    name: 'refundpay',
+    meta: {
+      title: 'refundpay',
+      activeMenu: '/collect/refund-manage/index',
+      hidden: !0,
+      noCache: true
+    }
+  },
+  {
+    path: 'refund-batchimport/index',
+    component: () => import(/* webpackChunkName: "refundBatchImport" */ '@/views/collect/refundmanage/batchimport/index.vue'),
+    name: 'refundbatchimport',
+    meta: {
+      title: 'refundbatchimport',
+      activeMenu: '/collect/refund-manage/index',
+      hidden: !0,
+      noCache: true
+    }
+  }]
+}
+
+export default Collect

@@ -1,0 +1,274 @@
+<template>
+  <div class="reduce-container">
+    <header>
+      <div class="line">
+        <i class="hs-icon-user" /><span class="student-name">郑斐文{{ data.userName }}</span>
+      </div>
+      <div class="line">
+        <static-item label="性别" :width="300"> {{ data.sexName }}</static-item>
+        <static-item label="证件号" :width="300">{{ data.stuPaperworkNumber }}</static-item>
+      </div>
+      <div class="line">
+        <static-item label="学校" :width="300"> {{ data.schoolName }}</static-item>
+        <static-item label="专业" :width="300" align="flex-start">{{ data.subjectName }}</static-item>
+        <static-item label="年级" :width="200"> {{ data.gradeName }}</static-item>
+        <static-item label="学制" :width="200"> {{ data.lenName }}</static-item>
+      </div>
+    </header>
+    <section>
+      <div class="line">
+        <static-item label="是否退学" :width="300">
+          <dict-select :val.sync="form.outSchool" comm-group-name="radio"></dict-select>
+        </static-item>
+        <static-item label="退费时间" :width="600">
+          <el-date-picker
+            v-model="form.date"
+            type="datetime"
+            size="mini"
+            placeholder="选择日期时间">
+          </el-date-picker>
+        </static-item>
+      </div>
+      <div class="line">
+         <hs-table
+            id="editAbletrendsTable"
+            :data="list"
+            :border="!0"
+            style="width: 100%"
+            @selection-change="selectionChange"
+            header-row-class-name="header-style">
+              <hs-table-column align="center" header-align="center" type="selection" width="55"></hs-table-column>
+              <hs-table-column prop="schoolName" label="缴费院校"></hs-table-column>
+              <hs-table-column prop="grade" label="缴费年级"></hs-table-column>
+              <hs-table-column prop="subject" label="缴费专业"></hs-table-column>
+              <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+              <hs-table-column prop="lenName" label="学年"></hs-table-column>
+              <hs-table-column prop="feeMust" :formatter="formatterMoney" label="必缴"></hs-table-column>
+              <hs-table-column prop="receivableAmount" :formatter="formatterMoney" label="应收"></hs-table-column>
+              <hs-table-column prop="acceptedAmount" :formatter="formatterMoney" label="已收"></hs-table-column>
+              <hs-table-column prop="alreadyReductionAmount" :formatter="formatterMoney" label="已减免"></hs-table-column>
+              <hs-table-column prop="alreadyRefundAmount" :formatter="formatterMoney" label="已退"></hs-table-column>
+              <hs-table-column prop="returnProport" label="退学退费比例">
+                <template slot-scope="scope">
+                  <span v-if="!list[scope.$index].edit">{{ list[scope.$index].returnProport }}</span>
+                  <dict-select v-else :val.sync="list[scope.$index].returnProport" :data="returnProports"></dict-select>
+                </template>
+              </hs-table-column>
+              <hs-table-column prop="tf" label="本次退费">
+                <template slot-scope="scope">
+                  <span v-if="!list[scope.$index].edit">{{ generatingThousandthPer(list[scope.$index].refundAmount) }}</span>
+                  <hs-input v-else v-money size="mini" @click="change(scope.$index)" v-model.trim="list[scope.$index].refundAmount"></hs-input>
+                </template>
+              </hs-table-column>
+              <hs-table-column prop="yetf" label="余额退费">
+                <template slot-scope="scope">
+                  <span v-if="!list[scope.$index].edit">{{ generatingThousandthPer(list[scope.$index].feeRefundAmount) }}</span>
+                  <hs-input v-else v-money size="mini" @click="change(scope.$index)" v-model.trim="list[scope.$index].feeRefundAmount"></hs-input>
+                </template>
+              </hs-table-column>
+          </hs-table>
+      </div>
+      <p style="color: red;">备注：退款时如果有个人账户余额优先退款余额</p>
+      <div class="line auto">
+        <el-tooltip class="item" effect="dark" content="勾选项本次退款=本次退费+余额退费" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="本次退款" :width="350">{{ totalRefundAmount }}</static-item>
+        <el-tooltip class="item" effect="dark" content="本次退款后，个人账户余额剩余金额" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="剩余余额" :width="350">{{ totalFeeRefundAmount }}</static-item>
+      </div>
+      <div class="line">
+        <static-item label="单据摘要" :width="900" align="flex-start">
+          <hs-input size="mini" type="textarea" v-model="form.centerCode" placeholder="请输入所属中心代码" ></hs-input>
+        </static-item>
+      </div>
+    </section>
+    <footer><hs-button type="primary" @click="onQuery" size="mini">减免</hs-button></footer>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'refund',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    Coverlap,
+    StaticItem,
+    DrawerSelect
+  }
+})
+export default class Refund extends Vue {
+  private activeName = 'reduce'
+
+  private data: any = util.getRouterParams()
+
+  private form = {
+    data: '',
+    workInfo: {}
+  }
+
+  private generatingThousandthPer (num: any) {
+    return util.generatingThousandthPer(num)
+  }
+
+  get totalRefundAmount () {
+    return util.generatingThousandthPer(this.selectedRow.reduce((sum, any, i: any, v: any) => sum + v[i].refundAmount * 1, 0))
+  }
+
+  get totalFeeRefundAmount () {
+    return util.generatingThousandthPer(this.selectedRow.reduce((sum, any, i: any, v: any) => sum + v[i].feeRefundAmount * 1, 0))
+  }
+
+  private returnProports = [
+    {
+      key: '20%',
+      value: '20%'
+    },
+    {
+      key: '40%',
+      value: '40%'
+    },
+    {
+      key: '60%',
+      value: '60%'
+    },
+    {
+      key: '80%',
+      value: '80%'
+    },
+    {
+      key: '100%',
+      value: '100%'
+    }
+  ]
+
+  private list: any[] = [
+    {
+      feeItemId: 1,
+      feeItemName: '收费项目',
+      lenName: '',
+      feeMust: 4,
+      returnProport: '20%',
+      acceptedAmount: 11,
+      refundAmount: 11111,
+      feeRefundAmount: 100
+    },
+    {
+      feeItemId: 2,
+      feeItemName: '收费项目',
+      lenName: '',
+      feeMust: 3,
+      returnProport: '40%',
+      acceptedAmount: 22,
+      refundAmount: 2,
+      feeRefundAmount: 100
+    },
+    {
+      feeItemId: 3,
+      feeItemName: '收费项目',
+      lenName: '',
+      feeMust: 2,
+      returnProport: '60%',
+      acceptedAmount: 33,
+      refundAmount: 3,
+      feeRefundAmount: 100
+    },
+    {
+      feeItemId: 4,
+      feeItemName: '收费项目',
+      lenName: '',
+      feeMust: 1,
+      returnProport: '80%',
+      acceptedAmount: 44,
+      refundAmount: 4,
+      feeRefundAmount: 100
+    }
+  ]
+
+  private selectedRow = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+    const len = this.list.length
+    for (let i = 0; i < len; i++) {
+      this.list[i].edit = !1
+      this.selectedRow.map((v: any) => {
+        if (v.feeItemId === this.list[i].feeItemId) {
+          this.list[i].edit = !0
+        }
+      })
+    }
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private change (row: any) {
+    // do
+  }
+}
+</script>
+<style lang="scss">
+  .reduce-container{
+    width: calc(100% - 10px);
+    height: 100%;
+    header{
+      width: 100%;
+      height: 120px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #e4e4e4;
+      .line{
+        .hs-icon-user{
+          font-size: 22px;
+          font-weight: bold;
+          margin-right: 12px;
+          margin-top: 2px;
+        }
+        .student-name{
+          font-size: 20px;
+          font-weight: bold;
+        }
+        width: 100%;
+        display: flex;
+        margin-bottom: 12px;
+      }
+    }
+    section{
+      width: 100%;
+      height: calc(100% - 180px);
+      .line{
+        display: flex;
+        align-items: center;
+        margin-top: 20px;
+        .header-style{
+          th {
+            background-color: #e4e4e4;
+          }
+        }
+        .hs-icon-question{
+          font-size: 16px;
+          margin-right: 6px;
+        }
+        &.auto .static-label{
+          font-size: 16px;
+          font-weight: bold;
+        }
+      }
+    }
+    footer{
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+  }
+</style>

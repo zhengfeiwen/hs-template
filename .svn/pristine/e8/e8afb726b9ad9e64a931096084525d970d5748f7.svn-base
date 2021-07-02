@@ -1,0 +1,275 @@
+<template>
+  <div class="feeitemmanage-container">
+    <header>
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+          <hs-form-item label="收费项目代码">
+          <dict-select :val.sync="form.feeItemCode" comm-group-name="state"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="收费项目名称">
+          <dict-select :val.sync="form.feeItemName" comm-group-name="state"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="是否预收项目">
+          <dict-select :val.sync="form.preFeeItem" comm-group-name="state"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="状态">
+          <dict-select :val.sync="form.feeItemState" comm-group-name="state"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="收费区间">
+          <el-date-picker
+            range-separator="至"
+            value-format="date"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            :picker-options="pickerOptions"
+            format="yyyy-MM-dd HH:mm:ss"
+            :default-time="['00:00:00','23:59:59']"
+            type="daterange"
+            v-model="form.date"
+            size="mini">
+          </el-date-picker>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table :isCheckbox="!0" :data="tableData" @selection-change="selectionChange" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolState']">
+        <template slot="custom_feeItemState" slot-scope="{ scope }">
+            <hs-switch
+              v-permission="['feeitemDisable', 'feeitemEnable']"
+              v-model="scope.row.feeItemState"
+              :active-value="1"
+              :inactive-value="0"
+              @change="change(scope.row)"
+              active-color="#13ce66"
+              inactive-color="#d9d9d9">
+            </hs-switch>
+          </template>
+          <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+          <hs-button
+            v-permission="['feeitemUpdate']"
+            @click.native.prevent="onEdit(scope.row)"
+            type="text"
+            size="small">
+            编辑
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="info" v-permission="['feeitemInsertInput']" icon="hs-icon-plus" @click="onAdd" size="mini">新增</hs-button>
+          <hs-button type="success" v-permission="['feeitemDelete']" icon="hs-icon-minus" @click="onRemove" size="mini">删除</hs-button>
+          <hs-button type="info" v-permission="['feeitemImport']" icon="hs-icon-upload" @click="onImport" size="mini">导入</hs-button>
+          <hs-button type="success" v-permission="['feeitemExport']" icon="hs-icon-download" @click="onExport" size="mini">导出</hs-button>
+        </template>
+      </simple-table>
+    </section>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import { MessageBox } from 'element-ui'
+import { schoolfeestandardList, schoolfeestandardDetail, feeitemEnable, feeitemDisable, feeitemExport, feeitemInsertInput, feeitemDelete, feeitemImport } from '@/api/base'
+@Component({
+  name: 'feeitemmanage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    Tree
+  }
+})
+export default class FeeitemManage extends Vue {
+  private form = {
+    status: 1,
+    feeItemCode: '',
+    feeItemName: '',
+    preFeeItem: '',
+    feeItemState: 1,
+    startDate: '',
+    endDate: ''
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'feeItemCode',
+    label: '收费项目代码'
+  },
+  {
+    prop: 'feeItemName',
+    label: '收费项目名称'
+  },
+  {
+    prop: 'startDate',
+    label: '默认起始收费区间'
+  },
+  {
+    prop: 'endDate',
+    label: '默认结束收费区间'
+  },
+  {
+    prop: 'preFeeItem',
+    label: '是否为预收项目'
+  },
+  {
+    prop: 'memo',
+    label: '备注'
+  },
+  {
+    prop: 'feeItemState',
+    label: '状态',
+    custom: !0
+  }]
+
+  get pickerOptions () {
+    return util.pickerOptions
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await schoolfeestandardList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      status: 1,
+      feeItemCode: '',
+      feeItemName: '',
+      preFeeItem: '',
+      feeItemState: 1,
+      startDate: '',
+      endDate: ''
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await schoolfeestandardDetail({ id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          businessName: res.object.businessName,
+          businessState: res.object.businessStateName,
+          memo: res.object.memo
+        }
+      }
+    })
+  }
+
+  private async onEdit (row: any) {
+    await schoolfeestandardDetail({ id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          businessName: res.object.businessName,
+          businessState: res.object.businessStateName,
+          memo: res.object.memo
+        }
+      }
+    })
+  }
+
+  private async change (row: any) {
+    if (row.schoolState === 1) {
+      if (!row.detailId) {
+        this.$alert('请先配置数据!')
+        row.schoolState = 0
+      } else {
+        await feeitemEnable({ id: row.detailId })
+      }
+    } else {
+      await feeitemDisable({ id: row.detailId })
+    }
+  }
+
+  private onAdd () {
+    // do something
+  }
+
+  private async onRemove () {
+    // do something
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择项目')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    MessageBox.confirm(
+      '提示：是否删除所选收费项目', '删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }).then(async () => {
+      await feeitemDelete({
+        ids: ids.join(',')
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message(res.message)
+        }
+      })
+    })
+  }
+
+  private onImport () {
+    // do something
+  }
+
+  private onExport () {
+    // do something
+  }
+
+  mounted () {
+    this.onQuery()
+    util.initFlexForm()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

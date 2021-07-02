@@ -1,0 +1,139 @@
+<template>
+  <el-dialog append-to-body :close-on-click-modal="!1" title="余额详情" :visible.sync="visible" :before-close="onClose" @open="open()">
+    <div class="account-balance-detail-dialog-container">
+      <div class="amount"><p>账户余额</p><span>{{ moneyFormatter(amount) }}</span>元<p>余额明细记录余额产生与支出的流水来源</p></div>
+      <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="Pagination" :columnable="!1">
+        <template slot="custom_amount" slot-scope="{ scope }">
+          <div :class="'status' + scope.row.accountRecordType">{{ (scope.row.accountRecordType == 1 ? '+' : '-') + scope.row.amount }}</div>
+        </template>
+        <template slot="custom_billNo" slot-scope="{ scope }">
+          <div>{{ scope.row.billNo }}</div>
+        </template>
+        <template slot="custom_payRecordStatusName" slot-scope="{ scope }">
+          <div :class="'status' + scope.row.payRecordStatus">{{ scope.row.payRecordStatusName }}</div>
+        </template>
+      </simple-table>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="info" size="mini" plain @click="onClose">关闭</el-button>
+      </div>
+    </div>
+  </el-dialog>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { studentApi } from '@/api/studentcenter'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private amount = 0
+
+  private loading = !1
+
+  private moneyFormatter (amount: Number) {
+    return util.generatingThousandthPer(amount)
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private columns = [{
+    prop: 'amount',
+    label: '金额',
+    custom: !0
+  },
+  {
+    prop: 'accountRecordTypeName',
+    label: '状态'
+  },
+  {
+    prop: 'billNo',
+    label: '关联流水',
+    custom: !0
+  },
+  {
+    prop: 'payRecordStatusName',
+    label: '流水状态',
+    custom: !0
+  },
+  {
+    prop: 'createTime',
+    label: '创建时间',
+    format: 'date'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    !pagination && (this.pagination.currentPage = 1)
+    await studentApi('stuContactsDetailedList', {
+      stuId: this.stuId,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private currentPage = 1
+
+  private async getStuBalance () {
+    await studentApi('stuAccountDetail', { id: this.stuId }).then((res: any) => {
+      if (res.code === 10000) {
+        this.amount = (res.object.info.balance * 0.01) || 0
+      }
+    })
+  }
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  private open () {
+    this.getStuBalance()
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang='scss'>
+.account-balance-detail-dialog-container{
+  .amount>span{
+      color: #333;
+      font-size: 36px;
+      font-weight: bold;
+  }
+  .status1{
+    color: rgb(19, 206, 102);
+  }
+  .status2{
+    color: #EA4335;
+  }
+  .link{
+    color: #409eff;
+  }
+  .dialog-footer{
+    margin-top: 10px;
+    text-align: right;
+  }
+}
+</style>

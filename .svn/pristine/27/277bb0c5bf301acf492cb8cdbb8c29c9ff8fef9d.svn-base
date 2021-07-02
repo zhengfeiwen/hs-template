@@ -1,0 +1,564 @@
+<template>
+  <div class="reduce-container">
+    <header>
+      <UserInfo :userInfo="data.info" /> <!-- 学生信息 -->
+    </header>
+    <section>
+      <div class="line user-info-box" v-show="action !== 'add'" style="margin-left:70px;">
+        <div class="w25p">流水号：{{ data.info.billNo }}</div>
+        <div class="w30p">创建时间：{{ data.info.createTime ? dayjs(data.info.createTime).format('YYYY年MM月DD日hh时mm分') : '' }}</div>
+        <div class="w20p">流水状态：
+          <span style="color:#009688;" v-if="data.info.statusName !== '作废'">{{ data.info.statusName }}</span>
+          <span style="color:#FF0000;" v-else>{{ data.info.statusName }}</span>
+        </div>
+        <div class="w20p">操作人:{{ data.info.createName }}</div>
+      </div>
+      <div class="line user-info-box" style="margin-left:70px;">
+        <span style="color:red">*</span>减免时间：
+        <el-date-picker
+          v-show="action !== 'view'"
+          v-model="form.payTime"
+          :picker-options="pickerOptions"
+          type="datetime"
+          format="yyyy-MM-dd HH:mm"
+          size="mini"
+          value-format="timestamp"
+          placeholder="选择日期时间">
+        </el-date-picker>
+        <span v-show="action === 'view'"> {{ params.payTime ? dayjs(params.payTime).format('YYYY年MM月DD日hh时mm分') : '' }}</span>
+      </div>
+      <div class="w20p" v-show="action !== 'add'">缴费类型：
+        <span> {{ data.info.tradeTypeName }}</span>
+      </div>
+      <div class="line">
+        <hs-table
+          v-if="refresh"
+          ref="hsTable"
+          id="editAbletrendsTable"
+          style="flex: inherit;"
+          :data="data.list"
+          :empty-text="emptyText"
+          :border="!0"
+          :show-summary="!0"
+          :summary-method="getSummaries"
+          @selection-change="selectionChange"
+          header-row-class-name="header-style">
+            <hs-table-column align="center" header-align="center" v-if="action === 'add'" type="selection" width="55"></hs-table-column>
+            <hs-table-column v-if="action === 'view'" prop="business" label="缴费业务">
+              <template slot-scope="scope">
+                <span>{{ dictBusiness(scope.row.business) }}</span>
+              </template>
+            </hs-table-column>
+            <hs-table-column v-if="action === 'view'" prop="schoolName" label="缴费院校"></hs-table-column>
+            <hs-table-column v-if="action === 'view'" prop="gradeName" label="缴费年级"></hs-table-column>
+            <hs-table-column v-if="action === 'view'" prop="subjectName" label="缴费专业"></hs-table-column>
+            <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+            <hs-table-column prop="schoolYearName" label="学年" width="155"></hs-table-column>
+            <hs-table-column prop="ifMust" label="必缴" width="60">
+              <template slot-scope="scope">
+                {{ scope.row.ifMust === 1 ? '是' : '否' }}
+              </template>
+            </hs-table-column>
+            <hs-table-column prop="receivableAmount" :formatter="formatterMoney" label="应收" width="155"></hs-table-column>
+            <hs-table-column prop="alreadyReductionAmount" :formatter="formatterMoney" label="已减免" width="155"></hs-table-column>
+            <hs-table-column prop="reductionAmount" label="本次减免" width="155">
+              <template slot-scope="scope">
+                <span v-if="!data.list[scope.$index].edit">{{ generatingThousandthPer(data.list[scope.$index].reductionAmount) }}</span>
+                <hs-input v-else style="width: 120px;" @input.native="reductionAmountChange($event, scope.$index)" v-money size="mini" @click="change(scope.$index)" v-model.trim="data.list[scope.$index].reductionAmount"></hs-input>
+              </template>
+            </hs-table-column>
+        </hs-table>
+      </div>
+      <div class="line auto">
+        <el-tooltip class="item" effect="dark" content="勾选项应收金额合计" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="本次应收" :width="350">{{ generatingThousandthPer(totalReceivableAmount || 0) }}</static-item>
+        <el-tooltip class="item" effect="dark" content="勾选项历史流水中减免总金额" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="上次已减" :width="350">{{ generatingThousandthPer(totalAlreadyReductionAmount || 0) }}</static-item>
+        <el-tooltip class="item" effect="dark" content="勾选项当前减免金额之和" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+        <static-item label="本次减免" :width="350">{{ generatingThousandthPer(titalReductionAmount || 0) }}</static-item>
+      </div>
+      <div class="line">
+        <static-item label="单据摘要" :width="900" align="flex-start">
+          <el-input size="mini" v-if="action !== 'view'" maxlength="200" show-word-limit :rows="3" resize="none" type="textarea" v-model="form.remark" placeholder="请输入单据摘要" ></el-input>
+          <span v-else>{{ form.remark }}</span>
+        </static-item>
+      </div>
+    </section>
+    <footer><hs-button type="primary" v-show="action !== 'view'" :disabled="!data.list.length" @click="onReduction" size="mini">{{ action === 'add' ? '减免' : '保存' }}</hs-button></footer>
+    <div class="empty-block" v-if="!1">
+      <img src="../../../../assets/statics/pics/empty.png" alt="">
+      <span>当前学年暂无可收的收费标准</span>
+      <hs-link type="primary" @click="toStandard">前往设置></hs-link>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import UserInfo from '@/views/collect/components/userInfo.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+import { collectApi } from '@/api/collect'
+import { commonApi } from '@/api/common'
+import { MessageBox } from 'element-ui'
+import { MenuModule } from '@/store/modules/menu'
+import { LocalStorage } from '@/utils/storage'
+import dayjs from 'dayjs'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import { baseApi } from '@/api/base'
+@Component({
+  name: 'reduce',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    UserInfo,
+    Coverlap,
+    StaticItem,
+    DrawerSelect
+  }
+})
+export default class Reduce extends Vue {
+  private dayjs = dayjs
+
+  private activeName = 'reduce'
+
+  private params: any = util.getRouterParams()
+
+  get isEmpty () {
+    return this.data.list.length === 0
+  }
+
+  get action () {
+    return this.params.action
+  }
+
+  private data:any = {
+    info: {},
+    list: []
+  }
+
+  private emptyText = '暂无数据'
+
+  private dictBusiness (business: any) {
+    if (!business) return ''
+    const businessDict = LocalStorage.getObj('constant-businessType')
+    // eslint-disable-next-line eqeqeq
+    return businessDict.filter((v: any) => v.key == business)[0].value
+  }
+
+  private form: any = {
+    remark: '',
+    payTime: (new Date()).getTime()
+  }
+
+  private generatingThousandthPer (num: any) {
+    return util.generatingThousandthPer(num)
+  }
+
+  get totalReceivableAmount () {
+    return this.selectedRow.reduce((sum: any, v: any) => sum + v.receivableAmount * 1, 0) || this.data.info.receivableAmount || 0
+  }
+
+  get totalAlreadyReductionAmount () {
+    return this.selectedRow.reduce((sum: any, v: any) => sum + v.alreadyReductionAmount * 1, 0) || this.data.info.alreadyReductionAmount || 0
+  }
+
+  get titalReductionAmount () {
+    return this.selectedRow.reduce((sum: any, v: any) => sum + v.reductionAmount * 1, 0) || this.data.info.reductionAmount || 0
+  }
+
+  private selectedRow = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+    const len = this.data.list.length
+    for (let i = 0; i < len; i++) {
+      this.data.list[i].edit = !1
+      this.selectedRow.map((v: any) => {
+        if (v.id === this.data.list[i].id) {
+          this.data.list[i].edit = !0
+        }
+      })
+    }
+  }
+
+  private getSummaries (param: any) {
+    const { columns } = param
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计（勾选项）'
+        return
+      }
+      const values = this.selectedRow.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0))
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      if (this.$el.querySelector('#editAbletrendsTable')) {
+        var current = (this.$el as any)
+          .querySelector('#editAbletrendsTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '5'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private pickerOptions = {
+    disabledDate: (time: any) => {
+      const _now = Date.now()
+      return time.getTime() > _now
+      // 大于当前的禁止，小于7天前的禁止
+    }
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private change (row: any) {
+    // do
+    console.log(row)
+  }
+
+  private async reduceUntreatedVerifyReduce () {
+    const params: any = []
+    this.selectedRow.map((v: any) => {
+      params.push({
+        feeItemId: v.feeItemId,
+        feeItemName: v.feeItemName,
+        schoolYear: v.schoolYear,
+        schoolYearName: v.schoolYearName,
+        receivableAmount: v.receivableAmount,
+        alreadyReductionAmount: v.alreadyReductionAmount,
+        reductionAmount: v.reductionAmount
+      })
+    })
+    await collectApi('reduceUntreatedVerifyReduce', params).then(async (res: any) => {
+      if (res.code === -10000) {
+        if (res.message) {
+          const message = res.message.replace(/;/g, '</br>')
+          this.$alert(message, { type: 'error', dangerouslyUseHTMLString: !0 })
+        }
+      } else {
+        const paramsInsert: any = {
+          payRecord: {
+            stuId: this.data.info.id,
+            stuCode: this.data.info.stuCode,
+            stuName: this.data.info.stuName,
+            business: this.params.business,
+            schoolId: this.data.info.stuSchoolId,
+            schoolName: this.data.info.stuSchoolName,
+            subjectId: this.data.info.stuSubjectId,
+            subjectName: this.data.info.stuSubjectName,
+            gradeId: this.data.info.stuGradeId,
+            gradeName: this.data.info.stuGradeName,
+            payTime: this.form.payTime,
+            receivableAmount: this.totalReceivableAmount * 100,
+            reductionAmount: this.titalReductionAmount * 100,
+            alreadyReductionAmount: this.totalAlreadyReductionAmount * 100,
+            schoolYear: -1,
+            remark: this.form.remark || '',
+            items: []
+          }
+        }
+        this.selectedRow.map((v: any) => {
+          paramsInsert.payRecord.items.push({
+            stuId: this.data.info.id,
+            stuCode: this.data.info.stuCode,
+            stuName: this.data.info.stuName,
+            business: this.params.business,
+            schoolId: this.data.info.stuSchoolId,
+            schoolName: this.data.info.stuSchoolName,
+            subjectId: this.data.info.stuSubjectId,
+            subjectName: this.data.info.stuSubjectName,
+            gradeId: this.data.info.stuGradeId,
+            gradeName: this.data.info.stuGradeName,
+            schoolYear: v.schoolYear,
+            feeStandardId: v.feeStandardId,
+            feeStandardCode: v.feeStandardCode,
+            feeStandardName: v.feeStandardName,
+            feeItemId: v.feeItemId,
+            feeItemName: v.feeItemName,
+            feeMust: v.ifMust,
+            receivableAmount: v.receivableAmount * 100,
+            reductionAmount: v.reductionAmount * 100,
+            alreadyReductionAmount: v.alreadyReductionAmount * 100
+          })
+        })
+        await collectApi('reduceUntreatedInsert', paramsInsert).then((res: any) => {
+          if (res.code === 10000) {
+            MessageBox.confirm(
+              res.message, '成功', {
+                confirmButtonText: '确定',
+                showCancelButton: !1
+              }).then(async () => {
+              this.$router.back()
+            })
+          } else {
+            this.$alert(res.message, { type: 'error' })
+          }
+        })
+      }
+    })
+  }
+
+  private toStandard () {
+    MenuModule.updateMenuName('fcsBaseMenu')
+    this.$router.push({
+      name: 'fcsSchFeeStandardMenu'
+    },
+    () => {
+      // do
+    })
+  }
+
+  private async reduceAlreadyUpdatePayRecord () {
+    await collectApi('reduceAlreadyUpdatePayRecord', {
+      remark: this.form.remark,
+      payTime: this.form.payTime,
+      id: this.params.id
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        MessageBox.confirm(
+          res.message, '成功', {
+            confirmButtonText: '确定',
+            showCancelButton: !1
+          }).then(async () => {
+          this.$router.back()
+        })
+      } else {
+        this.$alert(res.message, { type: 'error' })
+      }
+    })
+  }
+
+  private async onReduction () {
+    // do
+    if (!this.form.payTime) {
+      this.$alert('请选择减免时间', { type: 'error' })
+      return
+    }
+    if (this.selectedRow.length === 0) {
+      this.$alert('请选择标准项目', { type: 'error' })
+      return
+    }
+    if (this.titalReductionAmount <= 0) {
+      this.$alert('请输入本次减免金额', { type: 'error' })
+      return
+    }
+    this.action === 'add' && this.reduceUntreatedVerifyReduce()
+    this.action === 'edit' && this.reduceAlreadyUpdatePayRecord()
+  }
+
+  private async initAddData () {
+    await commonApi('stuCommonDetail', {
+      id: this.params.id
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data.info = res.object.info
+      }
+    })
+    const res = await baseApi('getBySchoolSubjectGrade', {
+      schoolId: this.data.info.stuSchoolId,
+      subjectId: this.data.info.stuSubjectId,
+      gradeId: this.data.info.stuGradeId
+    })
+    if (res.code === 10000) {
+      if (res.object.list.length <= 0) {
+        // this.$alert('学年暂无可收的收费标准，请前往设置', { type: 'error' })
+        this.emptyText = '学年暂无可收的收费标准，请前往设置'
+      } else {
+        await collectApi('getReduceItem', {
+          stuId: this.params.id,
+          schoolId: this.params.stuSchoolId,
+          subjectId: this.params.stuSubjectId,
+          gradeId: this.params.stuGradeId
+        }).then((res: any) => {
+          if (res.code === 10000) {
+            if (res.object.list.length === 0) {
+              this.emptyText = '该学年学生收费标准已收齐'
+              return
+            }
+            this.data.list = res.object.list.map((v: any) => {
+              v.receivableAmount = v.amount
+              v.alreadyReductionAmount = v.reductionAmount
+              v.reductionAmount = 0
+              delete v.amount
+              return v
+            })
+          }
+        })
+      }
+    } else {
+      this.$alert(res.message, { type: 'error' })
+    }
+  }
+
+  private reductionAmountChange (e: any, index:any) {
+    const item = this.data.list[index]
+    if (e.target.value > (item.receivableAmount - item.alreadyReductionAmount)) {
+      e.target.value = item.receivableAmount - item.alreadyReductionAmount
+      this.data.list[index].reductionAmount = item.receivableAmount - item.alreadyReductionAmount
+    }
+  }
+
+  private async initDetailData () {
+    this.form.payTime = this.params.payTime
+    await commonApi('stuCommonDetail', {
+      id: this.params.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data.info = {
+          receivableAmount: 0,
+          alreadyReductionAmount: 0,
+          reductionAmount: 0,
+          remark: '',
+          ...res.object.info
+        }
+      }
+    })
+    const feesStatus = await getConstantByGroup('feesStatus')
+    await collectApi('reduceAlreadyProcessDetail', {
+      id: this.params.id
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        // eslint-disable-next-line eqeqeq
+        const feesStatusList = feesStatus.filter((v: any) => v.key == res.object.info.status)
+        this.data.info.receivableAmount = res.object.info.receivableAmount // 应收
+        this.data.info.alreadyReductionAmount = res.object.info.alreadyReductionAmount // 已减
+        this.data.info.reductionAmount = res.object.info.reductionAmount // 减免
+        this.data.info.remark = res.object.info.remark
+        this.data.info.createName = res.object.info.createName
+        this.data.info.billNo = res.object.info.billNo
+        this.data.info.statusName = feesStatusList.length > 0 ? feesStatusList[0].value : res.object.info.status
+        this.data.info.payTypeName = res.object.info.payTypeName
+        this.data.list = res.object.info.items
+        this.form.remark = res.object.info.remark
+      }
+    })
+  }
+
+  private refresh = !0
+
+  private async initData () {
+    this.refresh = !1
+    this.params = util.getRouterParams()
+    if (Object.keys(this.params).length === 0) return
+    this.form = {
+      remark: '',
+      payTime: (new Date()).getTime()
+    }
+    this.action === 'add' && await this.initAddData()
+    this.action !== 'add' && await this.initDetailData()
+    this.setColSpan()
+    this.refresh = !0
+  }
+
+  async activated () {
+    await this.initData()
+  }
+
+  async beforeMount () {
+    await this.initData()
+  }
+}
+</script>
+<style lang="scss">
+  .reduce-container{
+    width: calc(100% - 10px);
+    height: 100%;
+    header{
+      width: 100%;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #e4e4e4;
+      .line{
+        .hs-icon-user{
+          font-size: 22px;
+          font-weight: bold;
+          margin-right: 12px;
+          margin-top: 2px;
+        }
+        .student-name{
+          font-size: 20px;
+          font-weight: bold;
+        }
+        width: 100%;
+        display: flex;
+        margin-bottom: 12px;
+      }
+    }
+    section{
+      width: 100%;
+      .line{
+        display: flex;
+        align-items: center;
+        margin-top: 20px;
+        .header-style{
+          th {
+            background-color: #F5F7FA;
+          }
+        }
+        .hs-icon-question{
+          font-size: 16px;
+          margin-right: 6px;
+        }
+        &.auto .static-label{
+          font-size: 16px;
+          font-weight: bold;
+        }
+      }
+    }
+    footer{
+      width: 100%;
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+    }
+    .empty-block{
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-color: #fff;
+      z-index: 999;
+      height: 100%;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      span{
+        margin: 8px 0;
+        font-size: 16px;
+      }
+    }
+  }
+</style>

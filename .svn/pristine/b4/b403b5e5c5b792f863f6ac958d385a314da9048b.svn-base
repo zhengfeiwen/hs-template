@@ -1,0 +1,82 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog title="内容新增" custom-class="report-directions-dialog" :visible.sync="visibleSync" width="60%" :close-on-click-modal="!1">
+    <div class="report-directions-container">
+      <el-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+        <el-form-item label="选择报表" prop="name">
+          <hs-input size="mini" v-model="form.name" placeholder="请输入标题名称" ></hs-input>
+        </el-form-item>
+        <el-form-item label="报表说明" prop="content" class="area line">
+          <tinymce
+            v-model="form.content"
+            :height="400"
+            @images-upload-handler="imagesUploadHandler"
+          />
+        </el-form-item>
+      </el-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="danger" @click="onSave">确认</hs-button>
+      <hs-button type="default" @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, PropSync, Vue } from 'vue-property-decorator'
+import { settingApi } from '@/api/settingmanage'
+import Tinymce from '@/components/Tinymce/index.vue'
+
+@Component({
+  name: 'add-dialog',
+  components: {
+    Tinymce
+  }
+})
+
+export default class AddDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private form = {
+    name: '',
+    memo: ''
+  }
+
+  private rules = {
+    name: [
+      { required: true, message: '请选择报表', trigger: 'change' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      await settingApi('addCatalog', {
+        ...this.form
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message.success(res.message)
+        }
+      })
+    })
+  }
+}
+</script>
+<style lang="scss">
+.report-directions-dialog{
+  min-width: 650px;
+  .hs-dialog__body{
+    overflow: auto;
+    padding: 10px;
+    .report-directions-container{
+      width: 100%;
+      min-width: 600px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+}
+</style>

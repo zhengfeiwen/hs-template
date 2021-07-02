@@ -1,0 +1,59 @@
+<template>
+  <div class="reduce-manage-container">
+    <div class="left">
+      <drawer-select :data="businessList" :value.sync="curBusiness"></drawer-select>
+    </div>
+    <div class="right">
+      <component :is="componentId" :params="{ business: curBusiness }"></component>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import FullReduce from './fulltime/index.vue'
+import PartReduce from './parttime/index.vue'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'reduce-manage',
+  components: {
+    DrawerSelect,
+    FullReduce,
+    PartReduce
+  }
+})
+export default class ReduceManage extends Vue {
+  private businessList = []
+
+  private businessDict: any = {
+    1: 'FullReduce',
+    2: 'PartReduce',
+    3: 'FullReduce',
+    4: 'FullReduce',
+    5: 'FullReduce'
+  }
+
+  get componentId () {
+    return this.businessDict[this.curBusiness.key]
+  }
+
+  private curBusiness: any = {}
+
+  private async initData () {
+    this.businessList = await getConstantByGroup('businessType', { update: !0 })
+    if (!this.curBusiness.value) {
+      this.curBusiness = this.businessList[0]
+    }
+    console.log(this.curBusiness)
+  }
+
+  async activated () {
+    await this.initData()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

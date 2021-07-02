@@ -1,0 +1,197 @@
+import { RouteConfig } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+const Setting: RouteConfig = {
+  path: '/setting',
+  component: Layout,
+  redirect: 'noredirect',
+  name: 'fcsSysSetMenu',
+  meta: {
+    permission: 'fcsSysSetMenu',
+    title: 'setting',
+    icon: 'columns'
+  },
+  children: [{
+    path: '/setting/centerusermanage/index',
+    component: () => import(/* webpackChunkName: "fcsCenterUserManageMenu" */ '@/views/setting/centerusermanage/index.vue'),
+    name: 'fcsCenterUserManageMenu',
+    meta: {
+      title: 'centerusermanage',
+      parent: 'fcsSysSetMenu',
+      permission: 'fcsCenterUserManageMenu',
+      noCache: true,
+      icon: 'package'
+    }
+  },
+  {
+    path: '/setting/notice/noticecatalogmanage/index',
+    component: () => import(/* webpackChunkName: "notice" */ '@/views/setting/notice/index.vue'),
+    redirect: 'fcsColumnManageMenu',
+    name: 'fcsNoticeMenu',
+    meta: {
+      permission: 'fcsNoticeMenu',
+      alwaysShow: true,
+      parent: 'fcsSysSetMenu',
+      title: 'notice',
+      icon: 'columns'
+    },
+    children: [{
+      path: '/setting/notice/noticecatalogmanage/index',
+      component: () => import(/* webpackChunkName: "noticeCatalogManage" */ '@/views/setting/notice/noticecatalogmanage/index.vue'),
+      name: 'fcsColumnManageMenu',
+      meta: {
+        permission: 'fcsColumnManageMenu',
+        title: 'noticecatalogmanage',
+        parent: 'fcsSysSetMenu',
+        icon: 'list'
+      }
+    },
+    {
+      path: '/setting/notice/noticemanage/index',
+      component: () => import(/* webpackChunkName: "noticeManage" */ '@/views/setting/notice/noticemanage/index.vue'),
+      name: 'fcsNoticeManageMenu',
+      meta: {
+        permission: 'fcsNoticeManageMenu',
+        title: 'noticemanage',
+        parent: 'fcsSysSetMenu',
+        icon: 'files-o'
+      }
+    },
+    {
+      path: '/setting/notice/reportdirectionsmanager/index',
+      component: () => import(/* webpackChunkName: "reportDirectionsManager" */ '@/views/setting/notice/reportdirectionsmanager/index.vue'),
+      name: 'reportDirectionsManager',
+      meta: {
+        permission: 'reportDirectionsManager',
+        title: 'reportdirectionsmanager',
+        parent: 'fcsSysSetMenu',
+        icon: 'clipboard'
+      }
+    }]
+  },
+  {
+    path: '/setting/system/operatelogsearch/index',
+    component: () => import(/* webpackChunkName: "operatelogsearch" */ '@/views/setting/system/index.vue'),
+    redirect: 'operatelogsearch',
+    name: 'operatelogsearch',
+    meta: {
+      permission: 'operatelogsearch',
+      alwaysShow: true,
+      parent: 'fcsSysSetMenu',
+      title: 'system',
+      icon: 'book'
+    },
+    children: [{
+      path: '/setting/system/operatelogsearch/index',
+      component: () => import(/* webpackChunkName: "operateLogSearch" */ '@/views/setting/system/operatelogsearch/index.vue'),
+      name: 'operatelogsearch',
+      meta: {
+        permission: 'operatelogsearch',
+        title: 'operatelogsearch',
+        noCache: true,
+        parent: 'fcsSysSetMenu',
+        icon: 'calendar'
+      }
+    },
+    {
+      path: '/setting/system/smstemplatemanager/index',
+      component: () => import(/* webpackChunkName: "smsTemplateManager" */ '@/views/setting/system/smstemplatemanager/index.vue'),
+      name: 'smsTemplateManager',
+      meta: {
+        permission: 'smsTemplateManager',
+        title: 'smstemplatemanager',
+        noCache: true,
+        parent: 'fcsSysSetMenu',
+        icon: 'wechat'
+      }
+    }]
+  },
+  // {
+  //   path: '/setting/optionmanage/index',
+  //   component: () => import(/* webpackChunkName: "fcsOptionManageMenu" */ '@/views/setting/optionmanage/index.vue'),
+  //   name: 'fcsOptionManageMenu',
+  //   meta: {
+  //     title: 'optionmanage',
+  //     permission: 'fcsOptionManageMenu',
+  //     noCache: true,
+  //     parent: 'fcsSysSetMenu',
+  //     icon: 'package'
+  //   }
+  // },
+  {
+    path: '/setting/studentcenter/studentcenterupdateinput/index',
+    component: () => import(/* webpackChunkName: "fcsStudentCenterMenu" */ '@/views/setting/studentcenter/index.vue'),
+    redirect: 'fcsStuInfoMenu',
+    name: 'fcsStudentCenterMenu',
+    meta: {
+      permission: 'fcsStudentCenterMenu',
+      alwaysShow: true,
+      title: 'studentcenter',
+      parent: 'fcsSysSetMenu',
+      icon: 'street'
+    },
+    children: [{
+      path: '/setting/studentcenter/studentcenterupdateinput/index',
+      component: () => import(/* webpackChunkName: "fcsStuInfoMenu" */ '@/views/setting/studentcenter/studentcenterupdateinput/index.vue'),
+      name: 'fcsStuInfoMenu',
+      meta: {
+        permission: 'fcsStuInfoMenu',
+        title: 'studentcenterupdateinput',
+        noCache: true,
+        parent: 'fcsSysSetMenu',
+        icon: 'file-word-o'
+      }
+    },
+    {
+      path: '/setting/studentcenter/studentpaysearch/index',
+      component: () => import(/* webpackChunkName: "fcsStuPaySearchMenu" */ '@/views/setting/studentcenter/studentpaysearch/index.vue'),
+      name: 'fcsStuPaySearchMenu',
+      meta: {
+        permission: 'fcsStuPaySearchMenu',
+        title: 'studentpaysearch',
+        parent: 'fcsSysSetMenu',
+        noCache: true,
+        icon: 'money1'
+      }
+    }]
+  },
+  {
+    path: '/setting/proxycenter/proxycenterdetailmanage/index',
+    component: () => import(/* webpackChunkName: "proxyCenter" */ '@/views/setting/proxycenter/index.vue'),
+    redirect: 'proxycenterdetailmanage',
+    name: 'proxyCenter',
+    meta: {
+      permission: 'proxyCenter',
+      parent: 'fcsSysSetMenu',
+      alwaysShow: true,
+      title: 'proxycenter',
+      icon: 'key'
+    },
+    children: [{
+      path: '/setting/proxycenter/proxycenterdetailmanage/index',
+      component: () => import(/* webpackChunkName: "proxyCenterDetailManage" */ '@/views/setting/proxycenter/proxycenterdetailmanage/index.vue'),
+      name: 'proxycenterdetailmanage',
+      meta: {
+        permission: 'proxyCenterDetailManage',
+        parent: 'fcsSysSetMenu',
+        title: 'proxycenterdetailmanage',
+        noCache: true,
+        icon: 'list'
+      }
+    },
+    {
+      path: '/setting/proxycenter/proxycenterupdateinput/index',
+      component: () => import(/* webpackChunkName: "proxyCenterUpdateInput" */ '@/views/setting/proxycenter/proxycenterupdateinput/index.vue'),
+      name: 'proxycenterupdateinput',
+      meta: {
+        permission: 'proxyCenterUpdateInput',
+        parent: 'fcsSysSetMenu',
+        title: 'proxycenterupdateinput',
+        noCache: true,
+        icon: 'file-word-o'
+      }
+    }]
+  }]
+}
+
+export default Setting

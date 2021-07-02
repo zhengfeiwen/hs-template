@@ -1,0 +1,325 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog :title="title" :visible.sync="visibleSync" width="50%" :close-on-click-modal="!1">
+    <div class="add-container">
+      <header>
+        <hs-tabs v-model="activeName" @tab-click="tabchange">
+          <hs-tab-pane label="选收费标准增专业" name="addsubject"></hs-tab-pane>
+          <hs-tab-pane label="选专业增收费标准" name="addstandard"></hs-tab-pane>
+        </hs-tabs>
+        <div class="title">{{ activeName === 'addsubject' ? '建议使用场景：多个专业使用同一个收费标准' : '建议使用场景：1个专业需要独立配置多个收费标准，如：新增专业时' }}</div>
+      </header>
+      <section>
+        <!-- 选收费标准增专业 start -->
+        <template v-if="activeName === 'addsubject'">
+          <div class="line">
+            <static-item required label="学年" :width="300">
+              <dict-select @change="schoolYearChange" :val.sync="form.schoolYear" constant-group-name="len"></dict-select>
+            </static-item>
+            <static-item required label="收费标准" :width="300">
+              <standard-dialog :disabled="!disabled" @save="getStandard"></standard-dialog>
+            </static-item>
+          </div>
+          <div class="line">
+            <div class="area shadow">
+              <div class="line title">
+                <span>收费标准</span>
+              </div>
+              <div class="line">
+                <hs-tag
+                  closable
+                  v-for="tag in standards"
+                  class="standard-tag"
+                  :title="tag.feeItemName + '_' + tag.amt + '元_' + tag.feeItemCode"
+                  :key="tag.feeStandardCode"
+                  @close="close(tag.feeStandardCode, 'standard')">
+                  {{ tag.feeItemName + '_' + tag.amt + '元_' + tag.feeItemCode }}
+                </hs-tag>
+              </div>
+              <div class="line">
+                <static-item required label="年级" :width="300">
+                  <dict-select @change="gradeChange" :val.sync="form.grade" :data="gradeDatas"></dict-select>
+                </static-item>
+                <static-item required label="专业" :width="300">
+                  <dict-select @change="subjectChange" :val.sync="form.subject" :data="subjectDatas"></dict-select>
+                </static-item>
+                <hs-button type="primary" :disabled="!isSubjectAdd" @click="onSubjectAdd" size="mini" icon="hs-icon-plus">添加</hs-button>
+              </div>
+              <div class="line">
+                <hs-tag
+                  closable
+                  type="success"
+                  v-for="tag in subjects"
+                  class="standard-tag"
+                  :title="tag.title"
+                  :key="tag.title"
+                  @close="close(tag.title)">
+                  {{ tag.title }}
+                </hs-tag>
+              </div>
+            </div>
+          </div>
+        </template>
+        <!-- 选收费标准增专业 end -->
+
+        <!-- 选专业增收费标准 start -->
+        <template v-else>
+          <div class="line">
+            <static-item required label="目标年级" :width="300">
+              <dict-select :val.sync="form.targetGrade" :data="targetGrades"></dict-select>
+            </static-item>
+            <static-item required label="目标专业" :width="300">
+              <dict-select :val.sync="form.targetSubject" :data="targetSubjects"></dict-select>
+            </static-item>
+          </div>
+          <div class="line">
+            <static-item required label="学年" :width="300">
+              <dict-select :val.sync="form.targetYear" :data="targetYears"></dict-select>
+            </static-item>
+            <static-item required label="收费标准" :width="300">
+              <standard-dialog :disabled="!disabled" @save="getStandard"></standard-dialog>
+            </static-item>
+          </div>
+          <simple-table :columnable="!1" :isCheckbox="!1" :data="standardTableData" :columns="standardColumns" :pagination="{ pageSize: 0 }" :loading="loading">
+            <template slot="operator" slot-scope="{ scope }">
+            <hs-button
+              @click.native.prevent="onRemove(scope.row)"
+              v-permission="['']"
+              type="text"
+              size="small">
+              移除
+            </hs-button>
+          </template>
+          </simple-table>
+        </template>
+        <!-- 选专业增收费标准 end -->
+      </section>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button size="mini" @click="visibleSync = !1">取消</hs-button>
+      <hs-button size="mini" type="primary" @click="onSave">确认</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import StandardDialog from './standardDialog.vue'
+
+@Component({
+  name: 'add-dialog',
+  components: {
+    SimpleTable,
+    DictSelect,
+    StaticItem,
+    StandardDialog
+  }
+})
+
+export default class AddDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private data!: object
+
+  get disabled () {
+    return this.activeName === 'addsubject' ? this.form.schoolYear : this.form.targetGrade && this.form.targetSubject && this.form.targetYear
+  }
+
+  private standards: any[] = []
+
+  private subjects: any[] = []
+
+  private selectedSubject = ['', '', '']
+
+  private schoolYears = [
+    {
+      key: '1',
+      value: '1年'
+    },
+    {
+      key: '2',
+      value: '2年'
+    }
+  ]
+
+  private subjectDatas = [
+    {
+      key: '1',
+      value: '计算机科学与技术'
+    },
+    {
+      key: '2',
+      value: '软件工程'
+    }
+  ]
+
+  private gradeDatas = [
+    {
+      key: '1',
+      value: '2021级'
+    },
+    {
+      key: '2',
+      value: '2020级'
+    }
+  ]
+
+  private onSave () {
+    // do
+    if (this.activeName === 'addSubject') {
+      // do
+    } else {
+      // do
+    }
+  }
+
+  private tabchange () {
+    this.standards = []
+    this.subjects = []
+  }
+
+  private schoolYearChange (val: any, label: any) {
+    this.selectedSubject[2] = label
+  }
+
+  private gradeChange (val: any, label: any) {
+    this.selectedSubject[0] = label
+  }
+
+  private subjectChange (val: any, label: any) {
+    this.selectedSubject[1] = label
+  }
+
+  private activeName = 'addsubject'
+
+  private form: any = {
+    grade: '',
+    subject: '',
+    schoolYear: ''
+  }
+
+  private getStandard (data: any, callBack: Function) {
+    this.standards = data
+    if (this.activeName === 'addstandard') {
+      this.standardTableData.list = [...data]
+      this.standardTableData.totalCount = data.length
+    }
+    callBack()
+  }
+
+  get isSubjectAdd () {
+    return this.form.grade && this.form.subject && this.form.schoolYear
+  }
+
+  private onSubjectAdd () {
+    const title: any = `${this.selectedSubject[0]}_${this.selectedSubject[1]}[${this.selectedSubject[2]}]`
+    this.subjects.push({
+      title: title
+    })
+  }
+
+  private async close (id: any, type: any) {
+    if (type === 'standard') {
+      const temp = this.standards
+      console.log(id, this.standards)
+      this.standards = temp.filter((val: any) => val.feeStandardCode !== id)
+    } else {
+      const temp = this.subjects
+      this.subjects = temp.filter((val: any) => val.title !== id)
+    }
+  }
+
+  private standardTableData: any = {
+    list: [],
+    totalCount: 0
+  }
+
+  private onRemove (row: any) {
+    const len = this.standardTableData.list.length
+    const list = [...this.standardTableData.list]
+    const res: any = []
+    for (let i = 0; i < len; i++) {
+      if (row.feeStandardCode !== list[i].feeStandardCode) {
+        res.push(Object.assign(list[i]))
+      }
+    }
+    this.standardTableData.list = [...res]
+    this.standardTableData.totalCount = res.length
+  }
+
+  private loading = !1
+
+  private standardColumns = [
+    {
+      prop: 'feeStandardCode',
+      label: '收费标准代码'
+    },
+    {
+      prop: 'feeItemName',
+      label: '收费项目'
+    },
+    {
+      prop: 'feeItemCode',
+      label: '收费项目代码'
+    },
+    {
+      prop: 'amt',
+      label: '金额',
+      format: 'money'
+    }
+  ]
+}
+</script>
+<style lang="scss" scoped>
+  .add-container{
+    width: calc(100% + 10px);
+    height: calc(100% + 30px);
+    margin-top: -30px;
+    margin-left: -10px;
+    header{
+      width: 100%;
+      .title{
+        width: 100%;
+        text-align: center;
+        margin-top: -6px;
+        opacity: 0.6;
+      }
+    }
+    section{
+      .line{
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+        .area{
+          width: 100%;
+          height: 300px;
+          padding: 10px;
+          overflow: auto;
+          .title{
+            margin: 6px 0;
+          }
+          .standard-tag{
+            margin: 10px;
+          }
+        }
+      }
+    }
+  }
+  ::v-deep .hs-dialog__body{
+   padding: 10px 20px;
+  }
+  ::v-deep .hs-tabs__nav-scroll{
+    display: flex;
+    justify-content: center;
+  }
+</style>

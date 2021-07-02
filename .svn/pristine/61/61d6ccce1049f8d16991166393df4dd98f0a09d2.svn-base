@@ -1,0 +1,294 @@
+<template>
+    <div class="collect-detail-container">
+        <el-dialog title="减免流水详情" :mode-append-to-body="!1" :visible.sync="visible" :before-close="onClose" width="70%" @open="open()">
+            <div class="header">
+                <div class="line">
+                    <i class="hs-icon-user" /><span class="student-name">{{ info.stuName }}</span>
+                </div>
+                <div class="line">
+                    <static-item label="性别">{{ stuInfo.stuSexName }}</static-item>
+                    <static-item label="证件号">{{ stuInfo.stuPaperworkNumber }}</static-item>
+                </div>
+            </div>
+            <section>
+              <div class="line">
+                <static-item label="流水号">{{ info.billNo }}</static-item>
+                <static-item label="创建时间">{{ timeConvert(info.createTime) }}</static-item>
+                <static-item label="流水状态">{{ getValueByConstrantArray('feesStatus', info.status) }}</static-item>
+                <static-item label="操作人">{{ info.createName }}</static-item>
+              </div>
+              <div class="line">
+                <static-item label="缴费时间">{{ timeConvert(info.payTime) }}</static-item>
+                <static-item label="缴费类型">减免</static-item>
+              </div>
+              <div class="subtitle">缴费明细</div>
+              <hs-table
+                id="reduceTable"
+                :data="list"
+                :border="!0"
+                :show-summary="!0"
+                :summary-method="getSummaries"
+                style="width: 100%"
+                :loading="loading"
+                header-row-class-name="header-style">
+                  <hs-table-column align="center" prop="business" :formatter="(row, column, cellValue) => this.getValueByConstrantArray('business', cellValue)"  label="缴费业务"></hs-table-column>
+                  <hs-table-column align="center" prop="schoolName" label="缴费院校"></hs-table-column>
+                  <hs-table-column align="center" prop="gradeName" label="缴费年级"></hs-table-column>
+                  <hs-table-column align="center" prop="subjectName" label="缴费专业"></hs-table-column>
+                  <hs-table-column align="center" prop="feeItemName" label="收费项目"></hs-table-column>
+                  <hs-table-column align="center" prop="schoolYear" :formatter="(row, column, cellValue) => this.getValueByConstrantArray('schoolYear', cellValue)" label="学年"></hs-table-column>
+                  <hs-table-column align="center" prop="feeMust" :formatter="(row, column, cellValue) => this.getValueByConstrantArray('yesOrNo', cellValue)" label="必缴"></hs-table-column>
+                  <hs-table-column align="center" prop="receivableAmount" :formatter="formatterMoney" label="应收"></hs-table-column>
+                  <hs-table-column align="center" prop="alreadyReductionAmount" :formatter="formatterMoney" label="已减免"></hs-table-column>
+                  <hs-table-column align="center" prop="reductionAmount" :formatter="formatterMoney" label="本次减免"></hs-table-column>
+                </hs-table>
+                <div class="line auto">
+                  <el-tooltip class="item" effect="dark" content="勾选项应收金额合计" placement="bottom"><i class="hs-icon-warning" /></el-tooltip>
+                  <static-item label="本次应收">{{ generatingThousandthPer(info.receivableAmount) }}</static-item>
+                  <el-tooltip class="item" effect="dark" content="勾选项历史有效流水中减免总金额" placement="bottom"><i class="hs-icon-warning" /></el-tooltip>
+                  <static-item label="上次已减">{{ generatingThousandthPer(info.alreadyReductionAmount) }}</static-item>
+                  <el-tooltip class="item" effect="dark" content="勾选项当前减免金额之和" placement="bottom"><i class="hs-icon-warning" /></el-tooltip>
+                  <static-item label="本次减免">{{ generatingThousandthPer(info.reductionAmount) }}</static-item>
+                </div>
+                <div class="line">
+                  单据摘要：{{ info.remark }}
+                </div>
+              </section>
+            <div slot="footer" class="dialog-footer">
+              <el-button @click="onClose">关  闭</el-button>
+            </div>
+        </el-dialog>
+    </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+import { studentApi } from '@/api/studentcenter'
+import dayjs from 'dayjs'
+import { getConstantDictVal } from '@/utils/common'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'collect-detail',
+  components: {
+    SimpleTable,
+    StaticItem
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private flowId!: number;
+
+  @Prop({ default: false }) private isAmateur!: boolean;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private loading = !0
+
+  private info = {
+    feesStatusName: '',
+    outSchoolName: ''
+  }
+
+  private list = []
+
+  private stuInfo = {}
+
+  private schoolYearName = ''
+
+  private feeMustName = ''
+
+  private async getPrepaidProcessedDetail () {
+    await studentApi(this.isAmateur ? 'parttimeReduceProcessedDetail' : 'reduceProcessedDetail', {
+      id: this.flowId
+    }).then(async (res: any) => {
+      if (res.code === 10000) {
+        this.list = res.object.info.items
+        this.info = res.object.info
+        await studentApi('stuDetail', {
+          id: res.object.info.stuId
+        }).then((resStu: any) => {
+          if (resStu.code === 10000) {
+            this.stuInfo = resStu.object.info
+            this.loading = !1
+          }
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getDetail () {
+    //
+  }
+
+  private getSummaries (param: any) {
+    const { columns, data } = param
+    const sums:any = {}
+    columns.forEach((column: { property: string|number }, index: number) => {
+      if (index === 0) {
+        sums[index] = '总价'
+        return
+      }
+      const values = data.map((item: { [x: string]: any }) => Number(item[column.property]))
+      if (!values.every((value: number) => isNaN(value))) {
+        sums[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)
+        sums[index] = util.generatingThousandthPer(sums[index])
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private timeConvert (timeStamp: number) {
+    return !timeStamp ? '' : dayjs(timeStamp).format('YYYY-MM-DD HH:mm')
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private generatingThousandthPer (value: any) {
+    return util.generatingThousandthPer(value)
+  }
+
+  private async getConstantDictVal (groupName:string, key:any) {
+    return await getConstantDictVal(groupName, key)
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      if (this.$el.querySelector('#reduceTable')) {
+        var current = (this.$el as any)
+          .querySelector('#reduceTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '7'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+        cell[5].style.display = 'none'
+        cell[6].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private clear () {
+    this.list = []
+    this.info = {
+      feesStatusName: '',
+      outSchoolName: ''
+    }
+    this.stuInfo = {}
+    this.loading = !1
+  }
+
+  private onClose () {
+    this.clear()
+    this.$emit('update:visible', false)
+  }
+
+  private constrantArray: any = {
+    business: [],
+    schoolYear: [],
+    feesStatus: [],
+    yesOrNo: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.business = await getConstantByGroup('business')
+    this.constrantArray.schoolYear = await getConstantByGroup('schoolYear')
+    this.constrantArray.feesStatus = await getConstantByGroup('feesStatus')
+    this.constrantArray.yesOrNo = await getConstantByGroup('yesOrNo')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private formatterConstrant (row: any, column: any, cellValue: any, groupName: string) {
+    this.getValueByConstrantArray(groupName, cellValue)
+  }
+
+  public mounted (): void {
+    // 获取常量列表
+    this.getConstrantList()
+  }
+
+  public open (): void {
+    this.setColSpan()
+    this.loading = !0
+    this.getPrepaidProcessedDetail()
+  }
+}
+</script>
+
+<style lang='scss'>
+.header{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #e4e4e4;
+}
+.line {
+    width: 100%;
+    display: flex;
+    margin-bottom: 12px;
+    .hs-icon-user {
+        font-size: 22px;
+        font-weight: bold;
+        margin-right: 12px;
+        margin-top: 2px;
+    }
+    .student-name {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    &.auto .static-label{
+      font-size: 16px;
+      font-weight: bold;
+    }
+}
+section{
+  margin-top: 10px;
+}
+.static-item-container{
+  width: 25%;
+  .static-label{
+    width: 150px;
+  }
+}
+.hs-icon-warning{
+  font-size: 18px;
+  margin-right: 6px;
+  transform: rotate(180deg);
+}
+.auto{
+  margin-left: 12px;
+  .static-item-container{
+    .static-label{
+      width: auto;
+      font-size: 16px;
+    }
+    .static-content{
+      font-size: 16px;
+      color: #FE4066;
+    }
+  }
+}
+</style>

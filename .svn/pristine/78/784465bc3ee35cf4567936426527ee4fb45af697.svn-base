@@ -1,0 +1,336 @@
+<template>
+  <div class="proxysettlement-container">
+    <header>
+      <hs-tabs v-model="activeName" type="card">
+        <hs-tab-pane label="待处理" name="undeal"></hs-tab-pane>
+        <hs-tab-pane label="已处理" name="dealed"></hs-tab-pane>
+      </hs-tabs>
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+        <hs-form-item label="代理人">
+          <hs-input size="mini" v-model="form.proxyName" placeholder="请输入代理人"></hs-input>
+        </hs-form-item>
+        <hs-form-item label="学生姓名">
+          <hs-input size="mini" v-model="form.stuName" placeholder="请输入学生姓名"></hs-input>
+        </hs-form-item>
+        <hs-form-item label="联系电话">
+          <hs-input size="mini" v-model="form.phone" placeholder="请输入联系电话"></hs-input>
+        </hs-form-item>
+        <hs-form-item label="学籍状态">
+          <dict-select :val.sync="form.schoolRollStatus" constant-group-name="schoolRollStatus"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="院校">
+          <dict-select :disabled="isSubmit" ref="school" @change="schoolChange" :option="options.school" :prop="{ key: 'id', value: 'schoolName' }" :val.sync="form.schoolId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="年级">
+          <dict-select :disabled="isSubmit" ref="grade" @change="gradeChange" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId" clearable></dict-select>
+        </hs-form-item>
+        <hs-form-item label="专业">
+          <dict-select ref="subject" :option="options.subject" :prop="{ key: 'id', value: 'showValue' }" format="subject"  :val.sync="form.subjectId"></dict-select>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table v-show="isUndeal" :columnable="!1" :isCheckbox="!0" @selection-change="selectionChange" :data="tableData" :columns="undealColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolStatus']">
+        <template slot="action">
+          <el-button type="primary" @click="onSettle" size="mini" icon="hs-icon-plus">结算</el-button>
+        </template>
+      </simple-table>
+      <simple-table ref="hsTable" v-show="!isUndeal" :export-name="exportName" :columnable="!1" :isCheckbox="!0" @selection-change="selectionChange" :exportable="exportable" :data="tableData" :columns="dealedColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolStatus']">
+        <template slot="action">
+          <el-button type="primary" @click="onExport" size="mini" icon="hs-icon-download">导出</el-button>
+          <el-button :loading="delLoading" type="danger" @click="onInvalidate" size="mini" icon="hs-icon-close">作废</el-button>
+          <span style="color: red;margin-left: 10px;">注：作废后，请重新进行结算操作！</span>
+        </template>
+      </simple-table>
+    </section>
+    <add-dialog :visible.sync="visibleAdd" :data="addData" @save-back="onQuery"></add-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Watch } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { settlementApi } from '@/api/settlement'
+import AddDialog from './add/index.vue'
+import { checkPermission } from '@/utils/permission'
+import dayjs from 'dayjs'
+
+@Component({
+  name: 'proxysettlement',
+  components: {
+    SimpleTable,
+    DictSelect,
+    AddDialog
+  }
+})
+export default class Proxysettlement extends Vue {
+  private activeName = 'undeal'
+
+  get isUndeal () {
+    return this.activeName === 'undeal'
+  }
+
+  private form: any = {
+    schoolId: '',
+    gradeId: '',
+    subjectId: ''
+  }
+
+  private visibleAdd = !1
+
+  private delLoading = !1
+
+  private options: any = {
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+        studyId: this.form.studyId || null
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        schoolId: this.form.schoolId || null
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+        schoolId: this.form.schoolId || null
+      }
+    }
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private undealColumns = [{
+    prop: 'schoolCode',
+    label: '学生姓名'
+  },
+  {
+    prop: 'studyName',
+    label: '联系电话'
+  },
+  {
+    prop: 'schoolName',
+    label: '业务类型'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '院校名称'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '年级'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '专业'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '已收金额'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '学籍状态'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '创建时间'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '代理人'
+  }]
+
+  private dealedColumns =[{
+    prop: 'schoolCode',
+    label: '学生姓名'
+  },
+  {
+    prop: 'studyName',
+    label: '联系电话'
+  },
+  {
+    prop: 'schoolName',
+    label: '业务类型'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '院校名称'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '年级'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '专业'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '已收金额'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '结算金额'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '学籍状态'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '创建时间'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '代理人'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  @Watch('activeName')
+  private activeNameChange () {
+    this.onReset()
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    return util.trimForm({ ...temp }, this.dealedColumns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['fcsSchoolFeeStandardExport']),
+    src: '/fcs/schoolFeeStandard/export',
+    data: this.exportParam
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `代理结算-收费标准-${day}`
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await settlementApi(this.isUndeal ? 'aaa' : 'bbb', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+    }
+    this.pagination = {
+      currentPage: 1,
+      pageSize: 10
+    }
+    this.tableData = {
+      list: [],
+      totalCount: 0
+    }
+    this.selectedRow = []
+    this.onQuery()
+  }
+
+  private onExport () {
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  private schoolChange () {
+    this.options.grade.data.schoolId = this.form.schoolId || null
+    this.options.subject.data.schoolId = this.form.schoolId || null
+    this.form.gradeId = ''
+    this.form.subjectId = '';
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+  }
+
+  handleNodeClick (data: any) {
+    this.form.businessId = data.id
+    this.onQuery()
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private addData: any = []
+
+  private onSettle () {
+    // if (!this.selectedRow || this.selectedRow.length === 0) {
+    //   this.$alert('请选择数据')
+    //   return
+    // }
+    this.visibleAdd = !0
+    this.addData = this.selectedRow
+  }
+
+  private onInvalidate () {
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择数据')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    this.$confirm(
+      '提示：是否删除所选数据', '删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }).then(async () => {
+      this.delLoading = !0
+      await settlementApi('aaa', {
+        ids: ids.join(',')
+      }).then((res: any) => {
+        this.delLoading = !1
+        if (res.code === 10000) {
+          this.$message.success(res.message)
+        }
+      })
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

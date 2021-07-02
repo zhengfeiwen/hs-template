@@ -1,0 +1,160 @@
+<template>
+  <div class="abnormal-turn-operation-dialog-container">
+    <el-dialog title="异动结转操作" :visible.sync="visible" :before-close="onClose" @open="open()">
+      <div class="header">
+        <div class="line">
+          <i class="hs-icon-user" /><span class="student-name">{{}}</span>
+        </div>
+        <div class="line">
+          <static-item label="业务">{{}}</static-item>
+          <static-item label="所在学校">{{}}</static-item>
+          <static-item label="所在年级">{{}}</static-item>
+          <static-item label="所在专业">{{}}</static-item>
+          <hs-button class="btn" type="text" size="small" @click="HistoryFlowDetailDialog = true">历史流水记录></hs-button>
+        </div>
+        <div class="line">
+          第一步：请先确认不可结转金额：<span></span>元
+          <hs-button class="btn" type="text" size="mini" @click="CannotTurnAmountDialog = true">查看详情></hs-button>
+        </div>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="onClose">关  闭</el-button>
+      </div>
+    </el-dialog>
+    <HistoryFlowDetailDialog :stuId="stuId" :visible.sync="HistoryFlowDetailDialog"></HistoryFlowDetailDialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { studentApi } from '@/api/studentcenter'
+import StaticItem from '@/components/busi/staticitem.vue'
+import HistoryFlowDetailDialog from '@/views/student/studentmanage/StudentBaseInfo/BaseInfo/ChangeStuBaseInfoDialog/AbnormalTurnOperationDialog/historyFlowDetailDialog.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable,
+    StaticItem,
+    HistoryFlowDetailDialog
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private amount = 0
+
+  private loading = !1
+
+  private HistoryFlowDetailDialog = !1
+
+  private CannotTurnAmountDialog = !1
+
+  private moneyFormatter (amount: Number) {
+    return util.generatingThousandthPer(amount)
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'amount',
+    label: '金额',
+    custom: !0
+  },
+  {
+    prop: 'accountRecordTypeName',
+    label: '状态'
+  },
+  {
+    prop: 'billNo',
+    label: '关联流水',
+    custom: !0
+  },
+  {
+    prop: 'payRecordStatusName',
+    label: '流水状态',
+    custom: !0
+  },
+  {
+    prop: 'createTime',
+    label: '创建时间',
+    format: 'date'
+  }]
+
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    await studentApi('stuContactsDetailedList', {
+      stuId: this.stuId
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  private open () {
+  }
+}
+</script>
+
+<style lang='scss'>
+.abnormal-turn-operation-dialog-container{
+    .header{
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #e4e4e4;
+    }
+    .line {
+        width: 100%;
+        display: flex;
+        margin-bottom: 12px;
+        .hs-icon-user {
+            font-size: 22px;
+            font-weight: bold;
+            margin-right: 12px;
+            margin-top: 2px;
+        }
+        .student-name {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        &.auto .static-label{
+          font-size: 16px;
+          font-weight: bold;
+        }
+    }
+    section{
+      margin-top: 10px;
+    }
+    .static-item-container{
+      width: 25%;
+      .static-label{
+        width: 150px;
+      }
+    }
+  .status1{
+    color: rgb(19, 206, 102);
+  }
+  .status2{
+    color: #EA4335;
+  }
+  .link{
+    color: #409eff;
+  }
+}
+</style>

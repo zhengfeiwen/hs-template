@@ -1,0 +1,88 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+const studentConfig: any = {
+  stuList: { url: '/fcs/stu/sch/roll/list' }, // 学生列表
+  stuListCount: { url: '/fcs/stu/sch/roll/list/count' }, // 学生列表
+  stuDetail: { url: '/fcs/stu/common/detail' }, // 学生详情
+  stuInsert: { url: '/fcs/stu/sch/roll/insert' }, // 学生新增
+  stuUpdate: { url: '/fcs/stu/sch/roll/update' }, // 学生修改
+  preStuUpdate: { url: '/fcs/pre/stu/update' }, // 预科学生修改
+  stuInsertCheck: { url: '/fcs/stu/sch/roll/insert/check/unique' }, // 唯一性验证
+  stuEnable: { url: '/fcs/stu/sch/roll/enable' }, // 学生启用
+  stuDisable: { url: '/fcs/stu/sch/roll/disable' }, // 学生禁用
+  stuSourceTree: { url: '/fcs/studentSource/tree' }, // 学生来源下拉数据
+  alterationRecordList: { url: '/fcs/stu/log/list' }, // 共用的变更记录
+  alterationRecordListCount: { url: '/fcs/stu/log/list/count' }, // 共用的变更记录总条数
+  feesList: { url: '/fcs/stu/fees/list', headers: { 'data-format': 'absmoney:response|dict:response' } }, // 缴费流水列表
+  feesItemList: { url: '/fcs/stu/fees/item/list', headers: { 'data-format': 'absmoney:response|dict:response' } }, // 缴费流水明细列表
+  feesListCount: { url: '/fcs/stu/fees/list/count' }, // 缴费流水列表总数
+  changeGetStuPayRecordList: { url: '/fcs/change/getStuPayRecordList' }, // 结转界面获取有效流水
+  payRecordDetail: { url: '/fcs/ft/pay/payRecordInfo', headers: { 'data-format': 'absmoney:response' } }, // 全日制收费流水详情
+  prepaidProcessedDetail: { url: '/fcs/ft/pre/processed/detail', headers: { 'data-format': 'absmoney:response' } }, // 全日制预收-已处理-详情
+  reduceProcessedDetail: { url: '/fcs/fulltime/reduce/already/process/detail', headers: { 'data-format': 'absmoney:response' } }, // 全日制减免详情
+  refundProcessedDetail: { url: '/fcs/fulltime/refund/already/process/detail', headers: { 'data-format': 'absmoney:response' } }, // 全日制退费详情
+  amateurPayRecordDetail: { url: '/fcs/amateur/pay/payRecordInfo', headers: { 'data-format': 'absmoney:response' } }, // 业余收费流水详情
+  amateurRepaidProcessedDetail: { url: '/fcs/amateur/pre/processed/detail', headers: { 'data-format': 'absmoney:response' } }, // 业余预收-已处理-详情
+  parttimeReduceProcessedDetail: { url: '/fcs/parttime/reduce/already/process/detail', headers: { 'data-format': 'absmoney:response' } }, // 业余减免详情
+  parttimeRefundProcessedDetail: { url: '/fcs/parttime/refund/already/process/detail', headers: { 'data-format': 'absmoney:response' } }, // 业余退费详情
+  insertExistence: { url: '/fcs/stu/sch/roll/data/call/back/list' }, // 新增回调生源列表
+  insertCheckVerifyStudentModify: { url: '/fcs/stu/sch/roll/insert/check/verify/student/modify' }, // 校验学生回调数据是否能修改-学生来源
+  stuAccountDetail: { url: '/fcs/stu/common/account/detail' }, // 学生账户详情
+  resetPwd: { url: '/fcs/stu/sch/roll/reset/pwd' }, // 重置密码
+  import: { url: '/fcs/stu/sch/roll/batch/update/import/excel' }, // 批量导入修改
+  export: { url: '/fcs/stu/sch/roll/export/list', responseType: 'blob', headers: { responseData: 'all' } }, // 导出列表
+  exportPhoto: { url: '/fcs/stu/sch/roll/export/photo', responseType: 'blob', headers: { responseData: 'all' } }, // 导出照片
+  graduationBatch: { url: '/fcs/stu/graduation/batch' }, // 批量毕业
+  graduationListCount: { url: '/fcs/stu/graduation/list/count' }, // 毕业-列表-总条数
+  graduationList: { url: '/fcs/stu/graduation/list' }, // 学生-毕业-列表
+  schRollUpdate: { url: '/fcs/stu/sch/roll/update/roll' }, // 学生-批量修改学籍
+  stuCommonTesOrgId: { url: '/fcs/stu/common/query/tes/orgId' }, // 学生-学生-根据用户ID获取招生组织ID..
+  schoolFeeStandardYear: { url: '/fcs/schoolFeeStandard/school/year' }, // 获取院校、年级、专业配置的学年
+  stuContactsList: { url: '/fcs/ft/stu/contacts/list', headers: { 'data-format': 'absmoney:response' } }, // 全日制-个人总往来（包含历史往来详情列表）-列表
+  amateurStuContactsList: { url: '/fcs/amateur/stu/contacts/list', headers: { 'data-format': 'absmoney:response' } }, // 业余-个人总往来（包含历史往来详情列表）-列表
+  stuContactsDetailedList: { url: '/fcs/stu/contacts/detailed/list', headers: { 'data-format': 'absmoney:response' } }, // 学生-个人总往来-明细详情-列表
+  stuContactsDetailedListCount: { url: '/fcs/stu/contacts/detailed/list/count' }, // 学生-个人总往来-明细详情-列表-总条数
+  stuHistoryContactsList: { url: '/fcs/stu/history/contacts/list' }, // 个人总往来-历史往来-列表
+  getUnChangePayRecordItemList: { url: '/fcs/change/getUnChangePayRecordItemList', headers: { 'data-format': 'money:response' } }, // 获取不可结转项目和金额
+  getStuUnPayItemList: { url: '/fcs/change/getStuUnPayItemList', headers: { 'data-format': 'money:response' } }, // 获取结转项目
+  getChangeAmount: { url: '/fcs/change/getChangeAmount', headers: { 'data-format': 'money:response' } }, // 获取结转金额
+  changeList: { url: '/fcs/change/list' }, // 结转列表
+  changeListCount: { url: '/fcs/change/list/count' }, // 结转列表
+  changeInvalid: { url: '/fcs/change/invalid' }, // 结转单据作废
+  getStuPayRecordHistoryCount: { url: '/fcs/change/getStuPayRecordHistory/count' }, // 结转界面获取历史流水条数
+  getStuPayRecordHistory: { url: '/fcs/change/getStuPayRecordHistory', headers: { 'data-format': 'absmoney:response' } }, // 结转界面获取历史流水
+  getStuPayRecordHistoryItem: { url: '/fcs/change/getStuPayRecordHistory/item', headers: { 'data-format': 'absmoney:response|dict:response' } }, // 结转界面获取历史流水明细
+  changeInsert: { url: '/fcs/change/insert', headers: { 'data-format': 'money:request' } }, // 结转新增
+  changeDetail: { url: '/fcs/change/detail', headers: { 'data-format': 'absmoney:response' } } // 结转单据详情
+}
+
+export const api: any = {}
+
+Object.keys(studentConfig).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${studentConfig[key].url}`,
+      method: 'post',
+      data: params,
+      headers: studentConfig[key].headers,
+      responseType: studentConfig[key].responseType
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const studentApi = (key: any, params: any = {}) => {
+  if (api[key]) {
+    return api[key](params)
+  } else {
+    throw Error('不存在该方法：' + key)
+  }
+}

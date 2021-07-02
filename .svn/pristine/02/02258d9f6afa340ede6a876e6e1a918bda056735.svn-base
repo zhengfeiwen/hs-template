@@ -1,0 +1,64 @@
+<template>
+  <div class="collectmanageauthimport-container">
+    <batch-import title="学生收费" :action="action" :params="params" :fixedColumns="fixedColumns" :auto-columns="['money']" back-router="collectmanageauth"></batch-import>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import BatchImport from '@/views/collect/components/batchimport.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'collectmanageauth-batch-import',
+  components: {
+    BatchImport
+  }
+})
+export default class CollectmanageauthBatchImport extends Vue {
+  private params = util.getRouterParams()
+
+  private action = {
+    type: 'collect',
+    batchImport: 'ftBatchPayFromData',
+    excelImport: 'ftBatchPayFromExcel'
+  }
+
+  private fixedColumns = {
+    left: [
+      {
+        prop: 'stuName',
+        label: '学生姓名'
+      },
+      {
+        prop: 'account',
+        label: '账号'
+      },
+      {
+        prop: 'idCard',
+        label: '身份证号'
+      },
+      {
+        prop: 'subjectName',
+        label: '专业'
+      },
+      {
+        prop: 'preTime',
+        label: '收费时间',
+        format: 'date'
+      },
+      {
+        prop: 'money',
+        label: '本次收款'
+      }
+    ],
+    right: [
+    ]
+  }
+}
+</script>
+<style lang="scss">
+  .reducebatchimport-container{
+    width: 100%;
+    height: 100%;
+  }
+</style>

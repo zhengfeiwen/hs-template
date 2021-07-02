@@ -1,0 +1,553 @@
+<template>
+<div>
+  <div class="flex-align mt10">
+    <img class="ml20 profile" src="@/assets/profile/male.png" />
+    <span class="ml10 f24">{{userInfo.stuName}}</span>
+  </div>
+  <div class="user-info-box">
+    <div class="w25p">性别：{{userInfo.stuSexName}}</div>
+    <div class="w30p">身份证号：{{userInfo.stuPaperworkNumber.replace(/^(.{4})(?:\d+)(.{4})$/,"$1******$2")}} </div>
+  </div>
+  <div class="user-info-box">
+    <div class="w25p">学校：{{userInfo.stuSchoolName}}</div>
+    <div class="w30p">专业：{{userInfo.stuSubjectName}}</div>
+    <div class="w20p">年级：{{userInfo.stuGradeName}}</div>
+    <div class="w20p">学制：{{userInfo.subLenName}} 年</div>
+  </div>
+
+  <div class="detail-line">
+    <div class="f20">分配金额</div>
+    <header class="mt10">
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+        <hs-form-item label="学年">
+          <dict-select :disabled="params.type !== 'add'" @change="schoolYearChange" :val.sync="form.schoolYear" constant-group-name="schoolYear"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="缴费时间">
+          <el-date-picker
+            v-model="form.payTime"
+            value-format="timestamp"
+            type="datetime"
+            format="yyyy-MM-dd HH:mm"
+            size="mini"
+            :disabled="params.type === 'view'"
+            placeholder="选择日期时间">
+          </el-date-picker>
+        </hs-form-item>
+      </hs-form>
+    </header>
+  <hs-table id="feeTable" :data="list" :border="true" :show-summary="true"
+    @selection-change="selectionChange"
+    :summary-method="getSummaries"
+    style="width: 100%" header-row-class-name="header-style">
+    <el-table-column align="center"  type="selection" width="55" :selectable="selectInit" ></el-table-column>
+    <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+    <hs-table-column prop="ifMust" label="必缴">
+      <template slot-scope="scope">
+        {{ scope.row.ifMust === 1 ? '是' : '否' }}
+      </template>
+    </hs-table-column>
+    <hs-table-column prop="receivableMoney" label="应收"></hs-table-column>
+    <hs-table-column prop="reduceMoney" :formatter="formatterMoney" label="已减免"></hs-table-column>
+    <hs-table-column prop="refundMoney" label="已退"></hs-table-column>
+    <hs-table-column prop="feesMoney" label="已收"></hs-table-column>
+    <hs-table-column prop="feesCharge" label="本次预交">
+    <template slot-scope="scope">
+      <span v-if="!list[scope.$index].edit || params.type !== 'add'">{{ list[scope.$index].feesCharge }}</span>
+      <hs-input v-else v-money size="mini" @click="change(scope.$index)" v-model.trim="list[scope.$index].feesCharge"></hs-input>
+    </template>
+    </hs-table-column>
+  </hs-table>
+  <div class="f20 mt20 mb20">收款方式 <span class="f12 ml10 red" v-if="params.type === 'add'">点击收费方式可快捷收费</span> </div>
+  <el-table :data="payData" style="width: 100%" :border="true" @header-click="expressCharge" >
+    <el-table-column align="center" prop="cash" label="现金">
+      <template slot-scope="scope">
+        <hs-input v-if="payWay==='cash'"  v-money size="mini" v-model.trim="payData[scope.$index].cash"></hs-input>
+        <span v-else >{{payData[scope.$index].cash}}</span>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" prop="brushCard" label="刷卡">
+      <template slot-scope="scope">
+        <hs-input v-if="payWay==='brushCard'"  v-money size="mini" v-model.trim="payData[scope.$index].brushCard"></hs-input>
+        <span v-else>{{payData[scope.$index].brushCard}}</span>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" prop="transferMoney" label="转账">
+      <template slot-scope="scope">
+        <hs-input v-if="payWay==='transferMoney'"  v-money size="mini" v-model.trim="payData[scope.$index].transferMoney"></hs-input>
+        <span v-else>{{payData[scope.$index].transferMoney}}</span>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" prop="aliPay" label="支付宝">
+      <template slot-scope="scope">
+        <hs-input v-if="payWay==='aliPay'"  v-money size="mini" v-model.trim="payData[scope.$index].aliPay"></hs-input>
+        <span v-else>{{payData[scope.$index].aliPay}}</span>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" prop="wechatPay" label="微信">
+      <template slot-scope="scope">
+        <hs-input v-if="payWay==='wechatPay'"  v-money size="mini" v-model.trim="payData[scope.$index].wechatPay"></hs-input>
+        <span v-else>{{payData[scope.$index].wechatPay}}</span>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" prop="oneCodePay" label="一码通">
+      <template slot-scope="scope">
+        <hs-input v-if="payWay==='oneCodePay'"  v-money size="mini" v-model.trim="payData[scope.$index].oneCodePay"></hs-input>
+        <span v-else>{{payData[scope.$index].oneCodePay}}</span>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" prop="payPlatform" label="缴平台">
+      <template slot-scope="scope">
+        <hs-input v-if="payWay==='payPlatform'"  v-money size="mini" v-model.trim="payData[scope.$index].payPlatform"></hs-input>
+        <span v-else>{{payData[scope.$index].payPlatform}}</span>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" prop="xtPay" label="秀推">
+      <template slot-scope="scope">
+        <hs-input v-if="payWay==='xtPay'"  v-money size="mini" v-model.trim="payData[scope.$index].xtPay"></hs-input>
+        <span v-else>{{payData[scope.$index].xtPay}}</span>
+      </template>
+    </el-table-column>
+    <el-table-column align="center" prop="payAmount" label="本次收款">
+      <template slot-scope="scope">
+          <span>{{ payAmount(scope.row) || 0 }}</span>
+      </template>
+    </el-table-column>
+  </el-table>
+  <div class="flex mt20">
+    <el-tooltip class="item" effect="dark" :content="explain.receivableAmount" placement="top-start">
+        <div class="w25p f20">本次应收：{{receivableAmount}}</div>
+    </el-tooltip>
+    <el-tooltip class="item" effect="dark" :content="explain.payAmount" placement="top-start">
+        <div class="w25p f20">本次预收款：{{ payAmount(payData[0]) || 0 }}</div>
+    </el-tooltip>
+    <el-tooltip class="item" effect="dark" :content="explain.balance" placement="top-start">
+        <div class="w25p f20">本次产生余额：{{balance}}</div>
+    </el-tooltip>
+  </div>
+  <div class="flex mt30">
+    <p>单据摘要：</p>
+    <el-input style="width:500px;margin-top:5px;"
+      :disabled="params.type === 'view'"
+      type="textarea" :rows="3" placeholder="请输入内容"
+      v-model="remark">
+    </el-input>
+  </div>
+  <div class="text-center">
+    <el-button v-if="params.type === 'add'" class="mt30" type="primary" @click="insertFee">人工收费</el-button>
+    <el-button v-if="params.type === 'edit'" class="mt30" type="primary" @click="updateFee">修改收费</el-button>
+  </div>
+  </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { arrayFormat } from '@/utils/common'
+import { commonApi } from '@/api/common'
+import { collectApi } from '@/api/collect'
+@Component({
+  name: 'collect-manage-detail',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class GradeManage extends Vue {
+  private params: any = util.getRouterParams()
+  private visible = false
+  private amountForm = { }
+  private form = {
+    schoolYear: 1,
+    payTime: (new Date()).valueOf()
+  }
+
+  private remark = ''
+  private loading = false
+  private listInfo = {
+    stuId: '',
+    payRecordId: ''
+  }
+
+  private explain = {
+    receivableAmount: '勾选项本次应收之和',
+    payAmount: '本次预交款=收款方式缴费金额',
+    balance: '本次产生余额= 本次预收款-本次预交合计'
+  }
+
+  // 学生余额
+  private stuBalance = 200
+
+  // 付款方式
+  private payData:any= [{
+    cash: 0,
+    brushCard: 0,
+    transferMoney: 0,
+    aliPay: 0,
+    wechatPay: 0,
+    oneCodePay: 0,
+    payPlatform: 0,
+    xtPay: 0,
+    balance: 0
+  }]
+
+  // 收款方式
+  private get payAmount () {
+    return function (row:any) {
+      return row.cash * 1 + row.brushCard * 1 + row.transferMoney * 1 + row.aliPay * 1 +
+      row.wechatPay * 1 + row.oneCodePay * 1 + row.payPlatform * 1 + row.xtPay * 1 + row.balance * 1
+    }
+  }
+
+  private get receivableAmount () {
+    return util.generatingThousandthPer(this.thisTime.receivableAmount)
+  }
+
+  private get arrears () {
+    return util.generatingThousandthPer(this.thisTime.arrears)
+  }
+
+  private get balance () {
+    return util.generatingThousandthPer((this.payAmount(this.payData[0]) || 0) - this.thisTime.receivableAmount)
+  }
+
+  private thisTime = {
+    receivableAmount: 0,
+    arrears: 0,
+    alreadyRefundAmount: 0,
+    alreadyReductionAmount: 0
+  }
+
+  private list: any = []
+
+  // 付款方式
+  private payWay = ''
+  private expressCharge (columns: any) {
+    if (columns.property !== 'payAmount' && this.params.type === 'add') this.payWay = columns.property
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      if (this.$el.querySelector('#feeTable')) {
+        var current = (this.$el as any)
+          .querySelector('#feeTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '3'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  // 单行结算
+  private get CurrentOweFee () {
+    // 本欠 = 应收 - 已减 -已收 + 已退 - 本收
+    return function (row:any) {
+      return row.receivableMoney - row.reduceMoney - row.feesMoney + row.refundMoney - row.feesCharge
+    }
+  }
+
+  // 被选行
+  private selectedRow = []
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+    console.log('hahah············；', this.selectedRow)
+    const len = this.list.length
+    for (let i = 0; i < len; i++) {
+      this.list[i].edit = false
+      this.selectedRow.map((v: any) => {
+        if (v.feeItemId === this.list[i].feeItemId) {
+          this.list[i].edit = true
+        }
+      })
+    }
+  }
+
+  // 合计
+  getSummaries (param: any) {
+    const { columns } = param
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计（勾选项）'
+        return
+      }
+      const values = this.selectedRow.map((item: any) => Number(item[column.property]))
+      console.log('values~~~~~~~~~~~~~~~~~~~:', values)
+      if (!values.every((value: any) => isNaN(value))) {
+        const account = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)
+
+        if (column.property === 'receivableMoney') {
+          this.thisTime.receivableAmount = account || 0
+        }
+
+        if (column.property === 'reduceMoney') {
+          this.thisTime.alreadyReductionAmount = account || 0
+        }
+
+        if (column.property === 'refundMoney') {
+          this.thisTime.alreadyRefundAmount = account || 0
+        }
+
+        sums[index] = util.generatingThousandthPer(account)
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  // 全日制收费待收费项目
+  private async payItemList () {
+    const { stuId } = this.listInfo
+    await collectApi('preProcessedItemList', { stuId, schoolYear: this.form.schoolYear }).then((res: any) => {
+      if (res.code === 10000) {
+        this.list = res.object.list
+        console.log('哈哈哈~~~~~~~~~~~~~~~~：', this.list)
+      }
+    })
+  }
+
+  // 学年
+  private schoolYearChange () {
+    this.onQuery()
+  }
+
+  // 分配金额查询
+  private onQuery () {
+    if (this.params.type === 'add') {
+      this.payItemList()
+    }
+  }
+
+  // 学生信息
+  private async stuDetail () {
+    const { stuId } = this.listInfo
+    await commonApi('stuCommonDetail', { id: stuId }).then((res: any) => {
+      if (res.code === 10000) {
+        const { stuGradeId, stuSubjectId, stuSchoolId, stuBusinessId, stuSchoolCode, stuName, stuSexName, stuGradeName, stuSubjectName, stuSchoolName, subLenName, stuPaperworkNumber } = res.object.info
+        this.userInfo = {
+          stuGradeId,
+          stuSubjectId,
+          stuSchoolId,
+          stuBusinessId,
+          stuSchoolCode,
+          stuName,
+          stuSexName,
+          stuPaperworkNumber,
+          stuSubjectName,
+          stuSchoolName,
+          subLenName,
+          stuGradeName
+        }
+      }
+    })
+  }
+
+  private selectInit () {
+    return (this.params.type === 'add')
+  }
+
+  // 全日制收费详情
+  private async payRecord () {
+    const { payRecordId } = this.listInfo
+    await collectApi('payRecordInfo', { id: payRecordId }).then((res: any) => {
+      if (res.code === 10000) {
+        const {
+          cash, brushCard, transferMoney, aliPay, wechatPay, oneCodePay, payPlatform, xtPay, accountPay,
+          remark, payTime, schoolYear, items
+        } = res.object
+
+        // 分配金额
+        const accounts = arrayFormat(items, 'money', { units: 0.01 })
+        console.log('accounts:', accounts)
+
+        this.list = accounts.map(function (item:any) {
+          return {
+            feeItemName: item.feeItemName,
+            ifMust: item.feeMust,
+            reduceMoney: item.alreadyReductionAmount,
+            feesMoney: item.acceptedAmount,
+            refundMoney: item.alreadyRefundAmount,
+            receivableMoney: item.receivableAmount,
+            feesCharge: item.payAmount
+          }
+        })
+
+        console.log('全日制收费流水:', res)
+        this.payData = [{
+          cash,
+          brushCard,
+          transferMoney,
+          aliPay,
+          wechatPay,
+          oneCodePay,
+          payPlatform,
+          xtPay,
+          balance: accountPay
+        }]
+        this.remark = remark
+        this.form = {
+          schoolYear,
+          payTime
+        }
+      }
+    })
+  }
+
+  // 用户信息
+  private userInfo = {
+    stuGradeId: '',
+    stuSubjectId: '',
+    stuSchoolId: '',
+    stuBusinessId: '',
+    stuSchoolCode: '',
+    stuName: '',
+    stuSexName: '',
+    stuPaperworkNumber: '',
+    stuSubjectName: '',
+    stuSchoolName: '',
+    subLenName: '',
+    stuGradeName: ''
+  }
+
+  // 新增收费
+  private async insertFee () {
+    const { payRecordId, stuId } = this.listInfo
+    const { schoolYear, payTime } = this.form
+    const { stuGradeName, stuSchoolCode, stuName, stuBusinessId, stuSchoolId, stuSchoolName, stuSubjectId, stuSubjectName, stuGradeId } = this.userInfo
+    const { cash, brushCard, transferMoney, aliPay, wechatPay, oneCodePay, payPlatform, xtPay, balance } = this.payData[0]
+    const items:any = []
+    this.selectedRow.forEach((element:any) => items.push({
+      stuId,
+      stuCode: stuSchoolCode,
+      stuName,
+      business: stuBusinessId,
+      schoolId: stuSchoolId,
+      schoolName: stuSchoolName,
+      subjectId: stuSubjectId,
+      subjectName: stuSubjectName,
+      gradeId: stuGradeId,
+      gradeName: stuGradeName,
+      schoolYear,
+      feeStandardId: element.feeStandardId,
+      feeStandardCode: element.feeStandardCode,
+      feeItemId: element.feeItemId,
+      feeItemName: element.feeItemName,
+      amount: Math.min(this.CurrentOweFee(element), element.feesCharge),
+      feeMust: element.ifMust,
+      payAmount: element.feesCharge,
+      receivableAmount: element.receivableMoney,
+      acceptedAmount: element.feesMoney,
+      alreadyReductionAmount: element.reduceMoney,
+      alreadyRefundAmount: element.refundMoney,
+      arrearsAmount: this.CurrentOweFee(element) || 0
+    }))
+
+    const insertFeeInfo:any = {
+      stuId,
+      stuCode: stuSchoolCode,
+      stuName,
+      business: stuBusinessId,
+      schoolId: stuSchoolId,
+      schoolName: stuSchoolName,
+      subjectId: stuSubjectId,
+      subjectName: stuSubjectName,
+      gradeId: stuGradeId,
+      gradeName: stuGradeName,
+      schoolYear,
+      payTime,
+      receivableAmount: this.thisTime.receivableAmount,
+      payAmount: this.payAmount(this.payData[0]) || 0,
+      arrearsAmount: this.thisTime.arrears,
+      accountAmount: (this.payAmount(this.payData[0]) || 0) - this.thisTime.receivableAmount,
+      acceptedAmount: this.thisTime.arrears,
+      alreadyReductionAmount: this.thisTime.alreadyReductionAmount,
+      alreadyRefundAmount: this.thisTime.alreadyRefundAmount,
+      remark: this.remark,
+      items,
+      cash,
+      brushCard,
+      transferMoney,
+      aliPay,
+      wechatPay,
+      oneCodePay,
+      payPlatform,
+      xtPay,
+      accountPay: balance
+    }
+
+    await collectApi('processedInsert', insertFeeInfo).then((res: any) => {
+      if (res.code === 10000) {
+        this.$message.success('操作成功')
+      } else {
+        this.$message.error(res.message)
+      }
+    })
+  }
+
+  // 修改已处理
+  private async updateFee () {
+    const { payTime } = this.form
+    const { payRecordId } = this.listInfo
+    await collectApi('processedUpdate', { id: payRecordId, payTime, remark: this.remark }).then((res: any) => {
+      if (res.code === 10000) {
+        this.$message.success('操作成功')
+      } else {
+        this.$message.error(res.message)
+      }
+    })
+  }
+
+  mounted () {
+    console.log('this.$route.params:', this.params)
+    if (this.params.info) {
+      this.listInfo = this.params.info
+      this.stuDetail()
+      if (this.params.type !== 'add') {
+        this.payRecord()
+      }
+    }
+
+    this.onQuery()
+    this.setColSpan()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "../index";
+@import "../../collect";
+
+::v-deep .gutter {
+  display: table-cell !important;
+}
+
+::v-deep .el-table__row{
+  height: 40px;
+  line-height: 40px;
+}
+
+::v-deep .has-gutter th:hover{
+  cursor: pointer;
+  background-color: #ddd;
+}
+
+::v-deep .hs-input .hs-input__inner {
+  text-align: center;
+}
+
+</style>

@@ -1,0 +1,345 @@
+<template>
+  <div class="login-container" v-loading.fullscreen.lock="fullscreenLoading"
+  element-loading-text="正在登录中......"
+  element-loading-spinner="el-icon-loading">
+    <el-image class="background" :src="bgImg"></el-image>
+    <!-- <header>
+      <el-image :src="logo" alt=""></el-image>
+      <span>猎学高校收费平台</span>
+    </header> -->
+    <section class="shadow">
+      <el-form
+        ref="loginForm"
+        :model="loginForm"
+        :rules="loginRules"
+        class="login-form"
+        autocomplete="on"
+        label-position="left"
+      >
+        <h3 class="title">
+          高校收费平台
+        </h3>
+        <el-form-item prop="username">
+          <div class="item user">
+            <i class="el-icon-user" />
+            <el-input
+              ref="username"
+              v-model="loginForm.username"
+              placeholder="请输入账号"
+              name="username"
+              type="text"
+              tabindex="1"
+              autocomplete="on"
+            />
+          </div>
+        </el-form-item>
+
+        <el-tooltip
+          v-model="capsTooltip"
+          content="Caps lock is On"
+          placement="right"
+          manual
+        >
+          <el-form-item prop="password">
+            <div class="item password">
+              <i class="el-icon-lock" />
+              <el-input
+                :key="passwordType"
+                ref="password"
+                v-model="loginForm.password"
+                :type="passwordType"
+                placeholder="密码"
+                name="password"
+                tabindex="2"
+                autocomplete="on"
+                @blur="capsTooltip = false"
+                @keyup.enter.native="handleLogin"
+              />
+              <span
+                class="show-pwd"
+                @click="showPwd"
+              >
+                <svg-icon :name="passwordType === 'password' ? 'eye-off' : 'eye-on'" />
+              </span>
+            </div>
+          </el-form-item>
+        </el-tooltip>
+        <el-form-item prop="code" class="login-code">
+          <div class="item code">
+            <i class="el-icon-shopping-bag-2" />
+            <el-input type="text" tabindex="3" v-model="loginForm.code" placeholder="验证码"></el-input>
+          </div>
+          <vue-img-verify @get-img-code="getImgCode" ref="vueImgVerify" />
+        </el-form-item>
+        <el-button
+          type="danger"
+          tabindex="4"
+          class="btn-login"
+          :loading="loading"
+          @keydown.enter.native.passive="handleLogin"
+          @click.native.prevent="handleLogin"
+        >
+          {{ $t('login.logIn') }}
+        </el-button>
+      </el-form>
+      <div class="browser-block">建议使用火狐、谷歌、IE11以上(<img src="@/assets/statics/pics/firefox.png"><img src="@/assets/statics/pics/chrome.png"><img src="@/assets/statics/pics/IE.png">)浏览器访问，否则部分功能将可能受影响</div>
+    </section>
+  </div>
+</template>
+
+<script lang="ts">
+import { Component, Vue, Watch } from 'vue-property-decorator'
+import { Route } from 'vue-router'
+import { Dictionary } from 'vue-router/types/router'
+import { UserModule } from '@/store/modules/user'
+import { RightModule } from '@/store/modules/right'
+import VueImgVerify from './vue-img-verify.vue'
+import md5 from 'md5'
+import { LocalStorage } from '@/utils/storage'
+import { PermissionModule } from '@/store/modules/permission'
+import { SingleSignOn } from '@/api/users'
+import router from '@/router'
+import Cookies from 'js-cookie'
+import { setToken } from '@/utils/cookies'
+@Component({
+  name: 'Login',
+  components: {
+    VueImgVerify
+  }
+})
+export default class extends Vue {
+  get userName () {
+    return UserModule.name
+  }
+
+  private logo = require('../../assets/statics/pics/favicon.png')
+
+  private bgImg = require('../../assets/statics/pics/bg.jpg')
+
+  private imgCode = ''
+
+  private broswerSrc = require('../../assets/statics/pics/browser.png')
+
+  private dialogVisible = !1
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private pagination = {
+    pageSize: 10,
+    currentPage: 1
+  }
+
+  private validateUsername = (rule: any, value: string, callback: Function) => {
+    if (!value) {
+      callback(new Error('请输入账号'))
+    } else {
+      callback()
+    }
+  }
+
+  private validatePassword = (rule: any, value: string, callback: Function) => {
+    if (value.length < 6) {
+      callback(new Error('密码不能少于6位数'))
+    } else {
+      callback()
+    }
+  }
+
+  private validateCode () {
+    if (!this.loginForm.code || this.imgCode !== this.loginForm.code.toLowerCase()) {
+      this.$message.error({ message: '验证码错误', showClose: !0 })
+      return !0
+    }
+    return !1
+  }
+
+  private loginForm: any = {
+    username: '',
+    password: '',
+    code: ''
+  }
+
+  private loginRules = {
+    username: [{ validator: this.validateUsername, trigger: 'blur' }],
+    password: [{ validator: this.validatePassword, trigger: 'blur' }]
+    // code: [{ validator: this.validateCode, trigger: 'blur' }]
+  }
+
+  // 点击图片获取验证码
+  private getImgCode (code: any) {
+    this.imgCode = code
+  }
+
+  private passwordType = 'password'
+  private loading = false
+  private showDialog = false
+  private capsTooltip = false
+  private redirect?: string
+  private otherQuery: Dictionary<string> = {}
+
+  @Watch('$route', { immediate: true })
+  private onRouteChange (route: Route) {
+    const query = route.query as Dictionary<string>
+    if (query) {
+      this.redirect = query.redirect
+      this.otherQuery = this.getOtherQuery(query)
+    }
+  }
+
+  private checkCapslock (e: KeyboardEvent) {
+    const { key } = e
+    this.capsTooltip = key !== null && key.length === 1 && (key >= 'A' && key <= 'Z')
+  }
+
+  private showPwd () {
+    if (this.passwordType === 'password') {
+      this.passwordType = ''
+    } else {
+      this.passwordType = 'password'
+    }
+    this.$nextTick(() => {
+      (this.$refs.password as any).focus()
+    })
+  }
+
+  private async login (params: any = {
+    userAlias: '',
+    password: ''
+  }) {
+    await UserModule.Login(params).then(async (res: any) => {
+      if (res.code !== 10000 && res.code !== 0) {
+        this.$confirm(
+          res.message, '登录失败', {
+            type: 'error',
+            confirmButtonText: '确定',
+            showCancelButton: !1
+          }).then(async () => {
+          this.loading = !1
+        })
+        return
+      }
+      await RightModule.getRightInfo().then(() => {
+        // 初始化菜单权限
+        PermissionModule.GenerateRoutes(RightModule.accessroutes)
+        // 菜单权限加入到动态路由中
+        if (!RightModule.accessroutes || (RightModule.accessroutes as any).length === 0) {
+          throw new Error('获取菜单权限失败')
+        }
+        router.addRoutes(PermissionModule.dynamicRoutes)
+        this.close()
+      }).catch(() => {
+        RightModule.ResetAccessRoutes()
+        UserModule.ResetToken()
+      })
+    }).catch((err: any) => {
+      console.log(err)
+    })
+  }
+
+  private handleLogin () {
+    if (this.loading) return
+    if (this.validateCode()) return
+    (this.$refs.loginForm as any).validate(async (valid: boolean) => {
+      if (valid) {
+        this.loading = !0
+        const params = {
+          userAlias: this.loginForm.username.trim(),
+          password: md5(this.loginForm.password)
+        }
+        Cookies.remove('token')
+        UserModule.ResetToken()
+        this.login(params)
+      } else {
+        this.loading = !1
+        return false
+      }
+    })
+  }
+
+  private getOtherQuery (query: Dictionary<string>) {
+    return Object.keys(query).reduce((acc, cur) => {
+      if (cur !== 'redirect') {
+        acc[cur] = query[cur]
+      }
+      return acc
+    }, {} as Dictionary<string>)
+  }
+
+  private close () {
+    this.dialogVisible = !1
+    setTimeout(() => {
+      LocalStorage.setObj('menu-name', '首页')
+      this.$router.push({
+        path: '/dashboard'
+      },
+      () => {
+        // do
+        this.loading = !1
+      })
+    }, 0.2 * 1000)
+    // 默认打开第一个菜单
+    // const parent = LocalStorage.getObj(RightModule.KEYS.ROUTE)[0].children[0]
+    // setTimeout(() => {
+    //   MenuModule.updateMenuName(parent.name)
+    //   LocalStorage.setObj('menu-name', parent.children[0].meta.titleZh || parent.children[0].meta.title)
+    //   this.$router.push({
+    //     name: parent.children[0].name,
+    //     query: this.otherQuery
+    //   },
+    //   () => {
+    //     // do
+    //     this.loading = !1
+    //   })
+    // }, 0.3 * 1000)
+  }
+
+  private fullscreenLoading = !1
+
+  private async SingleSignOn () {
+    const { data }: any = await SingleSignOn()
+    if (data.singleSignOn) {
+      const tokenLogin = Cookies.get('token')
+      if (tokenLogin) {
+        setToken(tokenLogin)
+        this.fullscreenLoading = !0
+        this.login({}).then(() => {
+          // 重定向对象不存在则返回顶层路径
+          this.fullscreenLoading = !1
+          this.$router.replace('/')
+        })
+          .catch(() => {
+            this.fullscreenLoading = !1
+          })
+      } else {
+        console.log('token is not set')
+        this.fullscreenLoading = !1
+      }
+    } else {
+      console.log('singleSignOn is false')
+      this.fullscreenLoading = !1
+    }
+  }
+
+  mounted () {
+    this.SingleSignOn()
+    if (this.loginForm.username === '') {
+      (this.$refs.username as any).focus()
+    } else if (this.loginForm.password === '') {
+      (this.$refs.password as any).focus()
+    }
+    document.onkeydown = () => {
+      const _key = (window.event as any).keyCode
+      if (_key === 13) {
+        this.handleLogin()
+      }
+    }
+  }
+}
+</script>
+
+<style lang="scss">
+@import './index.scss';
+</style>

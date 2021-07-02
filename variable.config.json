@@ -1,0 +1,23 @@
+{
+    "test":{
+        "system_change":{
+          "fcs":"http://fcs.liexue.org",
+          "tbs":"http://boscs.liexue.org",
+          "tes":"http://crmcs.liexue.org"
+        }
+    },
+    "production":{
+      "system_change":{
+        "fcs":"http://caiwu.liexue.cn",
+        "tbs":"http://bos.liexue.cn",
+        "tes":"http://crm.liexue.cn"
+      }
+    },
+    "development":{
+        "system_change":{
+          "fcs":"http://fcs.liexue.org",
+          "tbs":"http://boscs.liexue.org",
+          "tes":"http://crmcs.liexue.org"
+        }
+    }
+}

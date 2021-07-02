@@ -1,0 +1,67 @@
+
+
+.hs-form-item:last-child {
+    padding-top: 5px;
+    float: right;
+    text-align: right;
+    padding-right: 14px;
+}
+
+.hs-button--mini {
+  padding: 6px 10px !important;
+}
+
+.el-tabs__nav {
+  float: right  !important;
+}
+
+.flex-align{
+  display: flex;
+  align-items: center;
+}
+
+
+.user-info-box {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: 78px;
+  margin-top: 15px;
+  font-size: 18px;
+}
+
+.mt10 {margin-top: 10px;}
+.mt20 {margin-top: 20px;}
+.mt30 {margin-top: 30px;}
+
+.ml20 {margin-left: 20px;}
+.mr20 {margin-right: 20px;}
+
+.f18 {font-size: 18px;}
+.f20 {font-size: 20px;}
+
+.f24 {font-size: 24px;}
+
+.w20p {width: 20%;}
+.w25p {width: 25%;}
+.w30p {width: 30%;}
+
+.fw7{font-weight: 700;}
+
+.detail-line {
+  display: block;
+  width: 100%;
+  border-top: 1px dashed #ddd;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding:20px;
+}
+
+.tc {
+  text-align: center;
+}
+
+
+
+
+
+

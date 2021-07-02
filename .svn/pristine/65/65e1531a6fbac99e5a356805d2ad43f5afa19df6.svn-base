@@ -1,0 +1,137 @@
+<!-- 新增 -->
+<template>
+  <hs-dialog title="收费项目导入" :visible.sync="visibleSync" width="50%" :close-on-click-modal="!1">
+    <div class="feeitem-import-container">
+      <el-form ref="form" :rules="rules" :model="form" label-width="118px" :inline="true" class="border-style">
+        <el-form-item label="选择导入文件" prop="file">
+          <hs-plupload
+            ref="uploader"
+            :filters="filters"
+            :FilesAdded="filesAdded"
+            browseButton="browseButton_feeitem_import"
+            :url="postUrl"
+            @inputUploader="inputUploader"
+            :headers="{ token: token, accept: 'application/json' }"
+            :multipart-params="{'parentFolder': 'lb/schoolDetail'}"
+            :FileUploaded="FileUploaded"
+            :Error="error"
+          />
+          <hs-link type="success" id="browseButton_feeitem_import" >上传文件</hs-link>
+        </el-form-item>
+        <el-form-item label="模版下载" prop="template">
+          <hs-link type="warning" @click="download('http://.....')">下载收费项目信息导入模板.xls</hs-link>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark" class="line">
+          <span style="color: #F56C6C">只允许上传文件后缀为: .xls , .xlsx 文件</span>
+        </el-form-item>
+      </el-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="primary" @click="onSave">确认</hs-button>
+      <hs-button type="default" @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, PropSync, Vue } from 'vue-property-decorator'
+import { saveAs } from 'file-saver'
+import { baseApi } from '@/api/base'
+import settings from '@/settings'
+
+@Component({
+  name: 'feeitem-import'
+})
+
+export default class FeeitemImport extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private form = {
+    name: '',
+    memo: ''
+  }
+
+  get postUrl () {
+    return `${process.env.VUE_APP_BASE_API}api/core/oss/file/fileUploadPost`
+  }
+
+  private files: any[] = []
+  private up: any = {}
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private filters = {
+    mime_types: [
+      { title: 'xlsx type', extensions: 'xlsx,xls' }
+    ]
+  }
+
+  private filesAdded (up: any, files: any) {
+    if (files.length > 1) {
+      this.$message.error('每次只允许选择一个文件')
+      return
+    }
+    if (up.files.length > 1) {
+      up.removeFile(up.files[0])
+    }
+    this.up.start()
+  }
+
+  private error (up: any, res: any) {
+    if (res.code === -601) {
+      this.$message.error('只能上传xlsx,xls格式')
+      return
+    }
+    this.$message.error(res.message)
+  }
+
+  private async FileUploaded (up: any, files: any, res: any) {
+    const response = JSON.parse(res.response)
+    this.files[0].name = response.fileInfos[0].originalFileName
+    this.files[0].path = response.fileInfos[0].savePath
+  }
+
+  private rules = {
+    file: [
+      { required: true, message: '请选择文件', trigger: 'change' }
+    ],
+    template: [
+      { required: true, message: '', trigger: 'change' }
+    ],
+    remark: [
+      { required: true, message: '', trigger: 'change' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      await baseApi('itemInsert', {
+        ...this.form
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message.success(res.message)
+        }
+      })
+    })
+  }
+
+  private async downLoad (file: any) {
+    saveAs(settings.ossIp + '/' + file.path, file.realName)
+  }
+}
+</script>
+<style lang="scss">
+  .feeitem-import-container{
+    width: 100%;
+    min-width: 500px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+</style>

@@ -1,0 +1,54 @@
+<template>
+  <div class="refund-pay-info-container">
+    <hs-tabs v-model="activeName">
+      <hs-tab-pane label="退费信息" name="refund"></hs-tab-pane>
+      <hs-tab-pane label="个人总往来" name="PersonalIntercourse"></hs-tab-pane>
+      <hs-tab-pane label="缴费流水" name="FlowDetail"></hs-tab-pane>
+      <hs-tab-pane label="学生信息" name="StudentBaseInfo"></hs-tab-pane>
+    </hs-tabs>
+    <coverlap></coverlap>
+    <div class="main">
+      <component :stuId="stuId" :is="activeName"></component>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+import Refund from './refund.vue'
+import FlowDetail from '@/views/collect/flowdetail/index.vue'
+import StudentBaseInfo from '@/views/student/studentmanage/StudentBaseInfo/index.vue'
+import PersonalIntercourse from '@/views/student/studentmanage/PersonalIntercourse/index.vue'
+@Component({
+  name: 'refund-pay-info',
+  components: {
+    SimpleTable,
+    DictSelect,
+    Coverlap,
+    Refund,
+    FlowDetail,
+    StudentBaseInfo,
+    PersonalIntercourse
+  }
+})
+export default class RefundPayInfo extends Vue {
+  private activeName = 'refund'
+
+  private stuId = ''
+}
+</script>
+<style lang="scss">
+  .refund-pay-info-container{
+    width: 100%;
+    height: 100%;
+    position: relative;
+    .main{
+      width: 100%;
+      height: calc(100% - 36px);
+      overflow: auto;
+    }
+  }
+</style>

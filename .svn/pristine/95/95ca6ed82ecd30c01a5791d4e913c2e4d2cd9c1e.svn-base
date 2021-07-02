@@ -1,0 +1,10 @@
+.schoolmanage-container{
+  height: 100%;
+  width: 100%;
+  .hs-select{
+    width: 200px;
+  }
+  .hs-input{
+    width: 200px;
+  }
+}

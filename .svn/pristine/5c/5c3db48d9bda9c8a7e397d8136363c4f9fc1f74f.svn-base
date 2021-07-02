@@ -1,0 +1,160 @@
+<template>
+  <div class="intercourse-table-container">
+    <simple-table :id="id" :show-summary="!0" :summary-method="getSummaries" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination="!1" :columnable="!1">
+    </simple-table>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { studentApi } from '@/api/studentcenter'
+import util from '@/utils/busi/util'
+import { randomToken } from '@/utils/common'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuInfo!: object;
+
+  @Prop({ default: 0 }) private year!: number;
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private columns = [{
+    prop: 'feeItemName',
+    label: '收费项目'
+  },
+  {
+    prop: 'schoolYearName',
+    label: '学年'
+  },
+  {
+    prop: 'receivableAmount',
+    label: '应收',
+    format: 'money'
+  },
+  {
+    prop: 'alreadyReductionAmount',
+    label: '减免',
+    format: 'money'
+  },
+  {
+    prop: 'acceptedAmount',
+    label: '已收',
+    format: 'money'
+  },
+  {
+    prop: 'arrearsAmount',
+    label: '欠费',
+    format: 'money'
+  },
+  {
+    prop: 'alreadyRefundAmount',
+    label: '已退',
+    format: 'money'
+  }]
+  // {
+  //   prop: 'waitSettlementAmount',
+  //   label: '待结算',
+  //   format: 'money'
+  // },
+  // {
+  //   prop: 'alreadySettlementAmount',
+  //   label: '已结算',
+  //   format: 'money'
+  // },
+  // {
+  //   prop: 'unSettlementAmount',
+  //   label: '未结算',
+  //   format: 'money'
+  // }]
+
+  private amountFormat (num: number) {
+    return Number(num.toFixed(2))
+  }
+
+  public getSummaries (param: any) {
+    const { columns, data } = param
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计'
+        return
+      }
+      const values = data.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return this.amountFormat(prev + curr)
+          } else {
+            return prev
+          }
+        }, 0))
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private id = `intercourseTable-${randomToken()}`
+
+  private setColSpan () {
+    setTimeout(() => {
+      const id = `#${this.id}`
+      if (document.querySelector(id)) {
+        var current = (document as any)
+          .querySelector(id)
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '2'
+        cell[1].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  public async onQuery () {
+    this.loading = !0
+    const _data = (this.stuInfo as any).stuBusinessId === 2 ? {
+      stuId: (this.stuInfo as any).id,
+      businessId: (this.stuInfo as any).stuBusinessId,
+      schoolId: (this.stuInfo as any).stuSchoolId,
+      gradeId: (this.stuInfo as any).stuGradeId,
+      subjectId: (this.stuInfo as any).stuSubjectId
+    } : {
+      stuId: (this.stuInfo as any).id,
+      businessId: (this.stuInfo as any).stuBusinessId,
+      schoolId: (this.stuInfo as any).stuSchoolId,
+      gradeId: (this.stuInfo as any).stuGradeId,
+      subjectId: (this.stuInfo as any).stuSubjectId,
+      schoolYear: this.year
+    }
+    await studentApi((this.stuInfo as any).stuBusinessId === 2 ? 'amateurStuContactsList' : 'stuContactsList', _data).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.list.length
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  public mounted () {
+    this.onQuery()
+    this.setColSpan()
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

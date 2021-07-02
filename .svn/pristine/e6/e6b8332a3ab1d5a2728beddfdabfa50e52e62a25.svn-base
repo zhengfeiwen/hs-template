@@ -1,0 +1,75 @@
+<!-- 新增 -->
+<template>
+  <hs-dialog title="收费项目新增" :visible.sync="visibleSync" width="50%" :close-on-click-modal="!1">
+    <div class="feeitem-add-container">
+      <hs-form ref="form" :rules="rules" :model="form" label-width="128px" :inline="true" class="border-style">
+        <hs-form-item label="收费项目名称" prop="feeItemName">
+          <hs-input size="mini" v-model="form.feeItemName" placeholder="请输入收费项目名称" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="是否为预收项目" prop="ifPreFeeItem">
+          <hs-radio v-model="form.ifPreFeeItem" :label="1">是</hs-radio>
+          <hs-radio v-model="form.ifPreFeeItem" :label="0">否</hs-radio>
+        </hs-form-item>
+        <hs-form-item label="备注" prop="remark" class="double line">
+          <el-input type="textarea" maxlength="200" show-word-limit :rows="3" v-model="form.remark" resize="none"></el-input>
+        </hs-form-item>
+      </hs-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="primary" @click="onSave">确认</hs-button>
+      <hs-button type="default" @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, PropSync, Vue } from 'vue-property-decorator'
+import { itemInsert } from '@/api/base'
+
+@Component({
+  name: 'feeitem-add'
+})
+
+export default class FeeitemAdd extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private form = {
+    name: '',
+    ifPreFeeItem: 0,
+    remark: ''
+  }
+
+  private rules = {
+    feeItemName: [
+      { required: true, message: '请输入收费项目名称', trigger: 'blur' }
+    ],
+    ifPreFeeItem: [
+      { required: true, message: '请选择是否为预收项目', trigger: 'change' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      await itemInsert({
+        ...this.form
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message(res.message)
+        }
+      })
+    })
+  }
+}
+</script>
+<style lang="scss">
+  .feeitem-add-container{
+    width: 100%;
+    min-width: 500px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+</style>

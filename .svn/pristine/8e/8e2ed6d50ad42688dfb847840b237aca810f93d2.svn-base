@@ -1,0 +1,78 @@
+<template>
+  <hs-dialog title="选择学生" :visible.sync="visibleSync" width="70%" :close-on-click-modal="!1" @open="open">
+    <div class="batchimport-addstudent-container">
+      <el-transfer :titles="['收费学生名单', '本次收费学生名单']" filterable v-model="value" :props="{ key: 'stuId', label: 'showVal'}" :data="data"></el-transfer>
+    </div>
+    <template slot="footer">
+      <hs-button type="primary" @click="onSubmit" size="mini" icon="hs-icon-plus">添加</hs-button>
+      <hs-button @click="visibleSync = !1">关闭</hs-button>
+    </template>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+import { collectApi } from '@/api/collect'
+import { Vue, Component, PropSync, Prop } from 'vue-property-decorator'
+@Component({
+  name: 'batchimport-addstudent'
+})
+export default class BatchimportAddstudent extends Vue {
+  private dictType: any = {
+    collect: 1,
+    refund: 2,
+    prepaid: 3,
+    reduce: 4
+  }
+
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: Object })
+  private params!: object|any
+
+  private data: any = []
+
+  private value = []
+  private onSubmit () {
+    const res = this.data.filter((v: any) => this.value.includes(v.stuId as never))
+    this.$listeners.save && this.$emit('save', res)
+    this.visibleSync = !1
+  }
+
+  private async open () {
+    await collectApi('stuFeesBatchFeesSelectList', {
+      businessId: this.params.businessId,
+      schoolId: this.params.schoolId,
+      gradeId: this.params.gradeId,
+      subjectIds: this.params.subjectIds,
+      schoolYear: this.params.schoolYear,
+      tradeType: this.dictType[this.params.tradeType]
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.data = res.object.list.map((v: any) => {
+          v.showVal = `${v.stuName}-${v.idCard}-${v.subjectName}`
+          return v
+        })
+      }
+    })
+  }
+}
+</script>
+<style lang="scss">
+  .batchimport-addstudent-container{
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    .el-transfer{
+      margin: auto auto;
+      .el-transfer-panel{
+        width: auto !important;
+      }
+    }
+  }
+  .el-checkbox-group{
+    padding: 0 10px;
+  }
+</style>

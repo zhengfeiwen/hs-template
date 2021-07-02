@@ -1,0 +1,248 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+const apiUrl = setting.apiUrl
+
+/**
+* 栏目列表
+* @param data
+*/
+export const catalogList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/noticeCatalog/list`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 栏目列表总数
+* @param data
+*/
+export const catalogCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/noticeCatalog/count`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 栏目详情
+* @param data
+*/
+export const catalogDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/noticeCatalog/detail`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 新增
+* @param data
+*/
+export const addCatalog = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/noticeCatalog/add`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 删除
+* @param data
+*/
+export const removeCatalog = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/noticeCatalog/delete`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 编辑
+* @param data
+*/
+export const updateCatalog = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/noticeCatalog/update`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 启用
+* @param data
+*/
+export const enableCatalog = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/noticeCatalog/enable`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 禁用
+* @param data
+*/
+export const disableCatalog = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/noticeCatalog/disable`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+///
+/**
+* 启用
+* @param data
+*/
+export const enableNotice = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/notice/enable`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 禁用
+* @param data
+*/
+export const disableNotice = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/notice/disable`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 新增
+* @param data
+*/
+export const addNotice = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/notice/add`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 删除
+* @param data
+*/
+export const removeNotice = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/notice/delete`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 编辑
+* @param data
+*/
+export const updateNotice = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/notice/update`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 发布
+* @param data
+*/
+export const noticeOpen = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/notice/open`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 栏目列表
+* @param data
+*/
+export const noticeList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/notice/list`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 栏目列表总数
+* @param data
+*/
+export const noticeCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/notice/count`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+///
+
+/**
+* 报表说明新增
+* @param data
+*/
+export const reportDirectionsInsertInput = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/reportDirections/insertInput`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 报表说明删除
+* @param data
+*/
+export const reportDirectionsDelete = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/reportDirections/delete`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 报表说明修改
+* @param data
+*/
+export const reportDirectionsUpdateInput = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/reportDirections/updateInput`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 报表说明详情
+* @param data
+*/
+export const reportDirectionsDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/reportDirections/detail`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 报表说明字典列表
+* @param data
+*/
+export const reportOptionList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/reportDirections/getOptionKeyList`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 报表说明总数
+* @param data
+*/
+export const reportOptionCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/reportDirections/getOptionKeyCount`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })

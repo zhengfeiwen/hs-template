@@ -1,0 +1,66 @@
+<template>
+    <div class="insert-existence-dialog-container">
+        <el-dialog append-to-body :close-on-click-modal="!1" title="修改学籍状态" :visible.sync="visible" :before-close="onClose" width="380px">
+          <el-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+            <el-form-item label="修改数量" prop="catalogName">
+              {{ stuIds.length }}
+            </el-form-item>
+            <el-form-item label="学籍状态" prop="stuSchoolRollStatus">
+              <dict-select :isInit="!0" :val.sync="stuSchoolRollStatus" constant-group-name="stuSchoolRollStatus"></dict-select>
+            </el-form-item>
+          </el-form>
+          <div slot="footer" class="dialog-footer">
+              <el-button type="danger" size="mini" @click="submit">保存</el-button>
+              <el-button type="info" size="mini" plain @click="onClose">关闭</el-button>
+          </div>
+        </el-dialog>
+    </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import { studentApi } from '@/api/studentcenter'
+@Component({
+  name: 'insert-existence-dialog',
+  components: {
+    DictSelect
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuIds!: object;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private rules = {
+    stuSchoolRollStatus: [
+      { required: true, message: '请输选择学籍状态', trigger: 'blur' }
+    ]
+  }
+
+  private stuSchoolRollStatus = 0
+
+  private async submit () {
+    await studentApi('schRollUpdate', {
+      stuIds: this.stuIds,
+      schRoll: this.stuSchoolRollStatus
+    }).then((res: any) => {
+      this.$message({
+        showClose: !0,
+        message: res.message,
+        type: res.code === 10000 ? 'success' : 'warning'
+      })
+      this.onClose()
+      this.$emit('fresh')
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

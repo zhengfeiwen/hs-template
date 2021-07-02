@@ -1,0 +1,149 @@
+<template>
+  <simple-container-column @on-query="onQuery" @on-reset="onReset" :menuName="menuName">
+    <template slot="left">
+      <tree url="/fcs/schoolBusiness/tree" :props="{ children: 'children', label: 'name' }" @node-click="handleNodeClick"></tree>
+    </template>
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="院校代码">
+          <hs-input
+            size="mini"
+            v-model="form.schoolCode"
+            placeholder="请输入院校代码"
+          ></hs-input>
+        </el-form-item>
+        <el-form-item label="院校名称">
+          <hs-input
+            size="mini"
+            v-model="form.schoolName"
+            placeholder="请输入院校名称"
+          ></hs-input>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table ref="hsTable" :export-name="exportName" :exportable="exportable" :export-columns="columns" :columnable="!1" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolStatus']">
+        <template slot="action">
+          <hs-button type="danger" v-permission="['fcsSchoolBusinessExport']" @click="onExport" icon="hs-icon-download" size="mini">导出</hs-button>
+        </template>
+      </simple-table>
+    </template>
+  </simple-container-column>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import SimpleContainerColumn from '@/components/container/column/index.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import { baseApi } from '@/api/base'
+import dayjs from 'dayjs'
+import { checkPermission } from '@/utils/permission'
+
+@Component({
+  name: 'fcsSclBusinessMenu',
+  components: {
+    SimpleContainerColumn,
+    SimpleTable,
+    Tree
+  }
+})
+export default class BusiManage extends Vue {
+  private form: any = {
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'schoolCode',
+    label: '院校代码'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'schoolStatus',
+    label: '院校状态',
+    'style-format': {
+      f: [0],
+      t: [1]
+    }
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    return util.trimForm({ ...temp }, this.columns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['fcsSchoolBusinessExport']),
+    src: '/fcs/schoolBusiness/export',
+    data: this.exportParam
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `业务院校信息-${day}`
+  }
+
+  private onExport () {
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('businessSchoolList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+    }
+    this.onQuery()
+  }
+
+  private menuName = ''
+
+  handleNodeClick (data: any) {
+    this.form.businessId = data.id
+    this.menuName = data.name
+    this.onQuery()
+  }
+
+  activated () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

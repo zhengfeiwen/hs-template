@@ -1,0 +1,18 @@
+.personal-intercourse-container{
+    .amount{
+        color: #333;
+        margin: 0 0 20px;
+    }
+    .amount>p{
+        margin: 0;
+        color: #999;
+    }
+    .amount>span{
+        color: #333;
+        font-size: 36px;
+        font-weight: bold;
+    }
+    .amount>.btn{
+        margin-left: 20px;
+    }
+}

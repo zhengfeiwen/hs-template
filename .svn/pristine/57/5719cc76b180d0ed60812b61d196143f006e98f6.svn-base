@@ -1,0 +1,318 @@
+<template>
+  <div class="history-flow-detail-dialog-container">
+    <el-dialog title="历史流水记录" :visible.sync="visible" width="70%" :before-close="onClose" @open="open()">
+      <hs-table
+        ref="multipleTable"
+        :data="tableData.list"
+        style="width: 100%"
+        row-key="rowId"
+        border
+        :show-header="true"
+        :highlight-current-row="false"
+        :row-class-name="tableRowClassName"
+        max-height="500"
+        :cell-style="{padding:'5px 0'}"
+        :span-method="arraySpanMethod"
+        lazy
+        :load="load"
+        :loading="loading"
+        :tree-props="{children: 'children', hasChildren: 'hasChildren'}"
+        :indent="0"
+        :header-cell-style="{'text-align':'center'}">
+        <hs-table-column
+          prop="id"
+          label="缴费院校"
+          align="left" >
+            <template slot-scope="scope">
+              <span v-if="scope.row.hasChildren" class="flow-li">
+                <span>流水号：{{ scope.row.billNo }}</span>
+                <span>类型：{{ getValueByConstrantArray("tradeType", scope.row.tradeType) }}</span>
+                <span>
+                  本次{{ typeToName[scope.row.tradeType - 1] }}：
+                  <span class="blue">{{ scope.row[typeToNameEn[scope.row.tradeType - 1]] }} </span>
+                  <span v-if="scope.row.tradeType == 1 || scope.row.tradeType == 3">({{ payTypeKeyToName(scope.row.payType) }})</span>
+                </span>
+                <span>缴费时间：{{ timeConvert(scope.row.payTime) }}</span>
+                <span>创建时间：{{ timeConvert(scope.row.createTime) }}</span>
+                <span>操作人：{{ scope.row.createName }}</span>
+                <span>流水状态：<span :class="'status' + scope.row.STATUS">{{ getValueByConstrantArray("feesStatus", scope.row.STATUS) }}</span></span>
+                <span>摘要：{{ scope.row.remark }}</span>
+              </span>
+              <span v-else>{{ scope.row.schoolName }} <span v-if="scope.row.isNowSub" class="isNow">现</span></span>
+            </template>
+        </hs-table-column>
+        <hs-table-column
+          prop="business"
+          label="业务"
+          align="center">
+          <template slot-scope="scope">{{ getValueByConstrantArray("business", scope.row.business) }}</template>
+        </hs-table-column>
+        <hs-table-column
+          prop="gradeName"
+          label="年级"
+          align="center">
+        </hs-table-column>
+        <hs-table-column
+          prop="subjectName"
+          label="缴费专业"
+          align="center">
+        </hs-table-column>
+        <hs-table-column
+          prop="feeItemName"
+          label="收费项目"
+          align="center">
+        </hs-table-column>
+        <hs-table-column
+          prop="schoolYear"
+          label="学年"
+          align="center">
+          <template slot-scope="scope">{{ getValueByConstrantArray("schoolYear", scope.row.schoolYear) }}</template>
+        </hs-table-column>
+        <hs-table-column
+          prop="payAmount"
+          label="本次收款"
+          align="center"
+          :formatter="moneyFormatter">
+        </hs-table-column>
+        <hs-table-column
+          prop="reductionAmount"
+          label="本次减免"
+          align="center"
+          :formatter="moneyFormatter">
+        </hs-table-column>
+        <hs-table-column
+          prop="refundAmount"
+          label="本次退费"
+          align="center"
+          :formatter="moneyFormatter">
+        </hs-table-column>
+        <template slot="pagination">
+          <div class="action-block">
+            <slot name="action"></slot>
+          </div>
+          <el-pagination
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            :current-page.sync="pagination.currentPage"
+            :page-sizes="[10, 20, 30, 40, 50, 100]"
+            :page-size="pagination.pageSize"
+            :hide-on-single-page="false"
+            :pager-count="pagerCount"
+            :layout="'total, sizes, prev, pager, next, jumper'"
+            :total="tableData.totalCount">
+          </el-pagination>
+        </template>
+      </hs-table>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="onClose">关  闭</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import dayjs from 'dayjs'
+import util from '@/utils/busi/util'
+import { cellCallbackParams } from 'hs-elementui/src/utils/types/table'
+import { studentApi } from '@/api/studentcenter'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuInfo!: object;
+
+  @Prop({ default: false }) private newChangeData!: object;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private loading = !1
+
+  private pagerCount = 5
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private typeToName = ['收款', '退款', '预付款', '减免']
+
+  private typeToNameEn = ['payAmount', 'refundAmount', 'payAmount', 'reductionAmount']
+
+  private moneyFormatter (row: any, column: any) {
+    return util.generatingThousandthPer([row[column.property]])
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private constrantArray: any = {
+    tradeType: [],
+    feesStatus: [],
+    business: [],
+    payType: [],
+    schoolYear: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.tradeType = await getConstantByGroup('tradeType')
+    this.constrantArray.feesStatus = await getConstantByGroup('feesStatus')
+    this.constrantArray.business = await getConstantByGroup('business')
+    this.constrantArray.payType = await getConstantByGroup('payType')
+    this.constrantArray.schoolYear = await getConstantByGroup('schoolYear')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private payTypeKeyToName (payType: string) {
+    const payTypeArr: any[] = []
+    payType.split('|').forEach((item: string) => {
+      payTypeArr.push(this.getValueByConstrantArray('payType', Number(item)))
+    })
+    return payTypeArr.join('/')
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    await studentApi('getStuPayRecordHistory', {
+      stuId: (this.stuInfo as any).id,
+      business: (this.newChangeData as any).business,
+      schoolId: (this.newChangeData as any).schoolId,
+      gradeId: (this.newChangeData as any).gradeId,
+      subjectId: (this.newChangeData as any).subjectId,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.tableData.list = res.object.list.map((v: any) => {
+        return { ...v, hasChildren: true, rowId: v.payRecordId }
+      })
+      this.tableData.totalCount = res.object.totalCount
+      this.loading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  // 页数变化
+  private handleSizeChange (val: any) {
+    this.pagination.pageSize = val
+    this.pagination.currentPage = this.pagination.currentPage || 1
+    this.onQuery()
+  }
+
+  // 翻页
+  private handleCurrentChange (val: any) {
+    this.pagination.currentPage = val
+    this.pagination.pageSize = this.pagination.pageSize || 10
+    this.onQuery()
+  }
+
+  private tableRowClassName (table: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { row, rowIndex } = table
+    if (rowIndex === 1) {
+      return 'warning-row'
+    } else if (rowIndex === 3) {
+      return ''
+    }
+    return ''
+  }
+
+  private indexMethod (index: number) {
+    return index * 2
+  }
+
+  private filterHandler (value: any, row: any, column: any) {
+    const property = column.property
+    return row[property] === value
+  }
+
+  private load = async (tree:any, treeNode:any, resolve:any) => {
+    await studentApi('getStuPayRecordHistoryItem', {
+      business: (this.newChangeData as any).business,
+      schoolId: (this.newChangeData as any).schoolId,
+      gradeId: (this.newChangeData as any).gradeId,
+      subjectId: (this.newChangeData as any).subjectId,
+      recordId: tree.payRecordId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        resolve(res.object.list.map((v: any) => {
+          return { ...v, rowId: tree.payRecordId + ':' + v.id }
+        }))
+      }
+    })
+  }
+
+  private arraySpanMethod = function (cellCallbackParams: cellCallbackParams) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { row, column, rowIndex, columnIndex } = cellCallbackParams
+    return row.hasChildren ? (columnIndex === 0 ? [1, 9] : columnIndex === 9 ? [1, 1] : [0, 0]) : (columnIndex === 9 ? [0, 0] : [1, 1])
+  }
+
+  private timeConvert (timeStamp: number) {
+    return dayjs(timeStamp).format('YYYY-MM-DD HH:mm')
+  }
+
+  private reset () {
+    this.pagination = {
+      currentPage: 1,
+      pageSize: 10
+    }
+    this.loading = !1
+    this.pagerCount = 5
+    this.tableData = {
+      list: [],
+      totalCount: 0
+    }
+  }
+
+  private onClose () {
+    this.reset()
+    this.$emit('update:visible', false)
+  }
+
+  private open () {
+    this.getConstrantList()
+    this.loading = !0
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang='scss'>
+.history-flow-detail-dialog-container{
+  .hs-table .el-table th{
+    background-color: rgba(250, 250, 250, 1);
+  }
+  .flow-li{
+    &>span{
+      margin-right: 30px;
+      .blue{
+        color: #4285F4;
+        font-weight: bold;
+      }
+    }
+    .status1{
+      color: rgb(19, 206, 102);
+    }
+    .status2{
+      color: #EA4335;
+    }
+  }
+  .isNow{
+    border-radius: 999999px;
+    background-color: rgb(248, 175, 29);
+    color: #333;
+    width: 14px;
+    height: 14px;
+  }
+}
+</style>

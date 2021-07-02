@@ -1,0 +1,102 @@
+<template>
+  <div class="alteration-record-container">
+    <div class="title">
+      <span>变更记录</span>
+    </div>
+    <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolState']">
+    </simple-table>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { alterationRecordList, alterationRecordListCount } from '@/api/studentcenter'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'field',
+    label: '字段'
+  },
+  {
+    prop: 'oldValue',
+    label: '原值'
+  },
+  {
+    prop: 'freshValue',
+    label: '新值'
+  },
+  {
+    prop: 'createName',
+    label: '操作人员'
+  },
+  {
+    prop: 'createTime',
+    label: '更新时间',
+    format: 'date'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    !pagination && (this.pagination.currentPage = 1)
+    await alterationRecordList({
+      stuId: this.stuId,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      await alterationRecordListCount({
+        stuId: this.stuId
+      }).then((resCnt: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = resCnt.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getTotalCount () {
+    await alterationRecordListCount({
+      stuId: this.stuId
+    }).then((res: any) => {
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private currentPage = 1
+
+  public load () {
+    this.loading = !0
+    this.onQuery()
+  }
+
+  mounted () {
+    this.load()
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

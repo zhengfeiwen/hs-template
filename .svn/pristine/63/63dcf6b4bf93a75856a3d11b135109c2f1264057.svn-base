@@ -1,0 +1,5 @@
+# 指定构建模式
+NODE_ENV=production
+VUE_APP_BASE_API = 'http://fcs.liexue.org/'
+# 指定构建模式
+VUE_APP_TYPE=test

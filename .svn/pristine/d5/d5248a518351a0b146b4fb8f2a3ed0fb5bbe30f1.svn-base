@@ -1,0 +1,209 @@
+import { RouteConfig } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+const Setting: RouteConfig = {
+  path: '/setting',
+  component: Layout,
+  redirect: 'noredirect',
+  name: 'setting',
+  meta: {
+    permission: 'setting',
+    title: 'setting',
+    icon: 'columns'
+  },
+  children: [{
+    path: '/setting/account/centerUsermanage/index',
+    component: () => import(/* webpackChunkName: "account" */ '@/views/setting/account/index.vue'),
+    redirect: 'centerusermanage',
+    name: 'account',
+    meta: {
+      permission: 'account',
+      alwaysShow: true,
+      title: 'account',
+      icon: 'gears'
+    },
+    children: [{
+      path: '/setting/account/centerusermanage/index',
+      component: () => import(/* webpackChunkName: "centerUserManage" */ '@/views/setting/account/centerusermanage/index.vue'),
+      name: 'centerusermanage',
+      meta: {
+        permission: 'centerUserManage',
+        title: 'centerusermanage',
+        noCache: true,
+        icon: 'university'
+      }
+    }]
+  },
+  {
+    path: '/setting/notice/noticecatalogmanage/index',
+    component: () => import(/* webpackChunkName: "notice" */ '@/views/setting/notice/index.vue'),
+    redirect: 'noticecatalogmanage',
+    name: 'notice',
+    meta: {
+      permission: 'notice',
+      alwaysShow: true,
+      title: 'notice',
+      icon: 'columns'
+    },
+    children: [{
+      path: '/setting/notice/noticecatalogmanage/index',
+      component: () => import(/* webpackChunkName: "noticeCatalogManage" */ '@/views/setting/notice/noticecatalogmanage/index.vue'),
+      name: 'noticecatalogmanage',
+      meta: {
+        permission: 'noticeCatalogManage',
+        title: 'noticecatalogmanage',
+        noCache: true,
+        icon: 'list'
+      }
+    },
+    {
+      path: '/setting/notice/noticemanage/index',
+      component: () => import(/* webpackChunkName: "noticeManage" */ '@/views/setting/notice/noticemanage/index.vue'),
+      name: 'noticemanage',
+      meta: {
+        permission: 'noticeManage',
+        title: 'noticemanage',
+        noCache: true,
+        icon: 'files-o'
+      }
+    },
+    {
+      path: '/setting/notice/reportdirectionsmanager/index',
+      component: () => import(/* webpackChunkName: "reportDirectionsManager" */ '@/views/setting/notice/reportdirectionsmanager/index.vue'),
+      name: 'reportdirectionsmanager',
+      meta: {
+        permission: 'reportDirectionsManager',
+        title: 'reportdirectionsmanager',
+        noCache: true,
+        icon: 'clipboard'
+      }
+    }]
+  },
+  {
+    path: '/setting/system/operatelogsearch/index',
+    component: () => import(/* webpackChunkName: "system" */ '@/views/setting/system/index.vue'),
+    redirect: 'operatelogsearch',
+    name: 'system',
+    meta: {
+      permission: 'system',
+      alwaysShow: true,
+      title: 'system',
+      icon: 'book'
+    },
+    children: [{
+      path: '/setting/system/operatelogsearch/index',
+      component: () => import(/* webpackChunkName: "operateLogSearch" */ '@/views/setting/system/operatelogsearch/index.vue'),
+      name: 'operatelogsearch',
+      meta: {
+        permission: 'operateLogSearch',
+        title: 'operatelogsearch',
+        noCache: true,
+        icon: 'calendar'
+      }
+    },
+    {
+      path: '/setting/system/smstemplatemanager/index',
+      component: () => import(/* webpackChunkName: "smsTemplateManager" */ '@/views/setting/system/smstemplatemanager/index.vue'),
+      name: 'smstemplatemanager',
+      meta: {
+        permission: 'smsTemplateManager',
+        title: 'smstemplatemanager',
+        noCache: true,
+        icon: 'wechat'
+      }
+    }]
+  },
+  {
+    path: '/setting/option/optionmanage/index',
+    component: () => import(/* webpackChunkName: "account" */ '@/views/setting/option/index.vue'),
+    redirect: 'optionmanage',
+    name: 'option',
+    meta: {
+      permission: 'option',
+      alwaysShow: true,
+      title: 'option',
+      icon: 'book'
+    },
+    children: [{
+      path: '/setting/option/optionmanage/index',
+      component: () => import(/* webpackChunkName: "optionManage" */ '@/views/setting/option/optionmanage/index.vue'),
+      name: 'optionmanage',
+      meta: {
+        permission: 'optionManage',
+        title: 'optionmanage',
+        noCache: true,
+        icon: 'files-o'
+      }
+    }]
+  },
+  {
+    path: '/setting/studentcenter/studentcenterupdateinput/index',
+    component: () => import(/* webpackChunkName: "studentcenter" */ '@/views/setting/studentcenter/index.vue'),
+    redirect: 'studentcenterupdateinput',
+    name: 'studentcenter',
+    meta: {
+      permission: 'studentcenter',
+      alwaysShow: true,
+      title: 'studentcenter',
+      icon: 'street'
+    },
+    children: [{
+      path: '/setting/studentcenter/studentcenterupdateinput/index',
+      component: () => import(/* webpackChunkName: "studentCenterUpdateInput" */ '@/views/setting/studentcenter/studentcenterupdateinput/index.vue'),
+      name: 'studentcenterupdateinput',
+      meta: {
+        permission: 'studentCenterUpdateInput',
+        title: 'studentcenterupdateinput',
+        noCache: true,
+        icon: 'file-word-o'
+      }
+    },
+    {
+      path: '/setting/studentcenter/studentpaysearch/index',
+      component: () => import(/* webpackChunkName: "studentPaySearch" */ '@/views/setting/studentcenter/studentpaysearch/index.vue'),
+      name: 'studentpaysearch',
+      meta: {
+        permission: 'studentPaySearch',
+        title: 'studentpaysearch',
+        noCache: true,
+        icon: 'money1'
+      }
+    }]
+  },
+  {
+    path: '/setting/proxycenter/proxycenterdetailmanage/index',
+    component: () => import(/* webpackChunkName: "studentcenter" */ '@/views/setting/proxycenter/index.vue'),
+    redirect: 'proxycenterdetailmanage',
+    name: 'proxycenter',
+    meta: {
+      permission: 'proxyCenter',
+      alwaysShow: true,
+      title: 'proxycenter',
+      icon: 'key'
+    },
+    children: [{
+      path: '/setting/proxycenter/proxycenterdetailmanage/index',
+      component: () => import(/* webpackChunkName: "proxyCenterDetailManage" */ '@/views/setting/proxycenter/proxycenterdetailmanage/index.vue'),
+      name: 'proxycenterdetailmanage',
+      meta: {
+        permission: 'proxyCenterDetailManage',
+        title: 'proxycenterdetailmanage',
+        noCache: true,
+        icon: 'list'
+      }
+    },
+    {
+      path: '/setting/proxycenter/proxycenterupdateinput/index',
+      component: () => import(/* webpackChunkName: "proxyCenterUpdateInput" */ '@/views/setting/proxycenter/proxycenterupdateinput/index.vue'),
+      name: 'proxycenterupdateinput',
+      meta: {
+        permission: 'proxyCenterUpdateInput',
+        title: 'proxycenterupdateinput',
+        noCache: true,
+        icon: 'file-word-o'
+      }
+    }]
+  }]
+}
+
+export default Setting

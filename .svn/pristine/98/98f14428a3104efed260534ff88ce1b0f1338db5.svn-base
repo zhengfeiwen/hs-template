@@ -1,0 +1,23 @@
+<template>
+  <div>
+
+  </div>
+</template>
+<script lang="ts">
+
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import StaticItem from '@/components/busi/staticitem.vue'
+@Component({
+  name: 'detail-dialog',
+  components: {
+    StaticItem
+  }
+})
+
+export default class DetailDialog extends Vue {
+}
+</script>
+
+<style lang="scss">
+
+</style>

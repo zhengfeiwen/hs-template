@@ -1,0 +1,259 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="!1">
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="栏目名称">
+          <hs-input size="mini" v-model="form.catalogName" placeholder="请输入栏目名称" ></hs-input>
+        </el-form-item>
+        <el-form-item label="状态">
+          <dict-select :val.sync="form.catalogState" constant-group-name="status"></dict-select>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table :index="!0" :isCheckbox="!0" :data="tableData" :columns="columns" @selection-change="selectionChange" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail">
+        <template slot="custom_catalogState" slot-scope="{ scope }">
+          <hs-switch
+            :disabled="!stateDisabled"
+            v-model="scope.row.catalogState"
+            :active-value="1"
+            :inactive-value="0"
+            @change="changeState(scope.row)"
+            active-color="#1c2e52"
+            inactive-color="#d9d9d9">
+          </hs-switch>
+        </template>
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsNoticeCatalogUpdate']"
+            @click.native.prevent="onEdit(scope.row)"
+            type="text"
+            size="small">
+            编辑
+          </hs-button>
+          <hs-button
+            v-permission="['fcsNoticeCatalogDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="danger" @click="onAdd" v-permission="['fcsNoticeCatalogInsert']"  icon="hs-icon-plus" size="mini">新增</hs-button>
+          <hs-button type="info" @click="onRemove" v-permission="['fcsNoticeCatalogDelet']"  icon="hs-icon-minus" size="mini">删除</hs-button>
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+    <add-dialog :visible.sync="visibleAdd" :data="addData" @save-back="onQuery"></add-dialog>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { checkPermission } from '@/utils/permission'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import AddDialog from './add/index.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import SimpleContainer from '@/components/container/index.vue'
+import { settingApi } from '@/api/settingmanage'
+@Component({
+  name: 'notice-catalog-manage',
+  components: {
+    SimpleContainer,
+    SimpleTable,
+    AddDialog,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class NoticeCatalogManage extends Vue {
+  get stateDisabled () {
+    return checkPermission(['fcsNoticeCatalogEnable', 'fcsNoticeCatalogDisable'])
+  }
+
+  private form = {}
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'catalogName',
+    label: '栏目名称'
+  },
+  {
+    prop: 'memo',
+    label: '备注'
+  },
+  {
+    prop: 'catalogState',
+    label: '状态',
+    custom: !0
+  },
+  {
+    prop: 'createTime',
+    label: '创建时间',
+    format: 'date'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await settingApi('catalogList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {}
+    this.onQuery()
+  }
+
+  private visibleAdd = !1
+
+  private visible = !1
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onRemove () {
+    // 删除
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择栏目', '消息', {
+        confirmButtonText: '确定',
+        type: 'warning'
+      })
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    this.$alert('提示：是否删除所选栏目', '删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      await settingApi('noticeVerifyOpen', {
+        ids: ids.join(',')
+      }).then(async (res: any) => {
+        if (res.code === 10000) {
+          await settingApi('removeCatalog', {
+            ids: ids.join(',')
+          }).then((res: any) => {
+            if (res.code === 10000) {
+              this.$message.success(res.message)
+              this.onQuery()
+            }
+          })
+        } else {
+          this.$alert('不可删除存在内容的栏目', '消息', {
+            confirmButtonText: '确定',
+            type: 'warning'
+          })
+        }
+      }).catch((err: any) => {
+        console.log('err', err)
+      })
+    })
+  }
+
+  private detailData = {}
+
+  private async changeState (row: any) {
+    console.log(row)
+    const _data = {
+      id: row.id
+    }
+    if (row.catalogState === 0) {
+      await settingApi('disableCatalog', {
+        ..._data
+      }).then((res: any) => {
+        res.code === 10000 && this.onQuery(this.pagination)
+        this.$message({
+          message: res.message,
+          type: res.code === 10000 ? 'success' : 'error'
+        })
+      }).catch((err: any) => {
+        console.log('err', err)
+      })
+    } else {
+      await settingApi('enableCatalog', {
+        ..._data
+      }).then((res: any) => {
+        res.code === 10000 && this.onQuery(this.pagination)
+        this.$message({
+          message: res.message,
+          type: res.code === 10000 ? 'success' : 'error'
+        })
+      }).catch((err: any) => {
+        console.log('err', err)
+      })
+    }
+  }
+
+  private async showDetail (row: any) {
+    await settingApi('catalogDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          catalogName: res.object.info.catalogName,
+          catalogState: res.object.info.catalogState,
+          memo: res.object.info.memo
+        }
+      }
+    })
+  }
+
+  private addData: any = {}
+
+  private onAdd () {
+    this.visibleAdd = !0
+    this.addData = {
+      type: 'add'
+    }
+  }
+
+  private async onEdit (row: any) {
+    await settingApi('catalogDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visibleAdd = !0
+        this.addData = {
+          type: 'edit',
+          ...res.object.info
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

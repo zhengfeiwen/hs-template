@@ -1,0 +1,533 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+const apiUrl = setting.apiUrl
+
+/**
+* 获取业务列表
+* @param data
+*/
+export const businessList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/business/search`,
+    method: 'post',
+    headers: {
+      'data-format': 'money|dict'
+    },
+    data: qs.stringify(data)
+  })
+
+/**
+ * 获取收费标准列表
+ * @param data
+ */
+export const standardList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取收费标准列表-总数
+* @param data
+*/
+export const standardCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取收费标准详情
+* @param data
+*/
+export const standardDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/detail`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取收费标准插入
+* @param data
+*/
+export const standardInsert = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/insert`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取收费标准修改
+* @param data
+*/
+export const standardUpdate = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/update`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取收费标准启用
+* @param data
+*/
+export const standardEnable = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/enable`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取收费标准禁用
+* @param data
+*/
+export const standardDisable = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/disable`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取收费标准-变更记录列表
+* @param data
+*/
+export const standardModifyList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/modify/log/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取收费标准-变更记录列表-总数
+* @param data
+*/
+export const standardModifyCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/modify/log/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 标准-校验是否已挂钩院校
+* @param data
+*/
+export const standardHook = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/standard/hook`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校收费项目列表
+* @param data
+*/
+export const itemList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+ * 获取院校收费项目总数
+ * @param data
+ */
+export const itemCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+ * 获取院校收费项目详情
+ * @param data
+ */
+export const itemDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/detail`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+/**
+* 收费项目启用
+* @param data
+*/
+export const itemEnable = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/enable`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 收费项目新增
+* @param data
+*/
+export const itemInsert = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/insert`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 收费项目导入
+* @param data
+*/
+export const itemImport = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/import`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 收费项目删除
+* @param data
+*/
+export const itemDelete = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/delete`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 收费项目导出
+* @param data
+*/
+export const itemExport = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/export`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 收费项目编辑
+* @param data
+*/
+export const itemUpdate = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/update`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+ * 收费项目禁用
+ * @param data
+ */
+export const itemDisable = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/disable`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+ * 获取业务详情
+ * @param data
+ */
+export const businessDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/business/detail`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取业务列表-总数
+* @param data
+*/
+export const businessCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/business/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校列表
+* @param data
+*/
+export const getSchoolList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/school/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校列表
+* @param data
+*/
+export const getSchoolCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/school/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校详情
+* @param data
+*/
+export const schoolDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/school/detail`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取年级列表
+* @param data
+*/
+export const gradeList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/grade/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取年级列表总数
+* @param data
+*/
+export const gradeCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/grade/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取年级详情
+* @param data
+*/
+export const gradeDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/grade/detail`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取专业列表
+* @param data
+*/
+export const subjectList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/subject/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取专业列表总数
+* @param data
+*/
+export const subjectCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/subject/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取专业详情
+* @param data
+*/
+export const subjectDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/subject/detail`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取业务院校列表
+* @param data
+*/
+export const businessSchoolList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/business/school/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取业务院校列表-总数
+* @param data
+*/
+export const businessSchoolCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/business/school/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校列表
+* @param data
+*/
+export const schoolGradeList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/schoolGrade/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校列表
+* @param data
+*/
+export const schoolGradeCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/schoolGrade/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校专业列表
+* @param data
+*/
+export const schoolSubjectList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/schoolSubject/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校专业列表总数
+* @param data
+*/
+export const schoolSubjectCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/schoolSubject/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+ * 获取学习类型列表
+ * @param data
+ */
+export const studyList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/study/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+ * 获取学习类型列表-总数
+ * @param data
+ */
+export const studyCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/study/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+/**
+* 获取学习类型详情
+* @param data
+*/
+export const studyDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/study/detail`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取中心-列表
+* @param data
+*/
+export const centerList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/center/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取中心-列表-总条数
+* @param data
+*/
+export const centerCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/center/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取中心-详情
+* @param data
+*/
+export const centerDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/center/detail`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校收费标准列表
+* @param data
+*/
+export const schoolfeestandardList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/schoolfeestandard/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校收费标准列表-总数
+* @param data
+*/
+export const schoolfeestandardCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/schoolfeestandard/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校收费标准-删除
+* @param data
+*/
+export const schoolfeestandardDelete = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/schoolfeestandard/delete`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 获取院校收费标准-详情
+* @param data
+*/
+export const schoolfeestandardDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/schoolfeestandard/detail`,
+    method: 'post',
+    data: qs.stringify(data)
+  })

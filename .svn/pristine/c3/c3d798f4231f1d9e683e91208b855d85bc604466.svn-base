@@ -1,0 +1,237 @@
+<template>
+  <div class="prepaid-manage-container">
+    <div class="left">
+      <drawer-select :data="businessList" :value.sync="curBusiness"></drawer-select>
+    </div>
+    <div class="right">
+      <header>
+        <div class="header">
+          <span class="title">学生预付</span>
+          <hs-tabs v-model="activeName" type="card">
+            <hs-tab-pane label="待预付" name="undeal"></hs-tab-pane>
+            <hs-tab-pane label="已处理" name="dealed"></hs-tab-pane>
+          </hs-tabs>
+        </div>
+        <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+          <hs-form-item label="学习类型">
+            <hs-input size="mini" v-model="form.studyName" placeholder="请输入学习类型" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="院校">
+            <hs-input size="mini" v-model="form.schoolName" placeholder="请输入院校" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="年级">
+            <hs-input size="mini" v-model="form.gradeName" placeholder="请输入年级" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="专业">
+            <hs-input size="mini" v-model="form.subjectName" placeholder="请输入专业" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="所属中心">
+            <hs-input size="mini" v-model="form.stuBelongCenter" placeholder="请输入所属中心" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="学生姓名">
+            <hs-input size="mini" v-model="form.studentName" placeholder="请输入学生姓名" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="助记码">
+            <hs-input size="mini" v-model="form.stuMnemonicCode" placeholder="请输入助记码" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="证件后六位">
+            <hs-input size="mini" v-model="form.stuPaperworkNumberSix" placeholder="请输入证件后六位" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="学生来源">
+            <hs-input size="mini" v-model="form.stuSource" placeholder="请输入学生来源" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="学籍状态">
+            <dict-select :val.sync="form.stuSchoolRollStatus" constant-group-name="status"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="起止时间">
+            <el-date-picker
+              range-separator="至"
+              value-format="timestamp"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              :picker-options="pickerOptions"
+              type="daterange"
+              format="yyyy-MM-dd HH:mm"
+              :default-time="['00:00:00','23:59:59']"
+              v-model="form.date"
+              size="mini">
+            </el-date-picker>
+          </hs-form-item>
+          <hs-form-item class="query-block">
+            <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+            <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+          </hs-form-item>
+        </hs-form>
+      </header>
+      <section>
+        <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['gradeState']">
+          <template slot="operator" slot-scope="{ scope }">
+            <hs-button
+              @click.native.prevent="pay(scope.row)"
+              type="text"
+              size="small">
+              预付
+            </hs-button>
+          </template>
+          <template slot="action">
+            <hs-button type="primary" icon="hs-icon-plus" @click="batchCollect" size="mini">批量收费</hs-button>
+          </template>
+        </simple-table>
+      </section>
+      <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import util from '@/utils/busi/util'
+import { gradeList, gradeDetail } from '@/api/base'
+@Component({
+  name: 'reduce-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    DrawerSelect
+  }
+})
+export default class ReduceManage extends Vue {
+  private activeName = 'undeal'
+  private businessList = [
+    {
+      value: '10000',
+      label: '全日制'
+    },
+    {
+      value: '10002',
+      label: '业余'
+    },
+    {
+      value: '10003',
+      label: '本科'
+    },
+    {
+      value: '10004',
+      label: '其他'
+    }
+  ]
+
+  private curBusiness = {}
+
+  private form = {}
+
+  private loading = !1
+
+  private tableData = {
+    list: [{ gradeName: 1111111 }],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'studentName',
+    label: '学生姓名'
+  },
+  {
+    prop: 'sexName',
+    label: '性别'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业名称'
+  },
+  {
+    prop: 'stuBelongCenter',
+    label: '所属中心'
+  },
+  {
+    prop: 'stuSource',
+    label: '学生来源'
+  },
+  {
+    prop: 'stuPaperworkNumberSix',
+    label: '证件后六位'
+  },
+  {
+    prop: 'stuSchoolRollStatus',
+    label: '学籍状态'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await gradeList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {}
+
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async pay (row: any) {
+    this.$router.push({
+      name: 'prepaidpay'
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  private batchCollect () {
+    this.$router.push({
+      name: 'prepaidbatchimport'
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

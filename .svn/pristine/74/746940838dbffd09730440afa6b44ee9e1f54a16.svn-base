@@ -1,0 +1,36 @@
+// 列表详情标签字典
+import { Vue, Component } from 'vue-property-decorator'
+
+const DictMap: any = {
+  businessName: '业务名称',
+  memo: '备注',
+  status: '状态',
+  createTime: '创建时间',
+  businessId: '序号',
+  id: '序号',
+  schoolCode: '院校代码',
+  schoolName: '院校名称',
+  schoolState: '状态',
+  studyName: '学习类型',
+  lenName: '学制',
+  degreeName: '学历层次',
+  subjectCode: '专业代码',
+  subjectName: '专业名称',
+  subjectState: '状态',
+  gradeCode: '年级代码',
+  gradeName: '年级名称',
+  statusName: '状态',
+  studyCode: '学习代码',
+  studyState: '状态',
+  schoolId: '院校ID',
+  businessState: '状态'
+}
+
+export const t = function t (key: any) {
+  return key ? (DictMap[key] ? DictMap[key] : key) : ''
+}
+
+@Component
+export default class dict extends Vue {
+  private t = t
+}

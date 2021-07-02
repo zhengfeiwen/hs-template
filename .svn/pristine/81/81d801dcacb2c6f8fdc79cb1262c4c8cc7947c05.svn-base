@@ -1,0 +1,731 @@
+<template>
+  <div class="batchimport-container">
+    <header>
+      <div class="step-header">
+        <span class="title">{{ title }}</span>
+        <el-steps align-center style="width:calc(100% - 300px); margin-bottom: 10px;" :active="active" :process-status="processStatus" finish-status="success">
+          <el-step title="提交表单"></el-step>
+          <el-step title="批量导入"></el-step>
+          <el-step title="导入验证"></el-step>
+        </el-steps>
+        <coverlap></coverlap>
+      </div>
+      <hs-form ref="form" :model="form" :rules="rules" label-width="98px" :inline="true">
+        <hs-form-item label="学习类型" prop="studyId">
+          <dict-select @change="studyChange" :val.sync="form.studyId" constant-group-name="status"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="院校" prop="school">
+          <dict-select @change="schoolChange" :val.sync="form.school" constant-group-name="status"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="年级" prop="grade">
+          <dict-select @change="gradeChange" :val.sync="form.grade" constant-group-name="status"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="学年" prop="schoolYear">
+          <dict-select @change="schoolYearChange" :val.sync="form.schoolYear" constant-group-name="status"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="专业" prop="subject">
+          <dict-select @change="subjectChange" :multiple-limit="3" max-length="3" multiple :val.sync="form.subject" constant-group-name="status"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="收费标准" prop="standard">
+          <dict-select style="width:610px;" multiple @change="standardChange" :val.sync="form.standard" :data="standards"></dict-select>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" :disabled="isSubmit" @click="onSubmit" size="mini" icon="hs-icon-upload2">提交</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <transition name="el-zoom-in-top">
+        <div class="tip" :style="{ height: tipHidden ? '12px' : 'auto' }">
+          <i :class="tipHidden ? icon.up : icon.down" @click="tipHidden = !tipHidden"></i>
+          <p>操作步骤：收费标准中输入本次减免金额→选择减免时间→点击“批量导入”即可</p>
+          <p>如需部分学生批量导入，可通过“选择学生”批量筛选名单</p>
+          <p style="color: #f56c6c;">{{ `为了您操作便捷，建议按一个专业批量操作、超过${maxUpload}人以上使用下载模板编辑后再导入` }}</p>
+        </div>
+      </transition>
+      <template v-if="columns.length">
+        <hs-button style="float:right; margin-bottom: 10px;" type="primary" @click="onAddStudent" :disabled="!columns.length" size="mini" icon="hs-icon-plus">选择学生</hs-button>
+        <hs-alert
+          v-show="!isEdit"
+          :closable="!1"
+          :title="`学生名单已超${maxUpload}人，请前往下载模板处理`"
+          type="error"
+          center
+          show-icon>
+        </hs-alert>
+        <hs-table
+          ref="hsTable"
+          :exportName="'模板文件' + (new Date().getTime())"
+          :exportable="!0"
+          :id="tableId"
+          :data="list"
+          :border="!0"
+          :export-columns="exportColumns"
+          :columns="columns"
+          :show-summary="!0"
+          :summary-method="getSummaries"
+          style="width: 100%"
+          header-row-class-name="header-style">
+            <hs-table-column fixed="left" type="index" label="序号" header-align="center" align="center" width="50"></hs-table-column>
+            <hs-table-column fixed="left" v-for="(column, i) in fixedColumns.left" :prop="column.prop" :label="column.label" :key="i">
+              <template slot-scope="scope">
+                <el-date-picker
+                  :disabled="!isEdit"
+                  v-if="column.format === 'date'"
+                  v-model="list[scope.$index][scope.column.property]"
+                  type="datetime"
+                  value-format="timestamp"
+                  size="mini"
+                  placeholder="选择日期时间">
+                </el-date-picker>
+                <hs-input v-else-if="column.format === 'input'" :disabled="!isEdit" style="margin: 1px 0;" v-money size="mini" v-model.trim="list[scope.$index][scope.column.property]"></hs-input>
+                <span v-else>{{ generatingThousandthPer(list[scope.$index][scope.column.property] || '0') }}</span>
+              </template>
+            </hs-table-column>
+            <hs-table-column v-for="(column, i) in columns" :prop="column.prop" :label="column.label" :key="i">
+              <template slot-scope="scope">
+                <hs-input :disabled="!isEdit" style="margin: 1px 0;" v-money size="mini" v-model.trim="list[scope.$index][scope.column.property]"></hs-input>
+              </template>
+            </hs-table-column>
+            <hs-table-column v-for="(column, i) in fixedColumns.right" :prop="column.prop" :label="column.label" :key="i">
+              <template slot-scope="scope">
+                <el-date-picker
+                  :disabled="!isEdit"
+                  v-if="column.format === 'date'"
+                  v-model="list[scope.$index][scope.column.property]"
+                  type="datetime"
+                  value-format="timestamp"
+                  size="mini"
+                  placeholder="选择日期时间">
+                </el-date-picker>
+                <span v-else>{{ list[scope.$index][scope.column.property] }}</span>
+              </template>
+            </hs-table-column>
+            <hs-table-column  v-if="res.result === 0" prop="error" label="错误提示">
+              <template slot-scope="scope">
+                <span style="color: #f56c6c;">{{ scope.row.error }}</span>
+              </template>
+            </hs-table-column>
+        </hs-table>
+        <div class="line">
+          <hs-button type="primary" @click="onDownLoadTemplate" size="mini" icon="hs-icon-download">下载模板</hs-button>
+          <hs-plupload
+            ref="uploader"
+            :filters="filters"
+            :FilesAdded="filesAdded"
+            browseButton="browseButton_batchimport"
+            url="/api/core/oss/file/fileUploadPost"
+            @inputUploader="inputUploader"
+            :headers="{ token: token, accept: 'application/json' }"
+            :multipart-params="{'parentFolder': 'lb/schoolDetail'}"
+            :FileUploaded="FileUploaded"
+            :Error="error"
+          />
+          <hs-button id="browseButton_batchimport" type="success" size="mini" icon="hs-icon-plus">选择文件</hs-button>
+          <hs-button type="default" @click="onBatchUpload" size="mini" icon="hs-icon-upload">批量导入</hs-button>
+        </div>
+      </template>
+      <template v-else>
+        <div class="empty">
+          <i class="hs-icon-folder-add" />
+          <span>请先填写以上表单</span>
+        </div>
+      </template>
+      <div class="result-block" v-if="res.object.info">
+        <template v-if="res.result === 1 && res.object.info">
+          <i class="hs-icon-success" />
+          <span class="message">本次批量导入<span style="color: #67C23A;">{{ res.object.info.totalCount }}</span>数据</span>
+          <hs-button type="primary" @click="onBack" size="mini" icon="hs-icon-back">返回列表</hs-button>
+        </template>
+        <template v-if="res.result === 0 && res.object.info">
+          <i class="hs-icon-error" />
+          <span class="message">本次批量导入{{ res.object.info.totalCount }}数据，<span style="color: #67C23A;">{{ res.object.info.successCount }}</span>条导入成功，<span style="color: #F56C6C;">{{ res.object.info.errorCount }}</span>条失败</span>
+          <hs-button type="primary" @click="onView" size="mini" icon="hs-icon-view">查看项目</hs-button>
+        </template>
+      </div>
+    </section>
+    <add-student :data="studentList" @save="getStudent" :visible.sync="visible"></add-student>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import Coverlap from '@/components/busi/coverlap.vue'
+import AddStudent from './addstudent.vue'
+import dayjs from 'dayjs'
+import settings from '@/settings'
+import { getStudentList, validateData } from '@/api/collect'
+@Component({
+  name: 'batch-import',
+  components: {
+    Coverlap,
+    DictSelect,
+    AddStudent
+  }
+})
+export default class Batchimport extends Vue {
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private fixedColumns!: object|any
+
+  @Prop({ type: Number, default: 0 })
+  private leftColSpan!: number
+
+  @Prop({ type: String })
+  private backRouter!: string
+
+  @Prop({ type: Array })
+  private autoColumns!: any[]
+
+  @Prop({ type: Number, default: 100 })
+  private maxUpload!: number
+
+  private form = {}
+
+  private isSubmit = !1
+
+  private settings = settings
+
+  private processStatus = 'process'
+
+  private dayjs = dayjs
+
+  private active = 1
+
+  private visible = !1
+
+  private files: any[] = []
+  private up: any = {}
+
+  private res: any = {
+    result: -1
+  }
+
+  private tableId = `batch-import-${Math.random().toString(36).substr(2, 4) + '-' + Math.random().toString(36).substr(4, 4)}`
+
+  private loading = !1
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private filters = {
+    mime_types: [
+      { title: 'xlsx type', extensions: 'xlsx,xls' }
+    ]
+  }
+
+  private autoData () {
+    if (!this.autoColumns || this.autoColumns.length === 0) return
+    this.autoColumns.forEach(key => {
+      this.list.map((v: any) => {
+        v[key] = this.columns.reduce((prev: any, curr: any) => {
+          const value = Number(v[curr.prop])
+          if (!isNaN(value)) {
+            return prev + value
+          } else {
+            return prev
+          }
+        }, 0)
+      })
+    })
+    console.log(this.list)
+  }
+
+  private filesAdded (up: any, files: any) {
+    if (files.length > 1) {
+      this.$message.error('每次只允许选择一个文件')
+      return
+    }
+    if (up.files.length > 1) {
+      up.removeFile(up.files[0])
+    }
+    this.up.start()
+  }
+
+  private error (up: any, res: any) {
+    if (res.code === -601) {
+      this.$message.error('只能上传xlsx,xls格式')
+      return
+    }
+    this.$message.error(res.message)
+  }
+
+  private async FileUploaded (up: any, files: any, res: any) {
+    const response = JSON.parse(res.response)
+    this.files[0].name = response.fileInfos[0].originalFileName
+    this.files[0].path = response.fileInfos[0].savePath
+    await validateData(this.list).then((res: any) => {
+      if (res.code === 10000) {
+        this.res = {
+          result: res.success,
+          info: {
+            totalCount: res.object.info.totalCount,
+            successCount: res.object.info.successCount,
+            errorCount: res.object.info.errorCount
+          }
+        }
+        this.setColSpan()
+        this.active = 3
+        if (this.res.result === 0) {
+          this.active = 2
+          this.processStatus = 'error'
+          this.exportColumns.push({
+            prop: 'error',
+            label: '错误提示'
+          })
+          this.list = res.list
+        } else if (this.res.result === 1) {
+          this.processStatus = 'success'
+        }
+      }
+    }).catch(e => {
+      this.$message.error('操作异常，请刷新页面重新操作')
+      console.error(e)
+    })
+  }
+
+  private handleNodeClick (data: any) {
+    console.log(data)
+  }
+
+  private generatingThousandthPer (val: any) {
+    if (typeof val === 'number' || typeof val === 'bigint') return util.generatingThousandthPer(val)
+    return val
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private standards = [
+    {
+      key: 'xf',
+      value: '学费_13800元'
+    },
+    {
+      key: 'jnf',
+      value: '技能费_13800元'
+    }
+  ]
+
+  private list: any[] = []
+
+  private isEdit = !1
+
+  @Watch('list', { deep: !0 })
+  private listChange () {
+    if (this.list.length < this.maxUpload) {
+      this.isEdit = !0
+    } else {
+      this.isEdit = !1
+    }
+    this.autoData()
+  }
+
+  private rules = {
+    studyId: [
+      { required: !0, message: '请选择学习类型', trigger: 'change' }
+    ],
+    school: [
+      { required: !0, message: '请选择院校', trigger: 'change' }
+    ],
+    grade: [
+      { required: !0, message: '请选择年级', trigger: 'change' }
+    ],
+    subject: [
+      { required: !0, message: '请选择专业', trigger: 'change' }
+    ],
+    schoolYear: [
+      { required: !0, message: '请选择学年', trigger: 'change' }
+    ],
+    standard: [
+      { required: !0, message: '请选择收费标准', trigger: 'change' }
+    ]
+  }
+
+  private columns: any = []
+
+  private exportColumns: any = []
+
+  public $refs!: {
+    form: any
+  };
+
+  private icon = {
+    up: 'hs-icon-d-arrow-right',
+    down: 'hs-icon-d-arrow-left'
+  }
+
+  private onReset () {
+    this.active = 1
+    this.isSubmit = !1
+    this.exportColumns = []
+    this.processStatus = 'process'
+    this.form = {}
+    this.standardSelecteds = []
+    this.list = []
+    this.columns = []
+    this.res = {
+      result: -1
+    }
+  }
+
+  private tipHidden = !1
+
+  private currentPage = 1
+
+  private standardSelecteds: any = []
+
+  private getSummaries (param: any) {
+    const { columns } = param
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计'
+        return
+      }
+      const values = this.list.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)
+      } else {
+        sums[index] = '0'
+      }
+    })
+    const start = this.fixedColumns.left.length
+    const len = this.columns.length
+    const index = start + len + 1
+    sums[index] = ''
+    for (let i = 0; i <= len; i++) {
+      sums[start + i] += ''
+    }
+    return sums.map((v: any) => util.generatingThousandthPer(v || ''))
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      const el = `#${this.tableId}`
+      if (this.$el.querySelector(el)) {
+        var current = (this.$el as any)
+          .querySelector(el)
+          .querySelector('.el-table__fixed-footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        const leftColumns = this.fixedColumns.left
+        const rightColumns = this.fixedColumns.right
+        const leftLen = this.leftColSpan || (leftColumns.length + 1 - this.autoColumns.length)
+        console.log(leftLen)
+        cell[0].colSpan = leftLen.toString()
+        for (let i = 1; i < leftLen; i++) {
+          cell[i].style.display = 'none'
+        }
+        const start = leftColumns.length + this.columns.length + 1
+        if (rightColumns.length > 1 || this.res.result === 0) {
+          const len = (this.res.result === 0) ? rightColumns.length + 1 : rightColumns.length
+          cell[start].colSpan = len.toString()
+          for (let i = 1; i <= len; i++) {
+            cell[start + i].style.display = 'none'
+          }
+        }
+      }
+    }, 50)
+  }
+
+  private studentList: any = []
+
+  private onSubmit () {
+    // test start
+    // const common: any = {}
+    // this.standardSelecteds.map((v: any) => {
+    //   common[v.prop] = ''
+    // })
+    // this.res = {
+    //   result: -1
+    // }
+    // this.list.push({
+    //   studentId: '1111111',
+    //   studentName: 'zfw',
+    //   stuPaperworkNumber: '11111111111',
+    //   ...common,
+    //   date: new Date().getTime()
+    // })
+    // this.list.push({
+    //   studentId: '1111111',
+    //   studentName: 'zfw121212',
+    //   stuPaperworkNumber: '11111111111',
+    //   ...common,
+    //   date: new Date().getTime()
+    // })
+    // test end
+    // // 获取列信息，渲染总计，导出信息等
+    this.columns = [...this.standardSelecteds]
+    this.setColSpan()
+    this.exportColumns = [].concat(this.fixedColumns.left, this.fixedColumns.right, this.columns)
+    this.active = 2
+    this.isSubmit = !0
+    this.$refs.form.validate(async (valid: any) => {
+      if (valid) {
+        this.$message.error('请输入必填项')
+        this.isSubmit = !1
+      } else {
+        // 获取学生信息
+        await getStudentList({}).then((res: any) => {
+          if (res.code === 10000) {
+            this.studentList = res.list
+            this.initTableData()
+          }
+        })
+      }
+    })
+  }
+
+  private initTableData () {
+    this.res = {
+      result: -1
+    }
+    const common: any = {}
+    this.standardSelecteds.map((v: any) => {
+      common[v.prop] = ''
+    })
+    this.list = []
+    this.studentList.map((v: any) => {
+      this.list.push({
+        studentId: v.studentId,
+        studentName: v.studentName,
+        stuPaperworkNumber: v.stuPaperworkNumber,
+        ...common,
+        date: new Date().getTime()
+      })
+    })
+    // 获取列信息，渲染总计，导出信息等
+    this.columns = [...this.standardSelecteds]
+    this.setColSpan()
+    this.exportColumns = [].concat(this.fixedColumns.left, this.fixedColumns.right, this.columns)
+    this.active = 2
+    this.isSubmit = !0
+  }
+
+  private onAddStudent () {
+    this.visible = !0
+  }
+
+  private getStudent (stus: any) {
+    const common: any = {}
+    this.standardSelecteds.map((v: any) => {
+      common[v.prop] = ''
+    })
+    const temp: any = [...this.list]
+    this.list = []
+    stus.map((v: any) => {
+      let student = {
+        studentId: v.key,
+        studentName: v.studentName,
+        stuPaperworkNumber: v.stuPaperworkNumber,
+        ...common,
+        date: new Date().getTime()
+      }
+      const len = temp.length
+      for (let i = 0; i < len; i++) {
+        if (temp[i].studentId === v.key) {
+          student = {
+            ...temp[i]
+          }
+        }
+      }
+      this.list.push(student)
+    })
+  }
+
+  private standardChange (vals: any, labels: any) {
+    const len = vals.length
+    this.standardSelecteds = []
+    for (let i = 0; i < len; i++) {
+      this.standardSelecteds.push({
+        prop: vals[i],
+        label: labels[i]
+      })
+    }
+  }
+
+  private onDownLoadTemplate () {
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  private async onBatchUpload () {
+    await validateData(this.list).then((res: any) => {
+      if (res.code === 10000) {
+        this.res = {
+          result: res.success,
+          info: {
+            totalCount: res.object.info.totalCount,
+            successCount: res.object.info.successCount,
+            errorCount: res.object.info.errorCount
+          }
+        }
+        this.setColSpan()
+        this.active = 3
+        if (this.res.result === 0) {
+          this.active = 2
+          this.processStatus = 'error'
+          this.exportColumns.push({
+            prop: 'error',
+            label: '错误提示'
+          })
+          this.list = res.list
+        } else if (this.res.result === 1) {
+          this.processStatus = 'success'
+        }
+      }
+    }).catch(e => {
+      this.$message.error('操作异常，请刷新页面重新操作')
+      console.error(e)
+    })
+  }
+
+  private onView () {
+    this.res = {
+      result: 0
+    }
+  }
+
+  private onBack () {
+    if (!this.backRouter) {
+      this.$router.back()
+    } else {
+      this.$router.push({
+        name: this.backRouter
+      },
+      () => {
+        // do
+        this.loading = !1
+      })
+    }
+  }
+}
+</script>
+
+<style lang="scss">
+.batchimport-container{
+  height: 100%;
+  width: 100%;
+  header{
+    width: 100%;
+    .step-header{
+      width: 100%;
+      height: 66px;
+      position: relative;
+      display: flex;
+      border-bottom: 1px solid #d6d6d6;
+      margin-bottom: 10px;
+      .title{
+        width: 100px;
+        font-size: 22px;
+        font-weight: bold;
+        margin: 0 20px;
+        line-height: 40px;
+        text-align: center;
+      }
+    }
+  }
+  section{
+    position: relative;
+    height: calc(100% - 185px);
+    width: 100%;
+    .line{
+      width: 100%;
+      text-align: center;
+    }
+    .tip{
+      position: relative;
+      padding: 8px 16px;
+      background-color: #ecf8ff;
+      border-radius: 4px;
+      border-left: 5px solid #50bfff;
+      overflow: hidden;
+      margin: 10px 0;
+      i{
+        position: absolute;
+        border-radius: 50%;
+        text-align: center;
+        transform: rotate(90deg);
+        cursor: pointer;
+        font-size: 14px;
+        height: 16px;
+        width: 16px;
+        line-height: 16px;
+        vertical-align: middle;
+        bottom: 0;
+        right: calc(50% - 8px);
+        color: #50bfff;
+        &:hover{
+          color: #fff;
+          background-color: #50bfff;
+        }
+      }
+      p{
+        margin: 6px 0;
+      }
+    }
+    .header-style{
+      th {
+        background-color: #F5F7FA;
+      }
+    }
+    .empty{
+      width: 100%;
+      height: calc(100% - 90px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      i{
+        font-size: 60px;
+        color: #e6e6e6;
+      }
+    }
+    .result-block{
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      top: 0;
+      left: 0;
+      background-color: #fff;
+      .hs-icon-success{
+        font-size: 50px;
+        margin-bottom: 10px;
+        color: #67C23A;
+      }
+      .hs-icon-error{
+        font-size: 50px;
+        margin-bottom: 10px;
+        color: #f56c6c;
+      }
+      .message{
+        margin-bottom: 20px;
+        font-size: 18px;
+      }
+    }
+  }
+  .table-setting{
+    display: none;
+  }
+}
+</style>

@@ -1,0 +1,19 @@
+{
+  "name": "高校收费平台",
+  "devServerPort": 9629,
+  "mockServerPort": 9630,
+  "proxyTarget": {
+    "test": "http://118.178.134.97:8110/",
+    "xiong": "http://192.168.0.20:8604/pro-fcs/",
+    "qing": "http://192.168.10.108:8050/pro_fcs/",
+    "wen": "http://192.168.10.134:9090/pro-fcs/",
+    "fei": "http://192.168.10.233:8056/pro-fcs/",
+    "qiang": "http://192.168.10.180:8764/pro-fcs/",
+    "ting": "http://192.168.10.120:8087/pro-fcs/",
+    "changeOrigin": true,
+    "ws": true,
+    "pathRewrite": {
+      "/api": "/"
+    }
+  }
+}

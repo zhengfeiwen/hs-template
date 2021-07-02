@@ -1,0 +1,7 @@
+<template>
+    <div class="collect-detail-container">
+        <el-dialog>
+            
+        </el-dialog>
+    </div>
+</template>

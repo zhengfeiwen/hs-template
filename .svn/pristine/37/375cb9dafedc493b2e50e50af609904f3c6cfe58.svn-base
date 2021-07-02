@@ -1,0 +1,54 @@
+.title{
+    margin: 10px 0;
+    display: flex;
+}
+.title>span{
+    font-size: 20px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.simple-table{
+    border: 1px solid #d9d9d9;
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.simple-table tr td{
+    height: 50px;
+    padding: 0;
+    width: 50%;
+}
+
+.student-baseinfo-container .hs-form {
+    .hs-form-item{
+        height: 100%;
+        line-height: 100%;
+        margin: 0 !important;
+    }
+    .hs-form-item__label-wrap{
+        height: 100%;
+        line-height: 100%;
+        border-right: 1px solid #d9d9d9;
+        background-color: #fcfcfc;
+    }
+    .hs-form-item__label{
+        height: 100%;
+        line-height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+    .hs-form-item__content{
+        height: 100%;
+        line-height: 100%;
+        padding: 0 10px;
+        display: flex;
+        align-items: center;
+    }
+    .hs-form-item.hs-form-item.photo-block .image-dashed{
+        height: calc(100% - 20px);
+        width: 160px;
+    }
+}

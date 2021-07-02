@@ -1,0 +1,142 @@
+<template>
+  <hs-dialog title="中心用户新增" :visible.sync="visibleSync" width="50%" :close-on-click-modal="!1" @open="onQuery()">
+    <div class="centerusermanage-add">
+      <header>
+        <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+          <hs-form-item label="用户名称">
+            <hs-input
+              size="mini"
+              v-model="form.userName"
+              placeholder="请输入用户名称"
+            ></hs-input>
+          </hs-form-item>
+          <hs-form-item class="query-block">
+            <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+            <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+          </hs-form-item>
+        </hs-form>
+      </header>
+      <section style="height: 50vh;">
+        <simple-table :columnable="!1" :selection="selection" ref="table" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination"></simple-table>
+      </section>
+      <footer>
+        <hs-button type="primary" @click="onSave" size="mini">确定</hs-button>
+        <hs-button type="default" @click="visibleSync = !1" size="mini">关闭</hs-button>
+      </footer>
+    </div>
+  </hs-dialog>
+</template>
+<script lang="ts">
+import { Vue, Component, PropSync, Prop } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import util from '@/utils/busi/util'
+import { settingApi } from '@/api/settingmanage'
+import { MessageBox } from 'element-ui'
+
+@Component({
+  name: 'center-user-manage-add',
+  components: {
+    SimpleTable
+  }
+})
+export default class CenterUserManageAdd extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: Object })
+  private params!: object|any
+
+  private form: any = {
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private selection = {
+    key: 'key',
+    label: 'userName'
+  }
+
+  private columns = [{
+    prop: 'userName',
+    label: '用户名称'
+  },
+  {
+    prop: 'userAlias',
+    label: '用户编码'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 0
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await settingApi('centerUserUserList', {
+      ...form,
+      ...this.params,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list.map((v: any) => {
+        v.key = v.id + '-' + v.businessId
+        return v
+      });
+      (this.$refs.table as any).selects = []
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {}
+    this.onQuery()
+  }
+
+  private async onSave () {
+    const selects = (this.$refs.table as any).selects
+    if (!selects || selects.length === 0) {
+      this.$alert('请选择用户')
+      return
+    }
+    const centerUserList: any = []
+    selects.map((v: any) => {
+      const key = v.key.split('-')
+      centerUserList.push({
+        centerId: this.params.centerId,
+        businessId: key[1] * 1,
+        userId: key[0] * 1
+      })
+    })
+    await settingApi('centerUserInsert', {
+      centerUserList: centerUserList
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        MessageBox.confirm(
+          res.message, '成功', {
+            confirmButtonText: '确定',
+            showCancelButton: !1
+          }).then(async () => {
+          this.visibleSync = !1
+          this.$listeners['call-back'] && this.$emit('call-back')
+        })
+      } else {
+        this.$alert(res.message, { type: 'error' })
+      }
+    })
+  }
+}
+</script>
+<style lang="scss">
+.el-message-box__wrapper{
+  z-index: 2080 !important;
+}
+</style>

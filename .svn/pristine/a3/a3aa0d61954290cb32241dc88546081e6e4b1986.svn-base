@@ -1,0 +1,117 @@
+import { Response, Request, NextFunction } from 'express'
+import faker from 'faker'
+
+const menuRight = {
+  code: 10000,
+  message: "success",
+  accessRoutes: [
+    {
+      meta: {
+        cache: true,
+        title: "猎学财务系统"
+      },
+      component: "lbTbsSystem",
+      componentPath: "",
+      id: 14201,
+      name: "lbTbsSystem",
+      path: "",
+      pid: 1,
+      children: [
+        {
+          component: "basicDataMenu",
+          componentPath: "",
+          id: 14210,
+          meta: {cache: true, title: "基础"},
+          name: "basicDataMenu",
+          path: "",
+          pid: 14201,
+          children: [{
+            component: "businessSearch",
+            componentPath: "",
+            id: 14292,
+            meta: {cache: true, title: "业务管理"},
+            name: "businessSearch",
+            path: "",
+            pid: 14210
+          }]
+        }
+      ]
+    }
+  ],
+  rpcRightMarkSet: [
+    "opinionUpdate",
+    "ordinaryUserListCount",
+    "lbCitySearch",
+    "centerQueryInfo"
+  ],
+  rpcUserRoleNames: "招生代理|小程序代理用户",
+  rpcUser: {
+    applyTime: 1615174395401,
+    bankAccount: "cczxc",
+    businessId: null,
+    createId: 1,
+    createTime: 11111,
+    deadline: 1617119989997,
+    email: "-1",
+    headImgUrl: "",
+    id: 1,
+    lastLoginIp: "-1",
+    lastLoginTime: 1617679271460,
+    lbUserProTypes: null,
+    loginIp: "-1",
+    loginTime: 1617679271460,
+    memo: "32312",
+    openAccountAddress: "czxczxc",
+    openAccountBank: "czxc",
+    openid: "-1",
+    payee: "zxczxc",
+    phone: "15098778944",
+    presenter: "一级代理",
+    presenterId: 93,
+    proLevel: 2,
+    proType: null,
+    password: "21218cca77804d2ba1922c33e0151105",
+    referralCode: "12345678",
+    schoolQrCode: null,
+    settlementMethod: 2,
+    sex: 1,
+    state: 1,
+    tcsUserId: 64122,
+    updateId: 1,
+    updateTime: 1617255504665,
+    userAlias: "LXproxy",
+    userId: null,
+    userName: "猎学代理管理员",
+    userNum: "-1",
+    userType: 2,
+    vipLevel: null,
+    wechat: "sdfsd"
+  },
+  token: "VUGUHINSASASQASQWSQSHSQNS"
+}
+
+export const getRightByUserId = (req: Request, res: Response) => {
+  // const { id, sysId, token } = req.params
+  console.log('-----------------getRightByUserId-------------------------')
+  return res.json({
+    code: 10000,
+    object: {
+      ...menuRight
+    }
+  })
+}
+
+
+const opRight = {
+  opType: 'query',
+  opCode: 'search'
+}
+export const getOperaRight = (req: Request, res: Response) => {
+  // const { id, sysId, token } = req.params
+  return res.json({
+    code: 10000,
+    object: {
+      ...opRight
+    }
+  })
+}

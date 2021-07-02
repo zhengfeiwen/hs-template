@@ -1,0 +1,95 @@
+.studentcenterupdateinput-container{
+  height: 650px;
+  min-width: 830px;
+  border: 1px solid #d9d9d9;
+  .hs-form{
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    .hs-form-item{
+      border-bottom: 1px solid #d9d9d9;
+      height: 50px;
+      line-height: 50px;
+      margin: 0 !important;
+      .hs-form-item__label-wrap{
+        background-color: #fcfcfc;
+        border-right: 1px solid #d9d9d9;
+        height: 49px;
+      }
+      .hs-form-item__content{
+        width: 300px !important;
+        height: 50px;
+        line-height: 50px;
+        padding: 0 10px;
+      }
+      &.hs-form-item.photo-block{
+        height: 200px;
+        .hs-form-item__label-wrap{
+          background-color: #fcfcfc;
+          border-right: 1px solid #d9d9d9;
+          height: 199px;
+          line-height: 199px;
+        }
+        .hs-form-item__content{
+          width: 300px !important;
+          height: 200px;
+          line-height: 200px;
+          padding: 0 10px;
+        }
+        .image-dashed{
+          margin-top: 10px;
+          height: calc(100% - 20px);
+          width: 160px;
+          &.add-image{
+            display: flex;
+            flex-direction: column;
+            &:hover{
+              i{
+                color: #409eff;
+                opacity: 0.6;
+              }
+            }
+            i{
+              font-size: 20px;
+              font-weight: bold;
+              color: #d9d9d9;
+              margin-bottom: 6px;
+            }
+          }
+        }
+      }
+      &.full-line{
+        width: 100%;
+        height: 101px;
+        border: none;
+        .hs-form-item__label-wrap{
+          background-color: #fcfcfc;
+          border-right: 1px solid #d9d9d9;
+          height: 98px;
+          line-height: 100px;
+        }
+        .hs-form-item__content{
+          width: calc(100% - 120px) !important;
+          height: 102px;
+          line-height: 85px;
+          .hs-input__count{
+            height: 65px;
+          }
+        }
+      }
+    }
+    .left{
+      width: 50%;
+    }
+    .right{
+      width: 50%;
+      border-left: 1px solid #d9d9d9;
+    }
+  }
+  footer{
+    width: 100%;
+    display: flex;
+    margin-top: 20px;
+    justify-content: center;
+  }
+}

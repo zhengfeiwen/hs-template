@@ -1,0 +1,97 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+import { isEmpty } from 'xe-utils'
+const apiUrl = setting.apiUrl
+
+const commonConfig: any = {
+  getSchoolSelect: { url: '/fcs/school/getSchoolSelect' }, // 获取院校下拉框
+  getGradeSelect: { url: '/fcs/grade/getGradeSelect' }, // 获取年级下拉框
+  getSubjectSelect: { url: '/fcs/subject/getSubjectSelect' }, // 获取专业下拉框
+  getCenterSelect: { url: '/fcs/center/getCenterSelect' }, // 获取中心下拉框
+  getStudySelect: { url: '/fcs/study/getStudySelect' }, // 获取学习类型列表
+  getSchoolYearSelect: { url: '/fcs/study/getStudySelect' }, // 获取学年列表
+  getOption: { url: '/fcs/fcsoption/getOption' }, // 根据变量字典数据
+  getOptionValue: { url: '/fcs/fcsoption/getOptionValue' }, // 获取获取常量值
+  getFeeItem: { url: '/fcs/item/select' }, // 获取项目下拉框
+  feesPrint: { url: '/fcs/common/fees/print' }, // 打印
+  openInvoice: { url: '/fcs/common/fees/open/invoice' }, // 开票
+  stuCommonDetail: { url: '/fcs/stu/common/detail' }, // 学生详情通用接口
+  stuCommonAccountDetail: { url: '/fcs/stu/common/account/detail' }, // 个人账户信息
+  studentSourceTree: { url: '/fcs/studentSource/tree' }, // 学生来源树
+  studentSourceList: { url: '/fcs/studentSource/list' } // 学生来源数组
+}
+
+export const api: any = {}
+
+Object.keys(commonConfig).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${commonConfig[key].url}`,
+      method: 'post',
+      data: params,
+      headers: commonConfig[key].headers
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const commonApi = (key: any, params: any = {}) => {
+  if (api[key]) {
+    return api[key](params)
+  } else {
+    throw Error('不存在该方法：' + key)
+  }
+}
+
+/**
+ * 获取数据-通用
+ * @param data
+ */
+export const getList = (data: any) =>
+  request({
+    url: `${apiUrl.api}${data.url}`,
+    method: 'post',
+    data: data.data
+  })
+
+/**
+ * 获取常量字典列表-特殊处理group
+ * @param data
+ */
+
+const groups: any = {
+  status: 'available',
+  openInvoice: 'available',
+  degree: 'subjectDegree',
+  len: 'subjectLen',
+  preItem: 'yesOrNo',
+  ifMust: 'yesOrNo',
+  ifRefund: 'yesOrNo',
+  studyState: 'available',
+  businessId: 'businessType',
+  business: 'businessType',
+  stuSex: 'sex',
+  stuSchoolRollStatus: 'schoolRollStatus',
+  schoolStatus: 'available'
+}
+
+export const getConstant = (data: any) => {
+  const groupName = data.groupName
+  if (!isEmpty(groups[groupName])) {
+    data = {
+      groupName: groups[groupName]
+    }
+  }
+  return request({
+    url: `${apiUrl.api}/fcs/fcsoption/getConstant`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+}

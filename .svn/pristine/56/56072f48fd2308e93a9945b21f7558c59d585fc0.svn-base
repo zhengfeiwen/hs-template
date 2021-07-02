@@ -1,0 +1,103 @@
+<template>
+  <div class="refundbatchimport-container">
+    <batch-import :permission="permission" :action="action" :params="params" title="批量退费" :left-col-span="6" :auto-columns="['refundAmount']" :fixedColumns="fixedColumns" back-router="refundmanageauth"></batch-import>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import BatchImport from '@/views/collect/components/batchimport.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'refund-batch-import',
+  components: {
+    BatchImport
+  }
+})
+export default class RefundBatchImport extends Vue {
+  private params = util.getRouterParams()
+
+  private dict: any = {
+    1: { // 全日制
+      batchImport: 'fulltimeRefundBatchPayBatchInsert',
+      excelImport: 'fullTimeRefundBatchPayFromExcel',
+      excelImportPermission: ['fcsFullproInputExcel'],
+      batchImportPermission: ['fcsFullproInputInsert']
+    },
+    2: { // 业余学历
+      batchImport: 'fcsParttimeRefundBatchPayBatchInsert',
+      excelImport: 'fcsParttimeRefundBatchPayFromExcel',
+      excelImportPermission: ['fcsParttimeRefUnProcessedExcel'],
+      batchImportPermission: ['fcsParttimeRefUnProcessedBatchInsert']
+    },
+    3: { // 全日制
+      batchImport: 'fulltimeRefundBatchPayBatchInsert',
+      excelImport: 'fullTimeRefundBatchPayFromExcel',
+      excelImportPermission: ['fcsFullproInputExcel'],
+      batchImportPermission: ['fcsFullproInputInsert']
+    },
+    4: { // 全日制
+      batchImport: 'fulltimeRefundBatchPayBatchInsert',
+      excelImport: 'fullTimeRefundBatchPayFromExcel',
+      excelImportPermission: ['fcsFullproInputExcel'],
+      batchImportPermission: ['fcsFullproInputInsert']
+    },
+    5: { // 全日制
+      batchImport: 'fulltimeRefundBatchPayBatchInsert',
+      excelImport: 'fullTimeRefundBatchPayFromExcel',
+      excelImportPermission: ['fcsFullproInputExcel'],
+      batchImportPermission: ['fcsFullproInputInsert']
+    }
+  }
+
+  private action = {
+    type: 'refund',
+    batchImport: this.dict[this.params.businessId].batchImport,
+    excelImport: this.dict[this.params.businessId].excelImport
+  }
+
+  private permission = {
+    excelImport: this.dict[this.params.businessId].excelImportPermission,
+    batchImport: this.dict[this.params.businessId].batchImportPermission
+  }
+
+  private fixedColumns = {
+    left: [
+      {
+        prop: 'stuName',
+        label: '学生姓名'
+      },
+      {
+        prop: 'stuCode',
+        label: '账号'
+      },
+      {
+        prop: 'idCard',
+        label: '身份证'
+      },
+      {
+        prop: 'subjectName',
+        label: '专业名称'
+      },
+      {
+        prop: 'payTime',
+        label: '退费时间',
+        format: 'date'
+      },
+      {
+        prop: 'refundAmount',
+        label: '本次退款',
+        format: 'auto'
+      }
+    ],
+    right: [
+    ]
+  }
+}
+</script>
+<style lang="scss">
+  .refundbatchimport-container{
+    width: 100%;
+    height: 100%;
+  }
+</style>

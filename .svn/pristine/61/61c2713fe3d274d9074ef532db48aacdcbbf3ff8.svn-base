@@ -1,0 +1,49 @@
+<template>
+  <div class="reducebatchimport-container">
+    <header>
+      <span class="title">批量减免</span>
+      <el-steps style="width:calc(100% - 300px)" :active="active" finish-status="success">
+        <el-step title="提交表单"></el-step>
+        <el-step title="批量导入"></el-step>
+        <el-step title="导入验证"></el-step>
+      </el-steps>
+      <coverlap></coverlap>
+    </header>
+    <section>
+      <batchimport></batchimport>
+    </section>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import Coverlap from '@/components/busi/coverlap.vue'
+import BatchImport from '@/views/collect/components/batchimport.vue'
+@Component({
+  name: 'reduce-batch-import',
+  components: {
+    Coverlap,
+    BatchImport
+  }
+})
+export default class ReduceBatchImport extends Vue {
+  private active = 1
+}
+</script>
+<style lang="scss">
+  .reducebatchimport-container{
+    width: 100%;
+    height: 100%;
+    header{
+      width: 100%;
+      position: relative;
+      display: flex;
+      .title{
+        width: 100px;
+        font-size: 22px;
+        font-weight: bold;
+        margin-right: 20px;
+      }
+    }
+  }
+</style>

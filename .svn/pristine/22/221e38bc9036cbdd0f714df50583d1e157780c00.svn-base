@@ -1,0 +1,390 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog append-to-body :title="title" :visible.sync="visibleSync" width="920px" :close-on-click-modal="!1" @open="open">
+    <div class="schoolfeestandard-add-container">
+      <section>
+        <!-- 选收费标准增专业 start -->
+        <div style="margin-top:10px;">
+          <!-- <div class="subtitle">添加收费标准</div> -->
+          <br><br>
+          <div class="line">
+            <static-item required label="收费标准" :width="300" direction="column" align="flex-start">
+              <standard-dialog @save="getStandard"></standard-dialog>
+            </static-item>
+          </div>
+          <div class="line title">
+            <div class="fw6">所选收费标准</div>
+          </div>
+          <div class="line">
+            <hs-tag
+              closable
+              type="danger"
+              v-for="tag in standards"
+              class="standard-tag"
+              :title="tag.feeItemName + '_' + tag.amount + '元_' + tag.feeItemCode"
+              :key="tag.id"
+              @close="close(tag.feeStandardCode, 'standard')">
+              {{ tag.feeItemName + '_' + tag.amount + '元_' + tag.feeItemCode }}
+            </hs-tag>
+          </div>
+          <div class="subtitle">添加年级专业</div>
+          <div class="line">
+            <static-item required label="年级" :width="260" direction="column" align="flex-start">
+              <dict-select @change="gradeChange" :prop="{ key: 'value', value: 'gradeName' }" :val.sync="form.gradeId" :data="gradeDatas"></dict-select>
+            </static-item>
+            <static-item required label="学年" :width="260" direction="column" align="flex-start">
+              <dict-select @change="schoolYearChange" :val.sync="form.schoolYear" constant-group-name="schoolYear"></dict-select>
+            </static-item>
+            <static-item required label="专业" :width="360" direction="column" align="flex-start">
+              <dict-select :empty-text="emptyText" @change="subjectChange" :prop="{ key: 'value', value: 'showValue' }" :val.sync="form.subjectId" :data="subjectDatas"></dict-select>
+              <hs-button type="danger" style="margin-left:12px; padding: 6px 10px !important;" :disabled="!isSubjectAdd" @click="onSubjectAdd" size="mini" icon="hs-icon-plus">添加</hs-button>
+            </static-item>
+          </div>
+          <div class="fw6">所选年级专业</div>
+          <div class="line">
+            <simple-table style="width: 100%;" ref="hsTable" :columnable="!1" :isCheckbox="!1" :data="{ list: subjects, totalCount: -1 }" :columns="columns" :pagination="null">
+              <template slot="operator" slot-scope="{ scope }">
+                <hs-button
+                  @click.native.prevent="onDel(scope.row)"
+                  type="text"
+                  size="small">
+                  删除
+                </hs-button>
+              </template>
+            </simple-table>
+          </div>
+        </div>
+        <!-- 选收费标准增专业 end -->
+      </section>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <el-button size="mini" :loading="addLoading" type="danger" @click="onSave">确认</el-button>
+      <el-button type="info" plain size="mini" @click="visibleSync = !1">取消</el-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import StandardDialog from './standardDialog.vue'
+import { commonApi } from '@/api/common'
+import { baseApi } from '@/api/base'
+import { getConstantDict } from '@/utils/common'
+
+@Component({
+  name: 'add-dialog',
+  components: {
+    SimpleTable,
+    DictSelect,
+    StaticItem,
+    StandardDialog
+  }
+})
+
+export default class AddDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private data!: object|any
+
+  get disabled () {
+    return this.activeName === 'addsubject' ? this.form.schoolYear : this.form.gradeId && this.form.subjectId && this.form.schoolYear
+  }
+
+  private standards: any[] = []
+
+  private subjects: any[] = []
+
+  private selectedSubject: any = {
+    schoolYear: { value: '', label: '' },
+    grade: { value: '', label: '' },
+    subject: { value: '', label: '' }
+  }
+
+  private subjectDatas = []
+
+  private gradeDatas = []
+
+  private addLoading = !1
+
+  private async onSave () {
+    const params: any = []
+    if (this.standards.length === 0) {
+      this.$alert('请选择标准', { type: 'error' })
+      return
+    }
+    if (this.subjects.length === 0) {
+      this.$alert('请选择年级专业', { type: 'error' })
+      return
+    }
+    this.subjects.map((subject: any) => {
+      this.standards.map((standard: any) => {
+        params.push({
+          schoolId: this.data.schoolId,
+          schoolCode: this.data.schoolCode,
+          schoolName: this.data.schoolName,
+          subjectId: subject.subjectId,
+          subjectCode: subject.subjectCode,
+          subjectName: subject.subjectName,
+          gradeId: subject.gradeId,
+          gradeCode: subject.gradeCode,
+          gradeName: subject.gradeName,
+          schoolYear: subject.schoolYear,
+          feeStandardId: standard.id,
+          feeStandardCode: standard.feeStandardCode
+        })
+      })
+    })
+    this.addLoading = !0
+    await baseApi('schoolFeeStandardInsert', params).then((res: any) => {
+      this.addLoading = !1
+      if (res.code === 10000) {
+        this.$message.success({ message: res.message, showClose: !0, duration: 1500 })
+        this.visibleSync = !1
+        this.$listeners['save-back'] && this.$emit('save-back')
+      } else {
+        this.$alert(res.message, { type: 'error' })
+      }
+    })
+  }
+
+  private tabchange () {
+    this.clear()
+    // if (this.subjectDatas.length >= 0) return
+    this.initSelect()
+  }
+
+  private schoolYearChange (val: any, label: any) {
+    this.selectedSubject.schoolYear = {
+      value: val,
+      label: label
+    }
+  }
+
+  private emptyText = ''
+
+  private onDel (row: any) {
+    this.subjects = this.subjects.filter((v: any) => v.id !== row.id)
+  }
+
+  private async gradeChange (val: any, label: any) {
+    this.selectedSubject.grade = {
+      value: val,
+      label: label
+    }
+    this.selectedSubject.subject = {
+      value: '',
+      label: ''
+    }
+    this.form.subjectId = ''
+    const gradeId = this.form.gradeId ? this.form.gradeId.split('-')[0] : null
+    if (!gradeId) {
+      this.emptyText = '请先选择年级'
+      this.subjectDatas = []
+      return
+    }
+    this.emptyText = '无数据'
+    await commonApi('getSubjectSelect', {
+      schoolId: this.data.schoolId,
+      gradeId: gradeId
+    }).then(async (res: any) => {
+      this.formatDict.degree = await getConstantDict('degree')
+      this.formatDict.len = await getConstantDict('len')
+      this.subjectDatas = res.object.list.map((v: any) => {
+        // eslint-disable-next-line eqeqeq
+        const degree = this.formatDict.degree.filter((d: any) => d.key == v.degree)
+        // eslint-disable-next-line eqeqeq
+        const len = this.formatDict.len.filter((d: any) => d.key == v.len)
+        v.value = `${v.id}-${v.subjectCode}-${v.subjectName}`
+        v.showValue = `[${degree.length > 0 ? degree[0].value : v.degree}]${v.subjectName}[${len.length > 0 ? len[0].value : v.len}]`
+        return v
+      })
+    })
+  }
+
+  private subjectChange (val: any, label: any) {
+    this.selectedSubject.subject = {
+      value: val,
+      label: label
+    }
+  }
+
+  private activeName = 'addstandard'
+
+  private form: any = {
+    gradeId: '',
+    subjectId: '',
+    schoolYear: ''
+  }
+
+  private getStandard (data: any, callBack: Function) {
+    data.map((v: any) => {
+      if (this.standards.filter((standard: any) => standard.feeStandardCode === v.feeStandardCode).length === 0) {
+        this.standards.push({ ...v })
+      }
+    })
+    callBack()
+  }
+
+  get isSubjectAdd () {
+    return this.form.gradeId && this.form.subjectId && this.form.schoolYear
+  }
+
+  private onSubjectAdd () {
+    const title: any = `${this.selectedSubject.grade.label}_${this.selectedSubject.subject.label}[${this.selectedSubject.schoolYear.label}]`
+    const value: any = `${this.selectedSubject.grade.value}:${this.selectedSubject.subject.value}:${this.selectedSubject.schoolYear.value}`
+    const len = this.subjects.filter((v: any) => v.value === value).length
+    if (len > 0) {
+      this.$message.error({ message: '所选年级专业已在下列表中', showClose: !0, duration: 1500 })
+      return
+    }
+    const grade = this.selectedSubject.grade.value.split('-')
+    const subject = this.selectedSubject.subject.value.split('-')
+    this.subjects.push({
+      title: title,
+      id: value,
+      gradeId: grade[0],
+      gradeCode: grade[1],
+      gradeName: grade[2],
+      subjectId: subject[0],
+      subjectCode: subject[1],
+      subjectName: subject[2],
+      schoolYearName: this.selectedSubject.schoolYear.label,
+      schoolYear: this.selectedSubject.schoolYear.value,
+      value: value
+    })
+  }
+
+  private async close (id: any, type: any) {
+    if (type === 'standard') {
+      const temp = this.standards
+      this.standards = temp.filter((val: any) => val.feeStandardCode !== id)
+    } else {
+      const temp = this.subjects
+      this.subjects = temp.filter((val: any) => val.title !== id)
+    }
+  }
+
+  private loading = !1
+
+  private columns = [
+    {
+      prop: 'gradeName',
+      label: '年级'
+    },
+    {
+      prop: 'schoolYearName',
+      label: '学年'
+    },
+    {
+      prop: 'subjectName',
+      label: '专业'
+    }
+  ]
+
+  private open () {
+    this.clear()
+    this.initSelect()
+    this.subjects = []
+  }
+
+  private clear () {
+    this.standards = []
+    this.subjects = []
+    this.form = {
+      gradeId: '',
+      subjectId: '',
+      schoolYear: ''
+    }
+  }
+
+  private formatDict: any = {
+    degree: [],
+    len: []
+  }
+
+  private async initSelect () {
+    await commonApi('getGradeSelect', {
+      schoolId: this.data.schoolId
+    }).then((res: any) => {
+      this.gradeDatas = res.object.list.map((v: any) => {
+        v.value = `${v.id}-${v.gradeCode}-${v.gradeName}`
+        return v
+      })
+    })
+    const gradeId = this.form.gradeId ? this.form.gradeId.split('-')[0] : null
+    if (!gradeId) {
+      this.emptyText = '请先选择年级'
+      return
+    }
+    this.emptyText = '无数据'
+    await commonApi('getSubjectSelect', {
+      schoolId: this.data.schoolId,
+      gradeId: gradeId
+    }).then(async (res: any) => {
+      this.formatDict.degree = await getConstantDict('degree')
+      this.formatDict.len = await getConstantDict('len')
+      this.subjectDatas = res.object.list.map((v: any) => {
+        // eslint-disable-next-line eqeqeq
+        const degree = this.formatDict.degree.filter((d: any) => d.key == v.degree)
+        // eslint-disable-next-line eqeqeq
+        const len = this.formatDict.len.filter((d: any) => d.key == v.len)
+        v.value = `${v.id}-${v.subjectCode}-${v.subjectName}`
+        v.showValue = `[${degree.length > 0 ? degree[0].value : v.degree}]${v.subjectName}[${len.length > 0 ? len[0].value : v.len}]`
+        return v
+      })
+    })
+  }
+}
+</script>
+<style lang="scss" scoped>
+  .schoolfeestandard-add-container{
+    width: calc(100% + 10px);
+    height: calc(100% + 30px);
+    margin-top: -30px;
+    margin-left: -10px;
+    header{
+      width: 100%;
+      .title{
+        width: 100%;
+        text-align: left;
+        margin-top: -6px;
+        color: #333;
+      }
+    }
+    section{
+      .line{
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+        margin-left: 10px;
+        .title{
+          margin: 6px 0;
+        }
+        .standard-tag{
+          margin: 10px;
+        }
+      }
+    }
+  }
+  ::v-deep .hs-dialog__body{
+   padding: 10px 20px;
+  }
+  ::v-deep .hs-tabs__nav-scroll{
+    display: flex;
+    justify-content: center;
+  }
+  ::v-deep .static-item-container .static-label{
+    width: auto;
+    margin-bottom: 6px;
+  }
+</style>

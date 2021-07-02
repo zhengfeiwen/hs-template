@@ -1,0 +1,119 @@
+<template>
+  <div class="HistoryIntercourseDialog-container">
+    <el-dialog title="历史往来" :visible.sync="visible" :before-close="onClose">
+      <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="Pagination" :dicts="['schoolState']">
+        <template slot="custom_feeItemState" slot-scope="{ scope }">
+            <hs-switch
+              v-permission="['feeitemDisable', 'feeitemEnable']"
+              v-model="scope.row.feeItemState"
+              :active-value="1"
+              :inactive-value="0"
+              @change="change(scope.row)"
+              active-color="#13ce66"
+              inactive-color="#d9d9d9">
+            </hs-switch>
+        </template>
+      </simple-table>
+      <div slot="footer" class="dialog-footer">
+        <el-button >取 消</el-button>
+        <el-button type="primary" >确 定</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import util from '@/utils/busi/util'
+import { businessList } from '@/api/base'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private form = {
+    gradeState: 1
+  }
+
+  private amount = 123
+
+  private loading = !1
+
+  private tableData = {
+    list: [{
+      businessName: '1',
+      schoolName: '2021',
+      gradeName: 1,
+      subjectName: 2
+    },
+    {
+      businessName: '1',
+      schoolName: '2021',
+      gradeName: 1,
+      subjectName: 2
+    }],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'businessName',
+    label: '业务'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await businessList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      gradeState: 1
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

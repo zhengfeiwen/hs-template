@@ -1,0 +1,64 @@
+<template>
+    <div class="userInfo">
+        <div class="flex-align mt10">
+            <img class="ml20 profile" :src="profile" />
+            <span class="ml10 f24">{{userInfo.stuName}}</span>
+        </div>
+        <div class="user-info-box">
+            <div class="w25p">性别：{{userInfo.stuSexName}}</div>
+            <div class="w30p">身份证号：{{userInfo.stuPaperworkNumber.replace(/^(.{4})(?:\d+)(.{4})$/,"$1******$2")}} </div>
+        </div>
+        <div class="user-info-box">
+            <div class="w25p">学校：{{userInfo.stuSchoolName}}</div>
+            <div class="w30p">专业：{{userInfo.stuSubjectName}}</div>
+            <div class="w20p">年级：{{userInfo.stuGradeName}}</div>
+            <div class="w20p">学制：{{userInfo.subLenName}} 年</div>
+        </div>
+    </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+@Component({
+  name: 'collect-user-info',
+  components: {
+  }
+})
+
+export default class CollectUserInfo extends Vue {
+    @Prop({ type: String })
+    private userInfo!: object|any
+
+    private profile:any = ''
+
+    private maleProfile = require('@/assets/profile/male.png')
+
+    private femaleProfile = require('@/assets/profile//male.png')
+
+    @Watch('userInfo', { deep: !0 })
+    private profileChange () {
+      console.log(' this.userInfo:', this.userInfo)
+      const { stuSex } = this.userInfo
+      console.log('stuSex:', stuSex)
+      this.profile = stuSex ? this.femaleProfile : this.maleProfile
+    }
+}
+</script>
+
+<style lang="scss" scoped>
+.userInfo {
+    .profile {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+    }
+     .user-info-box {
+        display: flex;
+        flex-wrap: wrap;
+        margin-left: 68px;
+        margin-top: 15px;
+        font-size: 18px;
+    }
+}
+
+</style>

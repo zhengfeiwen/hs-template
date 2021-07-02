@@ -1,0 +1,90 @@
+<template>
+  <div class="simple-container-column">
+    <div class="simple-container-column-left">
+      <slot name="left"></slot>
+      <div class="expent-btn">
+        <i class="el-icon-d-arrow-left"></i>
+      </div>
+    </div>
+    <div class="simple-container-column-right">
+      <simple-container :more="more" :menu-name="menuName" @on-query="onQuery" @on-reset="onReset">
+        <template slot="title"><slot name="title"></slot></template>
+        <template slot="query"><slot name="query"></slot></template>
+        <template><slot></slot></template>
+      </simple-container>
+    </div>
+  </div>
+</template>
+<script lang="ts">
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleContainer from '../index.vue'
+@Component({
+  name: 'simple-container-column',
+  components: {
+    SimpleContainer
+  }
+})
+
+export default class SimpleContainerColumn extends Vue {
+  @Prop({ type: Boolean, default: !1 })
+  private more!: boolean
+
+  @Prop({ type: String })
+  private menuName!: string
+
+  private onQuery () {
+    this.$listeners['on-query'] && this.$emit('on-query')
+  }
+
+  private onReset () {
+    this.$listeners['on-reset'] && this.$emit('on-reset')
+  }
+}
+</script>
+<style lang="scss">
+$left-width: 200px;
+$block-padding: 10px;
+.simple-container-column{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  background-color: #EAEAEA;
+  .simple-container-column-left{
+    position: relative;
+    width: $left-width;
+    height: calc(100% - #{$block-padding});
+    background-color: #fff;
+    border-radius: 5px;
+    overflow: auto;
+    margin-left: $block-padding;
+    margin-top: $block-padding;
+    padding: 6px;
+    .expent-btn{
+      position: absolute;
+      height: 50px;
+      width: 50px;
+      right: -25px;
+      opacity: 0.8;
+      top: calc(50% - 25px);
+      background-color: #e6e6e6;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 50px;
+      color: #fff;
+      user-select: none;
+      &:hover{
+        cursor: pointer;
+      }
+      i{
+        font-weight: bold;
+        font-size: 18px;
+      }
+    }
+  }
+  .simple-container-column-right{
+    width: calc(100% - #{$left-width});
+    height: 100%;
+  }
+}
+</style>

@@ -1,0 +1,24 @@
+.schoolgrademanage-container{
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  .left-block{
+    height: 100%;
+    width: $searchWidth;
+    display: flex;
+    flex-direction: column;
+    padding: 6px 10px;
+    border-right: 2px solid #dedede;
+    .tree-block{
+      margin-top: 6px;
+      height: calc(100% - 34px);
+      overflow: hidden;
+    }
+  }
+  .right-block{
+    height: 100%;
+    width: calc(100% - #{$searchWidth} - 10px);
+    margin-left: 10px;
+  }
+}

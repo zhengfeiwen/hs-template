@@ -1,0 +1,171 @@
+import { isEmpty } from '@/utils/common'
+
+const common = (list: any, standards: any) => {
+  const res: any = []
+  list.map((v: any, index: any) => {
+    const params:any = {
+      memo: index,
+      stuId: v.stuId,
+      stuCode: v.stuCode,
+      stuName: v.stuName,
+      business: v.business,
+      schoolId: v.schoolId,
+      schoolName: v.schoolName,
+      subjectId: v.subjectId,
+      subjectName: v.subjectName,
+      gradeId: v.gradeId,
+      gradeName: v.gradeName,
+      schoolYear: v.schoolYear,
+      refundAmount: v.refundAmount * 100 || 0,
+      payTime: v.payTime,
+      payType: v.payType,
+      items: []
+    }
+    standards.map((standard: any, index: any) => {
+      // `${v.feeStandardId}-${v.feeStandardCode}-${v.feeItemId}-${v.feeItemName}-${v.ifMust}-${v.amount}`
+      if (!isEmpty(v[standard.prop])) {
+        const info = standard.prop.split('-')
+        params.items.push({
+          memo: index,
+          stuId: v.stuId,
+          stuCode: v.stuCode,
+          stuName: v.stuName,
+          business: v.business,
+          schoolId: v.schoolId,
+          schoolName: v.schoolName,
+          subjectId: v.subjectId,
+          subjectName: v.subjectName,
+          gradeId: v.gradeId,
+          gradeName: v.gradeName,
+          schoolYear: v.schoolYear,
+          feeStandardId: info[0],
+          feeStandardCode: info[1],
+          feeItemId: info[2],
+          feeItemName: info[3],
+          feeMust: info[4],
+          refundAmount: v[standard.prop] * 100 || 0,
+          reductionAmount: v[standard.prop] * 100 || 0,
+          receivableAmount: info[5] * 100
+        })
+      }
+    })
+    if (params.items.length > 0) res.push(params)
+  })
+  return res
+}
+
+const fulltimePrepaid = (list: any, standards: any) => {
+  const res: any = []
+  console.log('list~~~~~~~~~~~~：', list)
+  console.log('standards~~~~~~~~~~~~：', standards)
+  list.forEach(function (v: any, index: any) {
+    const payAmountHtml = v.preMoney * 100 || 0
+    const params:any = {
+      memo: index,
+      stuId: v.stuId,
+      stuCode: v.stuCode,
+      stuName: v.stuName,
+      business: v.business,
+      schoolId: v.schoolId,
+      schoolName: v.schoolName,
+      subjectId: v.subjectId,
+      subjectName: v.subjectName,
+      gradeId: v.gradeId,
+      gradeName: v.gradeName,
+      schoolYear: v.schoolYear,
+      payAmount: payAmountHtml,
+      payTime: v.payTime,
+      payType: v.payType,
+      items: []
+    }
+
+    standards.forEach((standard: any) => {
+      if (!isEmpty(v[standard.prop])) {
+        const info = standard.prop.split('-')
+        params.items.push({
+          memo: index,
+          stuId: v.stuId,
+          stuCode: v.stuCode,
+          stuName: v.stuName,
+          business: v.business,
+          schoolId: v.schoolId,
+          schoolName: v.schoolName,
+          subjectId: v.subjectId,
+          subjectName: v.subjectName,
+          gradeId: v.gradeId,
+          gradeName: v.gradeName,
+          schoolYear: v.schoolYear,
+          feeStandardId: info[0],
+          feeStandardCode: info[1],
+          feeItemId: info[2],
+          feeItemName: info[3],
+          feeMust: info[4],
+          payAmount: v[standard.prop] * 100 || 0,
+          receivableAmount: info[5] * 100
+        })
+      }
+    })
+    if (params.items.length > 0) res.push(params)
+  })
+  return res
+}
+
+const fulltimeCollect = (list: any, standards: any) => {
+  const res: any = []
+  list.forEach(function (v: any, index: any) {
+    const payAmountHtml = v.money * 100 || 0
+    const params:any = {
+      memo: index,
+      stuId: v.stuId,
+      stuCode: v.stuCode,
+      stuName: v.stuName,
+      business: v.business,
+      schoolId: v.schoolId,
+      schoolName: v.schoolName,
+      subjectId: v.subjectId,
+      subjectName: v.subjectName,
+      gradeId: v.gradeId,
+      gradeName: v.gradeName,
+      schoolYear: v.schoolYear,
+      payAmount: payAmountHtml,
+      payTime: v.payTime,
+      payType: v.payType,
+      items: []
+    }
+
+    standards.forEach((standard: any, indexItem: any) => {
+      if (!isEmpty(v[standard.prop])) {
+        const info = standard.prop.split('-')
+        params.items.push({
+          memo: index,
+          stuId: v.stuId,
+          stuCode: v.stuCode,
+          stuName: v.stuName,
+          business: v.business,
+          schoolId: v.schoolId,
+          schoolName: v.schoolName,
+          subjectId: v.subjectId,
+          subjectName: v.subjectName,
+          gradeId: v.gradeId,
+          gradeName: v.gradeName,
+          schoolYear: v.schoolYear,
+          feeStandardId: info[0],
+          feeStandardCode: info[1],
+          feeItemId: info[2],
+          feeItemName: info[3],
+          feeMust: info[4],
+          payAmount: v[standard.prop] * 100 || 0,
+          receivableAmount: info[5] * 100
+        })
+      }
+    })
+    if (params.items.length > 0) res.push(params)
+  })
+  return res
+}
+
+export const formatBatchImport = (business: any, type: any, list: any, standards: any) => {
+  if (type === 'reduce' || type === 'refund') return common(list, standards)
+  if (type === 'prepaid') return fulltimePrepaid(list, standards)
+  if (type === 'collect') return fulltimeCollect(list, standards)
+}

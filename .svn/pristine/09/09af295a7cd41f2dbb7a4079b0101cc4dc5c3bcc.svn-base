@@ -1,0 +1,267 @@
+<template>
+  <el-tabs v-model="activeName" @tab-click="handleClick" >
+    <el-tab-pane label="收费信息" name="toPrepaid">
+        <div class="flex-align">
+                <img class="ml20 profile" src="https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg" />
+                <span class="ml20 f24">吴彦祖</span>
+        </div>
+        <div class="user-info-box">
+            <div class="w25p">性别：男</div>
+            <div class="w30p">身份证号：350124********0152</div>
+        </div>
+        <div class="user-info-box">
+            <div class="w25p">学校：集美大学诚毅学院</div>
+            <div class="w30p">专业：中小企业经营管理-市场营销（专本连读）</div>
+            <div class="w20p">年级：2020</div>
+            <div class="w20p">学制：4年</div>
+        </div>
+        <div class="detail-line">
+            <div class="f20">分配金额</div>
+            <header class="mt10">
+              <hs-form ref="form" :model="form" label-width="108px" :inline="true">
+                  <hs-form-item label="选择学年">
+                    <dict-select :val.sync="form.gradeState" comm-group-name="state"></dict-select>
+                  </hs-form-item>
+                  <hs-form-item label="起止时间">
+                  <el-date-picker
+                    range-separator="至"
+                    value-format="timestamp"
+                    start-placeholder="开始日期"
+                    end-placeholder="结束日期"
+                    :picker-options="pickerOptions"
+                    type="daterange"
+                    format="yyyy-MM-dd HH:mm:ss"
+                    :default-time="['00:00:00','23:59:59']"
+                    v-model="form.createTime"
+                    size="mini">
+                  </el-date-picker>
+                </hs-form-item>
+                  <hs-form-item>
+                    <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+                    <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+                  </hs-form-item>
+              </hs-form>
+            </header>
+
+            <div class="f20 mt20">收款方式</div>
+
+            <hs-table
+            id="editAbletrendsTable"
+            :data="list"
+            :border="true"
+            :show-summary="true"
+            :summary-method="getSummaries"
+            style="width: 100%"
+            header-row-class-name="header-style">
+              <hs-table-column align="center"  type="selection" width="55"></hs-table-column>
+              <hs-table-column prop="feeItem" label="收费项目"></hs-table-column>
+              <hs-table-column prop="mustAmount" label="必缴"></hs-table-column>
+              <hs-table-column prop="receivableAmount" label="应收"></hs-table-column>
+              <hs-table-column prop="alreadyReductionAmount" :formatter="formatterMoney" label="已减免"></hs-table-column>
+              <hs-table-column prop="alreadyRefundAmount" label="已退"></hs-table-column>
+              <hs-table-column prop="currentFee" label="本次收费">
+                <template slot-scope="scope">
+                  <hs-input v-money size="mini" @click="change(scope.$index)" v-model.trim="list[scope.$index].jm"></hs-input>
+                </template>
+              </hs-table-column>
+              <hs-table-column prop="currentOweFee" label="本次欠费"></hs-table-column>
+          </hs-table>
+
+            <div class="flex mt20">
+              <el-tooltip class="item" effect="dark" content="勾选项本次应收之和" placement="top-start">
+                <div class="w25p f20">本次应收：14400</div>
+              </el-tooltip>
+              <el-tooltip class="item" effect="dark" content="本次收款=收款方式缴费金额+余额付款" placement="top-start">
+                <div class="w25p f20">本次收款：14100</div>
+              </el-tooltip>
+              <el-tooltip class="item" effect="dark" content="本次欠费=勾选项本次应收-上次已收-上次已退-本次收费" placement="top-start">
+                <div class="w25p f20">本次欠费：300</div>
+              </el-tooltip>
+              <el-tooltip class="item" effect="dark" content="本次收款-本次收费（勾选项）总额=本次产生余额
+产生的余额将计入个人账户中" placement="top-start">
+                <div class="w25p f20">本次产生余额：0</div>
+              </el-tooltip>
+            </div>
+
+            <div class="flex mt30">
+              <p>单据摘要:</p>
+                <el-input
+                    style="width:500px;margin-top:5px;margin-left:5px;"
+                    type="textarea"
+                    :rows="3"
+                    placeholder="请输入内容"
+                    v-model="textarea">
+                  </el-input>
+            </div>
+            <el-button class="mt30" type="primary">人工收费</el-button>
+        </div>
+    </el-tab-pane>
+    <el-tab-pane label="个人总往来" name="second">配置管理</el-tab-pane>
+    <el-tab-pane label="缴费明细" name="third">角色管理</el-tab-pane>
+    <el-tab-pane label="学生信息" name="fourth">定时任务补偿</el-tab-pane>
+  </el-tabs>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { gradeSearch, gradeDetail } from '@/api/base'
+@Component({
+  name: 'grade-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class GradeManage extends Vue {
+  private form = {
+    gradeState: 1
+  }
+
+  private activeName = 'toPrepaid'
+  private textarea = ''
+  private loading = !1
+  private bsItem = 1
+
+  private list = [
+    {
+      feeItem: '教材费',
+      mustAmount: '',
+      receivableAmount: '',
+      alreadyReductionAmount: '',
+      currentFee: 100,
+      currentOweFee: 100
+    },
+    {
+      feeItem: '学费',
+      mustAmount: '',
+      receivableAmount: '',
+      alreadyReductionAmount: '',
+      currentFee: 100,
+      currentOweFee: 100
+    }
+  ]
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'gradeCode',
+    label: '学生姓名'
+  },
+  {
+    prop: 'gradeName',
+    label: '性别'
+  },
+  {
+    prop: 'gradeState',
+    label: '学习类型'
+  },
+  {
+    prop: 'gradeState',
+    label: '院校名称'
+  },
+  {
+    prop: 'gradeState',
+    label: '年级'
+  },
+  {
+    prop: 'gradeState',
+    label: '专业名称'
+  },
+  {
+    prop: 'gradeState',
+    label: '所属中心'
+  },
+  {
+    prop: 'gradeState',
+    label: '学生来源'
+  },
+  {
+    prop: 'gradeState',
+    label: '证件后6位'
+  },
+  {
+    prop: 'gradeState',
+    label: '学籍状态'
+  }
+  ]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm({ ...this.form }, this.columns)
+    !pagination && (this.pagination.currentPage = 1)
+
+    const mockJson = [{ gradeCode: 123123, gradeName: 'gradeName' }]
+
+    this.tableData.list = mockJson
+
+    // await gradeSearch({
+    //   ...form,
+    //   ...pagination || this.pagination
+    // }).then((res: any) => {
+    //   this.loading = !1
+    //   this.tableData.list = res.object.list
+    //   this.tableData.totalCount = res.object.totalCount
+    // }).catch((err: any) => {
+    //   console.log('err', err)
+    //   this.loading = !1
+    // })
+    this.loading = false
+  }
+
+  private onReset () {
+    this.form = {
+      gradeState: 1
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private datailData = {}
+
+  private async showDetail (row: any) {
+    await gradeDetail({ id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.datailData = {
+          gradeCode: res.object.gradeCode,
+          gradeName: res.object.gradeName,
+          gradeState: res.object.gradeState
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "../index";
+@import "../../collect";
+
+::v-deep .gutter {
+  display: table-cell !important;
+}
+
+::v-deep .el-table__row{
+  height: 40px;
+  line-height: 40px;
+}
+</style>

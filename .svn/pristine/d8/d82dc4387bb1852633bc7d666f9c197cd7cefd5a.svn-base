@@ -1,0 +1,112 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog :title="title" :visible.sync="visibleSync" width="50%" :close-on-click-modal="!1">
+    <div class="add-container">
+      <header>
+        <hs-tabs v-model="activeName">
+          <hs-tab-pane label="选收费标准增专业" name="addsubject"></hs-tab-pane>
+          <hs-tab-pane label="选专业增收费标准" name="addstandard"></hs-tab-pane>
+        </hs-tabs>
+        <div class="title">建议使用场景：多个专业使用同一个收费标准</div>
+      </header>
+      <section>
+        <template v-if="activeName === 'addsubject'">
+          <div class="line">
+            <static-item required label="学年" :width="300">
+              <dict-select :val.sync="form.schoolYear" :data="schoolYears"></dict-select>
+            </static-item>
+            <static-item required label="收费标准" :width="300">
+              <hs-button size="mini" icon="hs-icon-plus" @click="visibleSync = !1">选择添加</hs-button>
+            </static-item>
+          </div>
+          <div class="line">
+            <div class="area"></div>
+          </div>
+        </template>
+        <template v-else>
+          1111111111
+        </template>
+      </section>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button size="mini" @click="visibleSync = !1">取消</hs-button>
+      <hs-button size="mini" type="primary" @click="onSave">确认</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import StaticItem from '@/components/busi/staticitem.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+
+@Component({
+  name: 'add-dialog',
+  components: {
+    DictSelect,
+    StaticItem
+  }
+})
+
+export default class AddDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private data!: object
+
+  private onSave () {
+    // do
+  }
+
+  private activeName = 'addsubject'
+
+  private schoolYears = [
+    {
+      key: 1,
+      value: '第一学年'
+    },
+    {
+      key: 2,
+      value: '第二学年'
+    },
+    {
+      key: 3,
+      value: '第三学年'
+    }
+  ]
+
+  private form: any = {}
+}
+</script>
+<style lang="scss" scoped>
+  .add-container{
+    width: calc(100% + 10px);
+    height: calc(100% + 30px);
+    margin-top: -30px;
+    margin-left: -10px;
+    header{
+      width: 100%;
+      .title{
+        width: 100%;
+        text-align: center;
+        margin-top: -6px;
+        opacity: 0.6;
+      }
+    }
+    section{
+      .line{
+        width: 100%;
+        display: flex;
+      }
+    }
+  }
+  ::v-deep .hs-tabs__nav-scroll{
+    display: flex;
+    justify-content: center;
+  }
+</style>

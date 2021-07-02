@@ -1,0 +1,323 @@
+<template>
+  <div class="flowdetail-container">
+      <hs-table
+    ref="multipleTable"
+    :data="tableData.list"
+    style="width: 100%"
+    row-key="rowId"
+    border
+    :show-header="true"
+    :highlight-current-row="false"
+    :row-class-name="tableRowClassName"
+    max-height="500"
+    :cell-style="{padding:'5px 0'}"
+    :span-method="arraySpanMethod"
+    lazy
+    :load="load"
+    :loading="loading"
+    :tree-props="{children: 'children', hasChildren: 'hasChildren'}">
+    <hs-table-column
+      prop="id"
+      label="缴费院校"
+      align="left" >
+        <template slot-scope="scope">
+          <span v-if="scope.row.hasChildren" class="flow-li">
+            <span>流水号：{{ scope.row.billNo }}</span>
+            <span>类型：{{ getValueByConstrantArray("tradeType", scope.row.tradeType) }}</span>
+            <span>
+              本次{{ typeToName[scope.row.tradeType - 1] }}：
+              <span class="blue">{{ scope.row[typeToNameEn[scope.row.tradeType - 1]] }} </span>
+              <span v-if="scope.row.tradeType == 1 || scope.row.tradeType == 3">({{ payTypeKeyToName(scope.row.payType) }})</span>
+            </span>
+            <span>缴费时间：{{ timeConvert(scope.row.payTime) }}</span>
+            <span>创建时间：{{ timeConvert(scope.row.createTime) }}</span>
+            <span>操作人：{{ scope.row.createName }}</span>
+            <span>流水状态：<span :class="'status' + scope.row.status">{{ getValueByConstrantArray("feesStatus", scope.row.status) }}</span></span>
+            <span>摘要：{{ scope.row.remark }}</span>
+          </span>
+          <span v-else>{{ scope.row.schoolName }}</span>
+        </template>
+    </hs-table-column>
+    <hs-table-column
+      prop="business"
+      label="业务"
+      align="center">
+      <template slot-scope="scope">{{ getValueByConstrantArray("business", scope.row.business) }}</template>
+    </hs-table-column>
+    <hs-table-column
+      prop="gradeName"
+      label="年级"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="subjectName"
+      label="缴费专业"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="feeItemName"
+      label="收费项目"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="schoolYear"
+      label="学年"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="payAmount"
+      label="本次收款"
+      align="center"
+      :formatter="moneyFormatter">
+    </hs-table-column>
+    <hs-table-column
+      prop="reductionAmount"
+      label="本次减免"
+      align="center"
+      :formatter="moneyFormatter">
+    </hs-table-column>
+    <hs-table-column
+      prop="refundAmount"
+      label="本次退费"
+      align="center"
+      :formatter="moneyFormatter">
+    </hs-table-column>
+    <hs-table-column
+      label="操作"
+      align="center">
+      <template slot-scope="scope">
+        <hs-button
+         v-permission="['fcsStuPayInfo']"
+          size="mini"
+          type="text"
+          @click="showDetail(scope.$index, scope.row)">详情</hs-button>
+        <!-- <hs-button
+          size="mini"
+          type="text"
+          @click="handleEdit(scope.$index, scope.row)">编辑</hs-button> -->
+      </template>
+    </hs-table-column>
+    <template slot="pagination">
+      <div class="action-block">
+        <slot name="action"></slot>
+      </div>
+        <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          :current-page.sync="pagination.currentPage"
+          :page-sizes="[10, 20, 30, 40, 50, 100]"
+          :page-size="pagination.pageSize"
+          :hide-on-single-page="false"
+          :pager-count="pagerCount"
+          :layout="'total, sizes, prev, pager, next, jumper'"
+          :total="tableData.totalCount">
+        </el-pagination>
+      </template>
+</hs-table>
+<CollectDetail :flowId="flowId" :isAmateur="isAmateur" :visible.sync="DetailVisible.CollectDetailVisible"></CollectDetail>
+<RefundDetail :flowId="flowId" :isAmateur="isAmateur" :visible.sync="DetailVisible.RefundDetailVisible"></RefundDetail>
+<PrepaidDetail :flowId="flowId" :isAmateur="isAmateur" :visible.sync="DetailVisible.PrepaidDetailVisible"></PrepaidDetail>
+<ReduceDetail :flowId="flowId" :isAmateur="isAmateur" :visible.sync="DetailVisible.ReduceDetailVisible"></ReduceDetail>
+  </div>
+</template>
+
+<script lang="ts">
+import dayjs from 'dayjs'
+import util from '@/utils/busi/util'
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import { cellCallbackParams } from 'hs-elementui/src/utils/types/table'
+import CollectDetail from '@/views/collect/components/flowdetail/collectDetail/index.vue'
+import RefundDetail from '@/views/collect/components/flowdetail/refundDetail/index.vue'
+import PrepaidDetail from '@/views/collect/components/flowdetail/prepaidDetail/index.vue'
+import ReduceDetail from '@/views/collect/components/flowdetail/reduceDetail/index.vue'
+import { studentApi } from '@/api/studentcenter'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'demo20',
+  components: {
+    CollectDetail,
+    PrepaidDetail,
+    ReduceDetail,
+    RefundDetail
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private flowId = ''
+
+  private isAmateur = !1
+
+  private DetailVisible = {
+    CollectDetailVisible: false,
+    RefundDetailVisible: false,
+    PrepaidDetailVisible: false,
+    ReduceDetailVisible: false
+  }
+
+  private loading = !1
+
+  private pagerCount = 5
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private typeToName = ['收款', '退款', '预付款', '减免']
+
+  private typeToNameEn = ['payAmount', 'refundAmount', 'payAmount', 'reductionAmount']
+
+  private moneyFormatter (row: any, column: any) {
+    return util.generatingThousandthPer([row[column.property]])
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private constrantArray: any = {
+    tradeType: [],
+    feesStatus: [],
+    business: [],
+    payType: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.tradeType = await getConstantByGroup('tradeType')
+    this.constrantArray.feesStatus = await getConstantByGroup('feesStatus')
+    this.constrantArray.business = await getConstantByGroup('business')
+    this.constrantArray.payType = await getConstantByGroup('payType')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private payTypeKeyToName (payType: string) {
+    const payTypeArr: any[] = []
+    payType.split('|').forEach((item: string) => {
+      payTypeArr.push(this.getValueByConstrantArray('payType', Number(item)))
+    })
+    return payTypeArr.join('/')
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    await studentApi('feesList', {
+      stuId: this.stuId,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.tableData.list = res.object.list.map((v: any) => {
+        return { ...v, hasChildren: true, rowId: v.id }
+      })
+      this.loading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private async getTotalCount () {
+    await studentApi('feesListCount', {
+      stuId: this.stuId
+    }).then((res: any) => {
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  // 页数变化
+  private handleSizeChange (val: any) {
+    this.pagination.pageSize = val
+    this.pagination.currentPage = this.pagination.currentPage || 1
+    this.onQuery()
+  }
+
+  // 翻页
+  private handleCurrentChange (val: any) {
+    this.pagination.currentPage = val
+    this.pagination.pageSize = this.pagination.pageSize || 10
+    this.onQuery()
+  }
+
+  private tableRowClassName (table: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { row, rowIndex } = table
+    if (rowIndex === 1) {
+      return 'warning-row'
+    } else if (rowIndex === 3) {
+      return ''
+    }
+    return ''
+  }
+
+  private indexMethod (index: number) {
+    return index * 2
+  }
+
+  private filterHandler (value: any, row: any, column: any) {
+    const property = column.property
+    return row[property] === value
+  }
+
+  private load = async function (tree:any, treeNode:any, resolve:any) {
+    await studentApi('feesItemList', { recordId: tree.id }).then((res: any) => {
+      if (res.code === 10000) {
+        resolve(res.object.list.map((v: any) => {
+          return { ...v, rowId: tree.id + ':' + v.id }
+        }))
+      }
+    })
+  }
+
+  private async showDetail (index: any, row: any) {
+    // await gradeDetail({ id: row.id }).then((res: any) => {
+    //   if (res.code === 10000) {
+    //     this.CollectDetailVisible = !0
+    //     this.detailData = {
+    //       gradeCode: res.object.gradeCode,
+    //       gradeName: res.object.gradeName,
+    //       gradeState: res.object.gradeState
+    //     }
+    //   }
+    // })
+    this.flowId = row.id
+    this.isAmateur = row.business === 2 ? !0 : !1
+    if (row.tradeType === 1) {
+      this.DetailVisible.CollectDetailVisible = !0
+    } else if (row.tradeType === 2) {
+      this.DetailVisible.RefundDetailVisible = !0
+    } else if (row.tradeType === 3) {
+      this.DetailVisible.PrepaidDetailVisible = !0
+    } else if (row.tradeType === 4) {
+      this.DetailVisible.ReduceDetailVisible = !0
+    }
+  }
+
+  private arraySpanMethod = function (cellCallbackParams: cellCallbackParams) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { row, column, rowIndex, columnIndex } = cellCallbackParams
+    return row.hasChildren ? (columnIndex === 0 ? [1, 9] : columnIndex === 9 ? [1, 1] : [0, 0]) : (columnIndex === 9 ? [0, 0] : [1, 1])
+  }
+
+  private timeConvert (timeStamp: number) {
+    return dayjs(timeStamp).format('YYYY-MM-DD HH:mm:ss')
+  }
+
+  mounted () {
+    this.getConstrantList()
+    this.loading = !0
+    this.getTotalCount()
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

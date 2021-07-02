@@ -1,0 +1,43 @@
+<template>
+  <div class="student-baseinfo-container" v-if="flag">
+    <BaseInfo ref="baseInfo" @fresh="refresh" :stuId="stuId"></BaseInfo>
+    <AlterationRecord ref="alterationRecord" :stuId="stuId" v-permission="['fcsstuLog']"></AlterationRecord>
+    <AbnormalTurnRecord ref="abnormalTurnRecord" :stuId="stuId"></AbnormalTurnRecord>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import BaseInfo from '@/views/student/studentmanage/StudentBaseInfo/BaseInfo/index.vue'
+import AlterationRecord from '@/views/student/studentmanage/StudentBaseInfo/AlterationRecord/index.vue'
+import AbnormalTurnRecord from '@/views/student/studentmanage/StudentBaseInfo/AbnormalTurnRecord/index.vue'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    BaseInfo,
+    AlterationRecord,
+    AbnormalTurnRecord
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private refresh () {
+    (this.$refs.baseInfo as any).load();
+    (this.$refs.alterationRecord as any).load();
+    (this.$refs.abnormalTurnRecord as any).load()
+  }
+
+  private flag = !0
+
+  activated () {
+    this.flag = !1
+    setTimeout(() => {
+      this.flag = !0
+    })
+  }
+}
+</script>
+
+<style lang='scss'>
+@import "./index";
+</style>

@@ -1,0 +1,145 @@
+import { VuexModule, Module, Action, Mutation, getModule } from 'vuex-module-decorators'
+import { getRightByUserId } from '@/api/right'
+import { getToken } from '@/utils/cookies'
+import { SessionStorage } from '@/utils/storage'
+import { RightRoute, UserInfo, OpType } from '@/utils/types'
+import store from '@/store'
+
+export interface IRightInfo {
+  accessroutes: RightRoute[]
+  rpcUser: object
+  userInfo: UserInfo
+  opRight: OpType
+  rpcUserRoleNames: String
+  rpcRightMarkSet: any[]
+}
+
+@Module({ dynamic: true, store, name: 'right' })
+class Right extends VuexModule implements IRightInfo {
+  KEYS = {
+    ROUTE: 'route_key',
+    RPC_USER: 'rpc_key',
+    USER_INFO: 'user_info_key',
+    OP_RIGHT: 'op_right',
+    RPC_USER_ROLE_NAMES: 'rpc-user-role-names',
+    RPC_RIGHT_MARK_SET: 'rpc-right-mark-set'
+  }
+
+  rpcUserRoleNames = ''
+
+  rpcRightMarkSet = []
+
+  accessroutes: RightRoute[] = []
+  rpcUser: object = {}
+  userInfo: UserInfo = {
+    id: -1,
+    userName: '',
+    userAccount: ''
+  }
+
+  opRight = {
+    opType: '',
+    opCode: ''
+  }
+
+  get userinfo () {
+    return this.userInfo
+  }
+
+  @Mutation
+  private SET_RPC_USER_ROLE_NAMES (rpcUserRoleNames: string) {
+    this.rpcUserRoleNames = rpcUserRoleNames
+  }
+
+  @Mutation
+  private SET_RPC_RIGHT_MARK_SET (rpcRightMarkSet: []) {
+    this.rpcRightMarkSet = rpcRightMarkSet
+  }
+
+  @Mutation
+  private SET_ACCESSROUTES (accessroutes: RightRoute[]) {
+    this.accessroutes = accessroutes
+  }
+
+  @Mutation
+  private SET_RPCUSER (rpcUser: object) {
+    this.rpcUser = rpcUser
+  }
+
+  @Mutation
+  private SET_USERINFO (userInfo: UserInfo) {
+    this.userInfo = userInfo
+  }
+
+  @Mutation
+  private SET_OPRIGHT (opRight: OpType) {
+    this.opRight = opRight
+  }
+
+  @Action
+  public async getRightByUserId (id: number) {
+    // 判断是否已经获取过权限了
+    const routes = SessionStorage.get(this.KEYS.ROUTE, 'array')
+    if (!routes || routes.length === 0 || id === -1 || !id) {
+      const res: any = await getRightByUserId({
+        id: id,
+        token: getToken()
+      })
+      this.SET_ACCESSROUTES(res.object.accessRoutes)
+      this.SET_RPCUSER(res.object.rpcLbUser)
+      this.SET_USERINFO(res.object.rpcLbUser)
+      this.SET_RPC_USER_ROLE_NAMES(res.object.rpcUserRoleNames)
+      this.SET_RPC_RIGHT_MARK_SET(res.object.rpcRightMarkSet)
+      // 路由权限存入session中
+      SessionStorage.set(this.KEYS.ROUTE, JSON.stringify(res.object.accessRoutes))
+      SessionStorage.set(this.KEYS.RPC_USER, JSON.stringify(res.object.rpcLbUser))
+      SessionStorage.set(this.KEYS.USER_INFO, JSON.stringify(res.object.rpcLbUser))
+      SessionStorage.set(this.KEYS.RPC_USER_ROLE_NAMES, res.object.rpcUserRoleNames)
+      SessionStorage.set(this.KEYS.RPC_RIGHT_MARK_SET, JSON.stringify(res.object.rpcRightMarkSet))
+    } else {
+      this.SET_ACCESSROUTES(routes)
+      this.SET_RPCUSER(SessionStorage.get(this.KEYS.RPC_USER, 'object'))
+      this.SET_USERINFO(SessionStorage.get(this.KEYS.USER_INFO, 'object'))
+      this.SET_RPC_RIGHT_MARK_SET(SessionStorage.get(this.KEYS.RPC_RIGHT_MARK_SET, 'array'))
+      this.SET_RPC_USER_ROLE_NAMES(SessionStorage.get(this.KEYS.RPC_USER_ROLE_NAMES))
+    }
+  }
+
+  // @Action
+  // public async getOperaRight (opData: { id: number, menuId: number }) {
+  //   // 判断是否已经获取过权限了
+  //   if (opData.menuId === -1) {
+  //     return
+  //   }
+  //   const opRight = SessionStorage.get(this.KEYS.OP_RIGHT, 'object')
+  //   if (!opRight || !opRight['op_' + opData.menuId]) {
+  //     const { data } = await getOperaRight({
+  //       id: opData.id,
+  //       menuId: opData.menuId
+  //     })
+  //     // 缓存权限信息
+  //     opRight['op_' + opData.menuId] = {
+  //       opType: data.opType,
+  //       opCode: data.opCode
+  //     }
+  //     this.SET_OPRIGHT(opRight)
+  //     // 路由权限存入session中
+  //     SessionStorage.set(this.KEYS.OP_RIGHT, JSON.stringify(opRight))
+  //   } else {
+  //     this.SET_OPRIGHT(opRight)
+  //     SessionStorage.set(this.KEYS.OP_RIGHT, JSON.stringify(opRight))
+  //   }
+  // }
+
+  @Action
+  public ResetAccessRoutes () {
+    this.SET_ACCESSROUTES([])
+    this.SET_RPCUSER([])
+    this.SET_USERINFO({ id: NaN, userName: '', userAccount: '' })
+    SessionStorage.remove(this.KEYS.ROUTE)
+    SessionStorage.remove(this.KEYS.RPC_USER)
+    SessionStorage.remove(this.KEYS.USER_INFO)
+  }
+}
+
+export const RightModule = getModule(Right)

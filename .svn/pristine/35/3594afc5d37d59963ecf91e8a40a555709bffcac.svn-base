@@ -1,0 +1,16 @@
+
+
+.hs-button--mini {
+  padding: 6px 10px !important;
+}
+.detail-line {
+  display: block;
+  width: 100%;
+  // padding:20px;
+}
+
+
+
+
+
+

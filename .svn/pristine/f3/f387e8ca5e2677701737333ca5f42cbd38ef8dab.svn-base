@@ -1,0 +1,109 @@
+<template>
+  <div class="intercourse-table-container">
+    <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination="!1" :columnable="!1">
+    </simple-table>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { studentApi } from '@/api/studentcenter'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuInfo!: object;
+
+  @Prop({ default: 0 }) private year!: number;
+
+  private loading = !1
+
+  private tableData = {
+    list: []
+  }
+
+  private columns = [{
+    prop: 'feeItemName',
+    label: '收费项目'
+  },
+  {
+    prop: 'schoolYearName',
+    label: '学年'
+  },
+  {
+    prop: 'receivableAmount',
+    label: '应收',
+    format: 'money'
+  },
+  {
+    prop: 'alreadyReductionAmount',
+    label: '减免',
+    format: 'money'
+  },
+  {
+    prop: 'acceptedAmount',
+    label: '已收',
+    format: 'money'
+  },
+  {
+    prop: 'arrearsAmount',
+    label: '欠费',
+    format: 'money'
+  },
+  {
+    prop: 'alreadyRefundAmount',
+    label: '已退',
+    format: 'money'
+  }]
+  // {
+  //   prop: 'waitSettlementAmount',
+  //   label: '待结算',
+  //   format: 'money'
+  // },
+  // {
+  //   prop: 'alreadySettlementAmount',
+  //   label: '已结算',
+  //   format: 'money'
+  // },
+  // {
+  //   prop: 'unSettlementAmount',
+  //   label: '未结算',
+  //   format: 'money'
+  // }]
+
+  public async onQuery () {
+    this.loading = !0
+    const _data = (this.stuInfo as any).stuBusinessId === 2 ? {
+      stuId: (this.stuInfo as any).id,
+      businessId: (this.stuInfo as any).stuBusinessId,
+      schoolId: (this.stuInfo as any).stuSchoolId,
+      gradeId: (this.stuInfo as any).stuGradeId,
+      subjectId: (this.stuInfo as any).stuSubjectId
+    } : {
+      stuId: (this.stuInfo as any).id,
+      businessId: (this.stuInfo as any).stuBusinessId,
+      schoolId: (this.stuInfo as any).stuSchoolId,
+      gradeId: (this.stuInfo as any).stuGradeId,
+      subjectId: (this.stuInfo as any).stuSubjectId,
+      schoolYear: this.year
+    }
+    await studentApi((this.stuInfo as any).stuBusinessId === 2 ? 'amateurStuContactsList' : 'stuContactsList', _data).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  public mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

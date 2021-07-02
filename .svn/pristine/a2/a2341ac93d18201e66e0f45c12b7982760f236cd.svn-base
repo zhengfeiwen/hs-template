@@ -1,0 +1,278 @@
+<template>
+  <div class="change-stubaseinfo-dialog-container">
+    <el-dialog title="学生基础信息修改" :visible.sync="visible" :before-close="onClose" @open="open()">
+      <hs-form ref="stuInfo" :rules="rules" :model="stuInfo" label-width="98px" class="border-style2">
+      <table class="simple-table" border="1">
+        <tr>
+          <td>
+            <hs-form-item label="姓名" prop="userName">
+                {{ stuInfo.stuName }}
+            </hs-form-item>
+          </td>
+          <td rowspan="4">
+            <hs-form-item class="photo-block" label="照片" prop="photo">
+            <hs-plupload
+              browseButton="browseButton"
+              url="/api/core/oss/file/fileUploadPost"
+              :FilesAdded="filesAdded"
+              :headers="{ token: token, accept: 'application/json' }"
+              :multipart-params="{'parentFolder': 'lb/schoolDetail'}"
+              @inputUploader="inputUploader"
+              :UploadComplete="UploadComplete"
+              :FileUploaded="FileUploaded"
+              :Error="error"
+            />
+            <hs-image v-if="stuInfo.attachment" class="image-dashed" :src="setting.ossIp + '/' + stuInfo.attachment"></hs-image>
+            <hs-link id="browseButton" v-else class="add-image image-dashed" icon="hs-icon-plus">添加照片</hs-link>
+          </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="性别" prop="sexName">
+              <dict-select :val.sync="stuInfo.stuSex" constant-group-name="sex"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="民族" prop="ethnic">
+              <dict-select :val.sync="stuInfo.ethnic" constant-group-name="ethnic"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="业务" prop="businessName">
+              <hs-input size="mini" v-model="stuInfo.businessName" placeholder="请输入业务" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="院校" prop="schoolName">
+              <hs-input size="mini" v-model="stuInfo.stuSchoolName" placeholder="请输入院校" ></hs-input>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="专业" prop="subjectName">
+              <hs-input size="mini" v-model="stuInfo.stuSubjectName" placeholder="请输入专业" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="年级" prop="gradeName">
+              <hs-input size="mini" v-model="stuInfo.stuGradeName" placeholder="请输入年级" ></hs-input>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="学籍状态" prop="stuSchoolRollStatusName">
+              <dict-select :val.sync="stuInfo.stuSchoolRollStatusName" :prop="{value: 'nationName', key: 'nationKey' }" :option="{ url: '/fcs/business/search', data: {} }"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="第二学历" prop="secondDegree">
+              <dict-select :val.sync="stuInfo.secondDegree" :prop="{value: 'nationName', key: 'nationKey' }" :option="{ url: '/fcs/business/search', data: {} }"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="所属中心" prop="centerName">
+              <hs-input size="mini" v-model="stuInfo.centerName" placeholder="请输入所属中心" ></hs-input>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="教学点" prop="point">
+              <hs-input size="mini" v-model="stuInfo.point" placeholder="请输入教学点" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="学生来源" prop="stuentOragin">
+              <hs-input size="mini" v-model="stuInfo.stuentOragin" placeholder="请输入学生来源" ></hs-input>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="来源名称" prop="oraginName">
+              <hs-input size="mini" v-model="stuInfo.oraginName" placeholder="请输入来源名称" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="证件类型" prop="cardName">
+              <dict-select :val.sync="stuInfo.cardName" :prop="{value: 'nationName', key: 'nationKey' }" :option="{ url: '/fcs/business/search', data: {} }"></dict-select>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="证件号码" prop="cardId">
+              <hs-input size="mini" v-model="stuInfo.cardId" placeholder="请输入证件号码" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="联系电话" prop="phone">
+              <hs-input size="mini" v-model="stuInfo.phone" placeholder="请输入联系电话" ></hs-input>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="备用手机号" prop="sparePhone">
+              <hs-input size="mini" v-model="stuInfo.sparePhone" placeholder="请输入备用手机号" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="准考证号" prop="id">
+              <hs-input size="mini" v-model="stuInfo.id" placeholder="请输入准考证号" ></hs-input>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="学号" prop="no">
+              <hs-input size="mini" v-model="stuInfo.no" placeholder="请输入学号" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="上门次数" prop="times">
+              <dict-select :val.sync="stuInfo.times" :prop="{value: 'nationName', key: 'nationKey' }" :option="{ url: '/fcs/business/search', data: {} }"></dict-select>
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="缴费状态" prop="payState">
+              <dict-select :val.sync="stuInfo.payState" :prop="{value: 'nationName', key: 'nationKey' }" :option="{ url: '/fcs/business/search', data: {} }"></dict-select>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="家庭住址" prop="address">
+              <hs-input size="mini" v-model="stuInfo.address" placeholder="请输入家庭住址" ></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="备注" prop="memo">
+              <hs-input type="textarea" maxlength="200" show-word-limit :rows="3" v-model="stuInfo.memo" resize="none"></hs-input>
+            </hs-form-item>
+          </td>
+        </tr>
+      </table>
+    </hs-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="stuBaseinfoDialogFormVisible = false">取 消</el-button>
+        <el-button type="primary" @click="stuBaseinfoDialogFormVisible = false">确 定</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import setting from '@/settings'
+import { stuDetail } from '@/api/studentcenter'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    DictSelect
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private setting = setting
+
+  private up: any = {}
+
+  private files: any[] = []
+
+  private stuInfo: any = {}
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private rules = {
+    userName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    sexName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    ethnic: [
+      { required: true, message: '请选择民族', trigger: 'change' }
+    ],
+    businessName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    schoolName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    gradeName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    centerName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    cardName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    subjectName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    cardId: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    stuSchoolRollStatusName: [
+      { required: true, message: '', trigger: 'blur' }
+    ],
+    // photo: [
+    //   { validator: this.validatePhoto, required: true, message: '请上传照片', trigger: 'change' }
+    // ],
+    point: [
+      { required: true, message: '', trigger: 'blur' }
+    ]
+  }
+
+  private async getDetail () {
+    await stuDetail({
+      id: this.stuId
+    }).then((res: any) => {
+      this.stuInfo = res.object.info
+      console.log(this.stuInfo)
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  private onReset () {
+    this.getDetail()
+  }
+
+  mounted () {
+    this.getDetail()
+  }
+
+  public open (): void {
+    this.onReset()
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

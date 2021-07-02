@@ -1,0 +1,20 @@
+{
+    "test":{
+        "system_change":{
+            "tbs":"http://boscs.liexue.org",
+            "tcs":"http://caiwucs.liexue.org"
+        }
+    },
+    "production":{
+        "system_change":{
+            "tbs":"http://bos.liexue.cn",
+            "tcs":"http://caiwu.liexue.cn"
+        }
+    },
+    "development":{
+        "system_change":{
+            "tbs":"http://www.baidu.com",
+            "tcs":"http://www.baidu.com"
+        }
+    }
+}

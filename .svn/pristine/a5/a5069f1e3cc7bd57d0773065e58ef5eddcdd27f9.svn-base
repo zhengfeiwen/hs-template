@@ -1,0 +1,84 @@
+<template>
+  <div class="collectmanageauthimport-container">
+    <batch-import title="学生收费" :permission="permission" :action="action" :params="params" :left-col-span="6" :fixedColumns="fixedColumns" :auto-columns="['money']" back-router="collectmanageauth"></batch-import>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import BatchImport from '@/views/collect/components/batchimport.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'collectmanageauth-batch-import',
+  components: {
+    BatchImport
+  }
+})
+export default class CollectmanageauthBatchImport extends Vue {
+  private params = util.getRouterParams()
+
+  private dict: any = {
+    1: { // 全日制
+      batchImport: 'ftBatchPayFromData',
+      excelImport: 'ftBatchPayFromExcel',
+      excelImportPermission: ['fcsFullColNuProcessedFromExcel'],
+      batchImportPermission: ['fcsFullColBatchPay']
+    },
+    2: { // 业余学历
+      batchImport: 'ptPayBatchfromData',
+      excelImport: 'ptPayFromExcel',
+      excelImportPermission: ['fcsParttimeColUnProcessedExcel'],
+      batchImportPermission: ['fcsParttimeColUnProcessedDate']
+    }
+  }
+
+  private action = {
+    type: 'collect',
+    batchImport: this.dict[this.params.businessId].batchImport,
+    excelImport: this.dict[this.params.businessId].excelImport
+  }
+
+  private permission = {
+    excelImport: this.dict[this.params.businessId].excelImportPermission,
+    batchImport: this.dict[this.params.businessId].batchImportPermission
+  }
+
+  private fixedColumns = {
+    left: [
+      {
+        prop: 'stuName',
+        label: '学生姓名'
+      },
+      {
+        prop: 'stuCode',
+        label: '学生账号'
+      },
+      {
+        prop: 'idCard',
+        label: '身份证号'
+      },
+      {
+        prop: 'subjectName',
+        label: '专业名称'
+      },
+      {
+        prop: 'payTime',
+        label: '收费时间',
+        format: 'date'
+      },
+      {
+        prop: 'money',
+        label: '本次收费'
+      }
+    ],
+    right: [
+    ]
+  }
+}
+</script>
+<style lang="scss">
+  .collectmanageauthimport-container{
+    width: 100%;
+    height: 100%;
+  }
+</style>

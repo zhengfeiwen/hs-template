@@ -1,0 +1,267 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="!1">
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="业务类型">
+          <dict-select :val.sync="form.business" constant-group-name="businessType" @change="businessChange"></dict-select>
+        </el-form-item>
+        <el-form-item label="学习类型">
+          <dict-select ref="study" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.study"></dict-select>
+        </el-form-item>
+        <el-form-item label="院校代码">
+          <hs-input
+            size="mini"
+            v-model="form.schoolCode"
+            placeholder="请输入院校代码"
+          ></hs-input>
+        </el-form-item>
+        <el-form-item label="院校名称">
+          <hs-input
+            size="mini"
+            v-model="form.schoolName"
+            placeholder="请输入院校名称"
+          ></hs-input>
+        </el-form-item>
+        <el-form-item label="院校状态">
+          <dict-select :isInit="!0" :val.sync="form.status" constant-group-name="status"></dict-select>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table ref="hsTable" :columnable="!1" :export-name="exportName" :exportable="exportable" :export-columns="columns" :index="!0" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" :pagination.sync="pagination" @query="onQuery" @row-dbclick="showDetail" :dicts="['status', 'business']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsSchoolDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+        <template slot="action-block">
+          <hs-button type="danger" v-permission="['fcsSchExport']" @click="onExport" icon="hs-icon-download" size="mini">导出</hs-button>
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible"  :dicts="['status', 'business']"></detail-dialog>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DialogSelect from '@/components/busi/custom/dialogselect.vue'
+import util from '@/utils/busi/util'
+import SimpleContainer from '@/components/container/index.vue'
+import { baseApi } from '@/api/base'
+import dayjs from 'dayjs'
+import { checkPermission } from '@/utils/permission'
+@Component({
+  name: 'fcsSchoolMenu',
+  components: {
+    SimpleTable,
+    SimpleContainer,
+    DetailDialog,
+    DictSelect,
+    DialogSelect
+  }
+})
+export default class SchoolManage extends Vue {
+  private form: any = { status: 1, study: '' }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private columns = [{
+    prop: 'schoolCode',
+    label: '院校代码'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'business',
+    label: '业务类型',
+    export: 'businessName'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'status',
+    label: '状态',
+    export: 'statusName',
+    'style-format': {
+      f: [0],
+      t: [1]
+    }
+  },
+  {
+    prop: 'createTime',
+    label: '创建时间',
+    format: 'date'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    return util.trimForm({ ...temp }, this.columns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['fcsSchExport']),
+    src: '/fcs/school/export',
+    data: this.exportParam
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `院校信息-${day}`
+  }
+
+  private onExport () {
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  private options: any = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {
+        businessId: this.form.business || null
+      }
+    }
+  }
+
+  private async businessChange () {
+    this.form.study = ''
+    this.options.study.data.businessId = this.form.business || null;
+    (this.$refs.study as any).getList()
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('getSchoolList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form.business = ''
+    this.form.study = ''
+    this.form.schoolCode = ''
+    this.form.schoolName = ''
+    this.form.status = 1
+    this.businessChange()
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await baseApi('schoolDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          schoolCode: res.object.info.schoolCode,
+          schoolName: res.object.info.schoolName,
+          business: res.object.info.business,
+          studyName: res.object.info.studyName,
+          status: res.object.info.status,
+          createTime: res.object.info.createTime ? dayjs(res.object.info.createTime).format('YYYY-MM-DD HH:mm') : dayjs(res.object.info.createTime).format('YYYY-MM-DD HH:mm')
+        }
+      }
+    })
+  }
+
+  private businessOption = {
+    key: 'business',
+    params: {
+
+    },
+    conditions: [
+      {
+        label: '业务名称',
+        value: 'businessName'
+      }
+    ],
+    table: {
+      url: '/fcs/business/search',
+      columns: [{
+        prop: 'businessName',
+        label: '业务名称'
+      },
+      {
+        prop: 'memo',
+        label: '备注'
+      }]
+    }
+  }
+
+  private studyOption: any = {
+    key: 'study',
+    conditions: [
+      {
+        label: '学习类型代码',
+        value: 'studyCode'
+      },
+      {
+        label: '学习类型名称',
+        value: 'studyName'
+      }
+    ],
+    table: {
+      url: '/fcs/study/search',
+      columns: [{
+        prop: 'studyName',
+        label: '学习类型名称'
+      },
+      {
+        prop: 'studyCode',
+        label: '学习类型代码'
+      }]
+    }
+  }
+
+  private studyOpen (done: Function) {
+    if (!this.form.businessName) {
+      this.$alert('请选择业务', { type: 'error' })
+    } else {
+      done()
+    }
+  }
+
+  activated () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index.scss";
+</style>

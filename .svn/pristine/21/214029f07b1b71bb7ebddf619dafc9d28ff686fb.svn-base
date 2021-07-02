@@ -1,0 +1,705 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="!0">
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="业务类型">
+          <dict-select :val.sync="form.businessId" constant-group-name="businessType" @change="businessChange" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="学习类型">
+          <dict-select ref="study" @change="studyChange" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.studyId" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="院校">
+          <dict-select ref="school" @change="schoolChange()" :data="schoolItemData" :prop="{ key: 'id', value: 'showValue' }" :val.sync="form.schoolId" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="年级">
+          <dict-select ref="grade" @change="gradeChange" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="专业">
+          <dict-select ref="subject" @change="$forceUpdate()" :data="subjectItemData" :prop="{ key: 'id', value: 'showValue' }" :val.sync="form.subjectId" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="学生姓名">
+          <hs-input size="mini" v-model="form.stuName" placeholder="请输入学生姓名" ></hs-input>
+        </el-form-item>
+        <el-form-item label="助记码">
+          <hs-input size="mini" v-model="form.mnemonicCode" placeholder="请输入助记码" ></hs-input>
+        </el-form-item>
+        <el-form-item label="证件后六位">
+          <hs-input size="mini" v-model="form.idCard" placeholder="请输入证件后六位" ></hs-input>
+        </el-form-item>
+        <el-form-item label="所属中心">
+          <dict-select ref="center" @change="centerChange" :option="options.center" :prop="{ key: 'id', value: 'centerName' }" :val.sync="form.centerId" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="学生来源">
+          <el-cascader @change="stuSourceCascaderChange" size="mini" :props="stuSourceProps" :options="stuSourceTreeData" :show-all-levels="false" v-model="stuSourceArr" clearable></el-cascader>
+        </el-form-item>
+        <el-form-item label="来源名称">
+          <hs-input size="mini" v-model="form.stuSourceName" placeholder="请输入来源名称" ></hs-input>
+        </el-form-item>
+        <!-- <el-form-item label="学籍状态">
+          <dict-select :val.sync="form.schoolRollStatus" constant-group-name="schoolRollStatus" :hasAll="true"></dict-select>
+        </el-form-item> -->
+        <el-form-item label="教学点">
+          <hs-input size="mini" v-model="form.teachingPoint" placeholder="请输入教学点" ></hs-input>
+        </el-form-item>
+        <el-form-item label="创建时间">
+          <el-date-picker
+            v-model="timePicker"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="timestamp"
+            size="mini"
+            @change="timeChange">
+          </el-date-picker>
+        </el-form-item>
+        <el-form-item label="学生状态">
+          <dict-select :isInit="!0" :val.sync="form.stuState" constant-group-name="available" :hasAll="true"></dict-select>
+        </el-form-item>
+        <el-form-item label="联系电话">
+          <hs-input size="mini" v-model="form.stuPhone" placeholder="请输入联系电话" ></hs-input>
+        </el-form-item>
+        <el-form-item label="异动状态">
+          <dict-select :val.sync="form.abnormalState" @change="abnormalStateChange" constant-group-name="yesOrNo" :hasAll="true"></dict-select>
+        </el-form-item>
+        <el-form-item label="同步状态">
+          <dict-select :val.sync="form.changeState" constant-group-name="changeState" :hasAll="true" :disabled="!(form.abnormalState === 1)"></dict-select>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table @row-dbclick="gotoDetail"  :width="10" :operator="{ width: 150 }" :data="tableData" :columns="columns" :isCheckbox="!0" @selection-change="selectionChange" :loading="loading" @query="onQuery" :pagination.sync="pagination">
+        <template slot="custom_stuState" slot-scope="{ scope }">
+          <hs-switch
+            :disabled="!stateDisabled"
+            v-model="scope.row.stuState"
+            :active-value="1"
+            :inactive-value="0"
+            @change="changeState(scope.$index, scope.row)"
+            active-color="#1c2e52"
+            inactive-color="#d9d9d9">
+          </hs-switch>
+        </template>
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsPreStuDetail']"
+            @click.native.prevent="gotoDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+          <hs-button
+            v-permission="['fcsPreStuResetPwd']"
+            @click.native.prevent="resetPwd(scope.row)"
+            type="text"
+            size="small">
+            重置密码
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="danger" icon="hs-icon-plus" @click="onAdd" size="mini" v-permission="['fcsPreStuInsert']">新增</hs-button>
+          <hs-button type="danger" icon="hs-icon-upload" @click="onImport" size="mini" v-permission="['fcsProstuUpdateImport']">导入</hs-button>
+          <hs-button type="danger" icon="hs-icon-download" @click="onExport" size="mini" v-permission="['fcsPreStuExport']">导出</hs-button>
+          <!-- <hs-button type="danger" icon="hs-icon-download" @click="onRemove" size="mini">导出学生异动未同步流水</hs-button> -->
+          <hs-button type="danger" icon="hs-icon-download" @click="onExportPhoto" size="mini" v-permission="['fcsPreStuPhoto']">导出照片</hs-button>
+          <hs-button type="danger" icon="el-icon-edit" @click="onSchRollUpdate" size="mini" v-permission="['fcsPreStuUpdateRoll']">修改学籍</hs-button>
+          <!-- <hs-button type="danger" icon="hs-icon-upload" @click="onRemove" size="mini">缴费变更导入</hs-button> -->
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+    <AddStuBaseInfoDialog @loadmethod="onQuery" :visible.sync="stuBaseinfoDialogFormVisible"></AddStuBaseInfoDialog>
+    <ImportStudent @loadmethod="onQuery" :visible.sync="ImportStudentVisible"></ImportStudent>
+    <SchRollUpdateDialog @fresh="onQuery" :stuIds="selectedStuIds" :visible.sync="schRollUpdateVisible"></SchRollUpdateDialog>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import { checkPermission } from '@/utils/permission'
+import { exportData } from '@/utils/exportByStream'
+import util from '@/utils/busi/util'
+import { studentApi } from '@/api/prestudentcenter'
+import { getList } from '@/api/common'
+import SimpleContainer from '@/components/container/index.vue'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import AddStuBaseInfoDialog from '@/views/student/prestudentsearch/addStudent/index.vue'
+import SchRollUpdateDialog from '@/views/student/prestudentsearch/schRollUpdateDialog/index.vue'
+import ImportStudent from '@/views/student/prestudentsearch/importStudent/importStudent.vue'
+import dayjs from 'dayjs'
+@Component({
+  name: 'fcsStudentPrepSearchMenu',
+  components: {
+    SimpleContainer,
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    AddStuBaseInfoDialog,
+    SchRollUpdateDialog,
+    ImportStudent
+  }
+})
+export default class GradeManage extends Vue {
+  get stateDisabled () {
+    return checkPermission(['fcsStuState'])
+  }
+
+  private stuBaseinfoDialogFormVisible = !1
+
+  private schRollUpdateVisible = !1
+
+  private ImportStudentVisible = !1
+
+  private form = {
+    businessId: '',
+    studyId: '',
+    schoolId: '',
+    gradeId: '',
+    subjectId: '',
+    stuName: '',
+    mnemonicCode: '',
+    idCard: '',
+    centerId: '',
+    stuSource: '',
+    stuSourceName: '',
+    schoolRollStatus: '',
+    teachingPoint: '',
+    createTimeStart: '',
+    createTimeEnd: '',
+    stuState: 1,
+    stuPhone: '',
+    abnormalState: '',
+    changeState: ''
+  }
+
+  private schoolItemData: any = []
+
+  private subjectItemData: any = []
+
+  private constrantArray: any = {
+    businessType: [],
+    subjectLen: [],
+    subjectDegree: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.businessType = await getConstantByGroup('businessType')
+    this.constrantArray.subjectLen = await getConstantByGroup('subjectLen')
+    this.constrantArray.subjectDegree = await getConstantByGroup('subjectDegree')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private async getSchoolItem () {
+    const _data = this.form.businessId === '' ? {} : { businessId: this.form.businessId }
+    await getList({
+      url: this.options.school.url,
+      data: _data
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.schoolItemData = []
+        res.object.list.map((v: any) => {
+          v.showValue = `[${this.getValueByConstrantArray('businessType', Number(v.business))}]${v.schoolName}[${v.studyName}]`
+          this.schoolItemData.push(v)
+        })
+      }
+    })
+  }
+
+  private async getSubjectItem () {
+    const _data = this.form.schoolId === '' ? {} : { schoolId: this.form.schoolId }
+    await getList({
+      url: this.options.subject.url,
+      data: _data
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.subjectItemData = []
+        res.object.list.map((v: any) => {
+          v.showValue = `[${this.getValueByConstrantArray('subjectDegree', Number(v.degree))}]${v.subjectName}[${this.getValueByConstrantArray('subjectLen', Number(v.len))}年]`
+          this.subjectItemData.push(v)
+        })
+      }
+    })
+  }
+
+  // 临时存放时间戳数组
+  private timePicker: any[] = []
+
+  private stuSourceTreeData: any[] = []
+
+  private stuSourceProps = {
+    value: 'optionKey',
+    label: 'optionValue',
+    children: 'children',
+    checkStrictly: true
+  }
+
+  private stuSourceArr: any[] = []
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'stuCode',
+    label: '学生账号',
+    width: 100
+  },
+  {
+    prop: 'stuName',
+    label: '学生名称'
+  },
+  {
+    prop: 'stuPhone',
+    label: '联系电话'
+  },
+  {
+    prop: 'mnemonicCode',
+    label: '助记码'
+  },
+  {
+    prop: 'stuSexName',
+    label: '性别',
+    width: 50
+  },
+  {
+    prop: 'businessName',
+    label: '业务名称'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级名称'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业名称'
+  },
+  {
+    prop: 'centerName',
+    label: '所属中心'
+  },
+  {
+    prop: 'teachingPoint',
+    label: '教学点'
+  },
+  {
+    prop: 'sourceName',
+    label: '学生来源'
+  },
+  {
+    prop: 'stuSourceName',
+    label: '来源名称'
+  },
+  {
+    prop: 'paperworkNumber',
+    label: '证件后六位',
+    format: 'str:-6'
+  },
+  {
+    prop: 'schoolRollName',
+    label: '学籍状态'
+  },
+  {
+    prop: 'abnormalStateName',
+    label: '异动状态'
+  },
+  {
+    prop: 'stuState',
+    label: '状态',
+    custom: !0,
+    width: 70
+  }]
+
+  private options: any = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {
+      }
+    },
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+      }
+    },
+    center: {
+      url: '/fcs/center/getCenterSelect',
+      data: {
+        isJoinUser: 0
+      }
+    }
+  }
+
+  private timeChange () {
+    this.form.createTimeStart = this.timePicker ? this.timePicker[0] : ''
+    this.form.createTimeEnd = this.timePicker ? this.timePicker[1] : ''
+  }
+
+  private businessChange () {
+    this.form.studyId = ''
+    this.form.schoolId = ''
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.form.centerId = ''
+    this.options.study.data = this.form.businessId === '' ? {} : { businessId: this.form.businessId }
+    this.options.center.data = this.form.businessId === '' ? { isJoinUser: 0 } : { businessId: this.form.businessId, isJoinUser: 0 }
+    this.options.grade.data = {};
+    (this.$refs.study as any).getList();
+    (this.$refs.center as any).getList();
+    (this.$refs.grade as any).getList()
+    this.getSchoolItem()
+    this.getSubjectItem()
+  }
+
+  private studyChange () {
+    this.form.schoolId = ''
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.options.grade.data = {};
+    (this.$refs.grade as any).getList()
+    this.getSchoolItem()
+    this.getSubjectItem()
+  }
+
+  private schoolChange () {
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.options.grade.data = { schoolId: this.form.schoolId };
+    (this.$refs.grade as any).getList()
+    this.getSubjectItem()
+  }
+
+  private abnormalStateChange () {
+    this.form.changeState = ''
+  }
+
+  private currentPage = 1
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await studentApi('stuList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getTotalCount () {
+    const form = util.trimForm(this.form)
+    await studentApi('stuListCount', {
+      ...form
+    }).then((res: any) => {
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getStuSourceTree () {
+    await studentApi('stuSourceTree', {
+    }).then((res: any) => {
+      this.stuSourceTreeData = res.object.list
+      this.stuSourceArr = this.getStuSourceArr(this.form.stuSource + '', 'optionKey', this.stuSourceTreeData)
+    })
+  }
+
+  private stuSourceCascaderChange (row: any) {
+    this.form.stuSource = row.slice(-1)[0]
+  }
+
+  private getNodePath (temppath: any, key: any, value: any, node: any) {
+    temppath.push(node)
+    if (node[key] === value) {
+      throw new Error('GOT IT!')
+    }
+    if (node.children && node.children.length > 0) {
+      for (var i = 0; i < node.children.length; i++) {
+        this.getNodePath(temppath, key, value, node.children[i])
+      }
+      temppath.pop()
+    } else {
+      temppath.pop()
+    }
+  }
+
+  private getStuSourceArr (value: any, key: any, arr: any) {
+    const temppath: any[] = []
+    try {
+      for (let i = 0; i < arr.length; i++) {
+        this.getNodePath(temppath, key, value, arr[i])
+      }
+      return []
+    } catch (e) {
+      return temppath.map((item) => { return item.optionKey })
+    }
+  }
+
+  private onReset () {
+    this.form = {
+      businessId: '',
+      studyId: '',
+      schoolId: '',
+      gradeId: '',
+      subjectId: '',
+      stuName: '',
+      mnemonicCode: '',
+      idCard: '',
+      centerId: '',
+      stuSource: '',
+      stuSourceName: '',
+      schoolRollStatus: '',
+      teachingPoint: '',
+      createTimeStart: '',
+      createTimeEnd: '',
+      stuState: 1,
+      stuPhone: '',
+      abnormalState: '',
+      changeState: ''
+    }
+    this.timePicker = []
+    this.stuSourceArr = []
+    this.options.study.data = this.form.businessId === '' ? {} : { businessId: this.form.businessId }
+    this.options.center.data = this.form.businessId === '' ? { isJoinUser: 0 } : { businessId: this.form.businessId, isJoinUser: 0 }
+    this.options.grade.data = {}
+    this.getSchoolItem()
+    this.getSubjectItem()
+    this.getStuSourceTree();
+    (this.$refs.study as any).getList();
+    (this.$refs.grade as any).getList();
+    (this.$refs.center as any).getList()
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private gotoDetail (row: any) {
+    this.$router.push({ path: '/student/prestudent-manage/detail', query: { stuId: row.id } })
+  }
+
+  private resetPwd (row: any) {
+    this.$confirm('是否将该学生账号密码重置为888888？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      await studentApi('resetPwd', {
+        userId: row.userId
+      }).then((res: any) => {
+        this.$message({
+          showClose: !0,
+          message: res.message,
+          type: res.code === 10000 ? 'success' : 'error'
+        })
+      }).catch((err: any) => {
+        console.log('err', err)
+      })
+    }).catch(() => {
+      this.$message({
+        showClose: !0,
+        type: 'info',
+        message: '已取消重置密码操作'
+      })
+    })
+  }
+
+  private selectedStuIds: any = []
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private onSchRollUpdate () {
+    if (this.selectedRow.length > 0) {
+      this.selectedStuIds = this.selectedRow.map((item: any) => {
+        return item.id
+      })
+      this.schRollUpdateVisible = !0
+    } else {
+      this.$alert('请选择修改学籍状态学生', '消息', {
+        confirmButtonText: '确定',
+        customClass: 'message-top',
+        type: 'warning'
+      })
+    }
+  }
+
+  private async onAdd () {
+    await studentApi('stuCommonTesOrgId'
+    ).then((res: any) => {
+      if (res.code === 10000) {
+        this.stuBaseinfoDialogFormVisible = true
+      } else {
+        this.$alert(res.message, '消息', {
+          confirmButtonText: '确定',
+          customClass: 'message-top',
+          type: 'warning'
+        })
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private onImport () {
+    this.ImportStudentVisible = !0
+  }
+
+  private async onExportPhoto () {
+    this.$confirm('确定要批量导出照片吗?', '消息', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      const form = util.trimForm(this.form)
+      const fileName = '学生照片-' + dayjs().format('YYYYMMDD') + '.zip'
+      await studentApi('exportPhoto', {
+        ...form
+      }).then((res: any) => {
+        const fileName = '学生照片-' + dayjs().format('YYYYMMDD') + '.' + res.headers['content-file-suffix']
+        exportData(res.data, fileName).then(() => {
+          this.$message({
+            showClose: !0,
+            type: 'success',
+            message: '导出成功'
+          })
+        })
+      }).catch((err: any) => {
+        console.log('err', err)
+      })
+    }).catch(() => {
+      this.$message({
+        showClose: !0,
+        type: 'info',
+        message: '已取消照片导出'
+      })
+    })
+  }
+
+  private async onExport () {
+    this.$confirm('确定要导出吗?', '消息', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      const form = util.trimForm(this.form)
+      await studentApi('export', {
+        ...form
+      }).then((res: any) => {
+        const fileName = '学生信息-' + dayjs().format('YYYYMMDD') + '.' + res.headers['content-file-suffix']
+        exportData(res.data, fileName).then(() => {
+          this.$message({
+            showClose: !0,
+            type: 'success',
+            message: '导出成功'
+          })
+        })
+      }).catch((err: any) => {
+        console.log('err', err)
+      })
+    }).catch(() => {
+      this.$message({
+        showClose: !0,
+        type: 'info',
+        message: '已取消导出'
+      })
+    })
+  }
+
+  private async changeState (index: any, row: any) {
+    const _data = {
+      id: row.id
+    }
+    if (row.stuState === 0) {
+      row.stuState = 1
+      this.$confirm('提示：确定要无效该学生？', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }).then(async () => {
+        await studentApi('stuDisable', {
+          ..._data
+        }).then((res: any) => {
+          res.code === 10000 && this.onQuery(this.pagination)
+          this.$message({
+            showClose: !0,
+            message: res.message,
+            type: res.code === 10000 ? 'success' : 'error'
+          })
+          row.stuState = 0
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+      }).catch(() => {
+        row.stuState = 1
+      })
+    } else {
+      await studentApi('stuEnable', {
+        ..._data
+      }).then((res: any) => {
+        res.code === 10000 && this.onQuery(this.pagination)
+        this.$message({
+          showClose: !0,
+          message: res.message,
+          type: res.code === 10000 ? 'success' : 'error'
+        })
+      }).catch((err: any) => {
+        console.log('err', err)
+      })
+    }
+  }
+
+  activated () {
+    this.getConstrantList()
+    this.getSchoolItem()
+    this.getSubjectItem()
+    this.getStuSourceTree()
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

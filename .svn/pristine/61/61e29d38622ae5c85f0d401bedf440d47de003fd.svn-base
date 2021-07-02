@@ -1,0 +1,203 @@
+<template>
+  <div class="businessmanage-container">
+    <div class="left-block">
+      <div class="tree-block">
+        <tree url="/lb/business/school/leftBusinessSchoolTreeSearch" @node-click="handleNodeClick"></tree>
+      </div>
+    </div>
+    <div class="right-block">
+      <header>
+        <hs-form ref="form" :model="form" label-width="108px" :inline="true">
+           <hs-form-item label="年级">
+            <dict-select :val.sync="form.grade" comm-group-name="state"></dict-select>
+          </hs-form-item>
+           <hs-form-item label="专业">
+            <dict-select :val.sync="form.subject" comm-group-name="state"></dict-select>
+          </hs-form-item>
+           <hs-form-item label="标准代码">
+            <dict-select :val.sync="form.code" comm-group-name="state"></dict-select>
+          </hs-form-item>
+           <hs-form-item label="学年">
+            <dict-select :val.sync="form.len" comm-group-name="state"></dict-select>
+          </hs-form-item>
+           <hs-form-item label="是否有效">
+            <dict-select :val.sync="form.validate" comm-group-name="state"></dict-select>
+          </hs-form-item>
+           <hs-form-item label="是否必缴">
+            <dict-select :val.sync="form.must" comm-group-name="state"></dict-select>
+          </hs-form-item>
+           <hs-form-item label="允许退费">
+            <dict-select :val.sync="form.reduce" comm-group-name="state"></dict-select>
+          </hs-form-item>
+           <hs-form-item label="收费项目">
+            <dict-select :val.sync="form.item" comm-group-name="state"></dict-select>
+          </hs-form-item>
+           <hs-form-item label="收费区间">
+            <hs-date-picker
+              range-separator="至"
+              value-format="timestamp"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              :picker-options="pickerOptions"
+              format="yyyy-MM-dd HH:mm:ss"
+              :default-time="['00:00:00','23:59:59']"
+              type="daterange"
+              v-model="form.createTime"
+              size="mini">
+            </hs-date-picker>
+          </hs-form-item>
+          <hs-form-item>
+            <hs-button type="danger" @click="onQuery" size="mini">查询</hs-button>
+            <hs-button type="default" @click="onReset" size="mini">重置</hs-button>
+          </hs-form-item>
+        </hs-form>
+      </header>
+      <section>
+        <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolState']"></simple-table>
+      </section>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import { schoolTree } from '@/api/common'
+import { schoolfeestandardList, schoolfeestandardDetail } from '@/api/base'
+@Component({
+  name: 'schoolfeestandard',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    Tree
+  }
+})
+export default class BusiManage extends Vue {
+  private form = {
+    businessName: '',
+    businessState: 1
+  }
+
+  private loading = !1
+
+  private handleNodeClick (data: any) {
+    console.log(data)
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'businessName',
+    label: '业务名称'
+  },
+  {
+    prop: 'memo',
+    label: '备注'
+  },
+  {
+    prop: 'businessStateName',
+    label: '状态'
+  }]
+
+  private pickerOptions = {
+    shortcuts: [
+      {
+        text: '上一周',
+        onClick (picker: { $emit: (arg0: string, arg1: Date[]) => void }) {
+          const end = new Date()
+          const start = new Date()
+          start.setTime(start.getTime() - 3600 * 1000 * 24 * 7)
+          picker.$emit('pick', [start, end])
+        }
+      },
+      {
+        text: '最近一个月',
+        onClick (picker: { $emit: (arg0: string, arg1: Date[]) => void }) {
+          const end = new Date()
+          const start = new Date()
+          start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
+          picker.$emit('pick', [start, end])
+        }
+      },
+      {
+        text: '最近三个月',
+        onClick (picker: { $emit: (arg0: string, arg1: Date[]) => void }) {
+          const end = new Date()
+          const start = new Date()
+          start.setTime(start.getTime() - 3600 * 1000 * 24 * 90)
+          picker.$emit('pick', [start, end])
+        }
+      }
+    ],
+    disabledDate: !0,
+    firstDayOfWeek: 7,
+    cellClassName: () => 'custClass',
+    onPick: null
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await schoolfeestandardList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      businessName: '',
+      businessState: 1
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private visible = !1
+
+  private datailData = {}
+
+  private async showDetail (row: any) {
+    await schoolfeestandardDetail({ id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.datailData = {
+          businessName: res.object.businessName,
+          businessState: res.object.businessStateName,
+          memo: res.object.memo
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

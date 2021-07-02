@@ -1,0 +1,185 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+/**
+*学生列表
+* @param data
+*/
+export const stuList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/sch/roll/list`,
+    method: 'post',
+    data
+  })
+/**
+*学生列表
+* @param data
+*/
+export const stuListCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/sch/roll/list/count`,
+    method: 'post',
+    data
+  })
+
+/**
+*学生详情
+* @param data
+*/
+export const stuDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/sch/roll/detail`,
+    method: 'post',
+    data
+  })
+
+/**
+*学生修改
+* @param data
+*/
+export const stuUpdate = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/sch/roll/update`,
+    method: 'post',
+    data
+  })
+
+/**
+*学生启用
+* @param data
+*/
+export const stuEnable = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/sch/roll/enable`,
+    method: 'post',
+    data
+  })
+
+/**
+*学生禁用
+* @param data
+*/
+export const stuDisable = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/sch/roll/disable`,
+    method: 'post',
+    data
+  })
+
+/**
+*学生禁用
+* @param data
+*/
+export const stuSourceTree = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/studentSource/tree`,
+    method: 'post',
+    data
+  })
+
+/**
+*变更记录
+* @param data
+*/
+export const alterationRecordList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/log/list`,
+    method: 'post',
+    data
+  })
+
+/**
+*变更记录总条数
+* @param data
+*/
+export const alterationRecordListCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/log/list/count`,
+    method: 'post',
+    data
+  })
+
+/**
+*缴费流水列表
+* @param data
+*/
+export const feesList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/fees/list`,
+    method: 'post',
+    data
+  })
+
+/**
+*缴费流水明细列表
+* @param data
+*/
+export const feesItemList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/fees/item/list`,
+    method: 'post',
+    data
+  })
+
+/**
+*缴费流水列表总数
+* @param data
+*/
+export const feesListCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/fees/list/count`,
+    method: 'post',
+    data
+  })
+
+/**
+*全日制收费流水详情
+* @param data
+*/
+export const payRecordDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/ft/pay/payRecordInfo`,
+    method: 'post',
+    data
+  })
+
+/**
+*预收-已处理-详情
+* @param data
+*/
+export const prepaidProcessedDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/ft/pre/processed/detail`,
+    method: 'post',
+    data
+  })
+
+/**
+*减免详情
+* @param data
+*/
+export const reduceProcessedDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/already/process/detail`,
+    method: 'post',
+    data
+  })
+
+/**
+*退费详情
+* @param data
+*/
+export const refundProcessedDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/refund/already/process/detail`,
+    method: 'post',
+    data
+  })
+
+export const studentcenter = {
+  stuList: stuList,
+  stuDetail: stuDetail,
+  feesList: feesList,
+  feesItemList: feesItemList,
+  feesListCount: feesListCount
+}

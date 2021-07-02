@@ -1,0 +1,109 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog append-to-body :title="title" :visible.sync="visibleSync" width="800px" :close-on-click-modal="!1" @open="open">
+    <div class="detail-container">
+      <el-form label-width="98px" :inline="true" class="border-style">
+        <el-form-item :label="column.label" v-for="(column, i) in columns" :key="i">
+          <template v-if="column.type === 'file'">
+            <hs-table :data="column.value" border style="width: 100%">
+              <hs-table-column prop="originalName" label="文件名"> </hs-table-column>
+              <hs-table-column prop="size" label="大小" width="150">
+                <template slot-scope="scope">
+                  <span>{{ sizeToStr(scope.row.size) }}</span>
+                </template>
+              </hs-table-column>
+              <hs-table-column fixed="right" label="操作" width="100">
+                <template slot-scope="scope">
+                  <hs-button @click="download(scope.row)" type="text" size="mini">下载</hs-button>
+                </template>
+              </hs-table-column>
+            </hs-table>
+          </template>
+          <div v-else-if="column.type === 'tinymce'" class="tinymce" v-html="column.value" style="line-height: 1;"></div>
+          <span v-else>{{ column.value }}</span>
+        </el-form-item>
+      </el-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button size="mini" type="info" plain @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import { saveAs } from 'file-saver'
+import setting from '@/settings'
+import util from '@/utils/busi/util'
+
+@Component({
+  name: 'detail-dialog'
+})
+
+export default class DetailDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private data!: object|any
+
+  private columns = [
+    {
+      label: '标题名称',
+      key: 'catalogTitle'
+    },
+    {
+      label: '信息来源',
+      key: 'source'
+    },
+    {
+      label: '内容',
+      key: 'catalogContent',
+      type: 'tinymce'
+    },
+    {
+      label: '附件',
+      key: 'atts',
+      type: 'file'
+    },
+    {
+      label: '置顶',
+      key: 'topName'
+    },
+    {
+      label: '发布',
+      key: 'openName'
+    }]
+
+  private sizeToStr (size: any) {
+    return util.sizeToStr(size)
+  }
+
+  private open () {
+    this.columns = this.columns.map((v: any) => {
+      v.value = this.data[v.key]
+      return v
+    })
+  }
+
+  private download (file: any) {
+    saveAs(setting.ossIp + '/' + file.path, file.originalName)
+  }
+}
+</script>
+<style lang="scss" scoped>
+  .detail-container{
+    width: 100%;
+    min-width: 500px;
+    padding: 10px;
+    height: 60vh;
+    overflow: auto;
+    .el-form.border-style .el-form-item{
+      height: auto;
+    }
+  }
+</style>

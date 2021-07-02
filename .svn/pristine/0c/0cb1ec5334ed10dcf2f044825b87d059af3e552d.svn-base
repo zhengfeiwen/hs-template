@@ -1,0 +1,16 @@
+import { SessionStorage } from '@/utils/storage'
+// 检验权限字段
+export const checkPermission = (value: string[]): boolean => {
+  if (process.env.VUE_APP_BASE_API?.includes('mock')) return !0
+  if (value && value instanceof Array && value.length > 0) {
+    const rights: any[] = SessionStorage.get('rpc-right-mark-set', 'array')
+    const permissionRoles = value
+    const hasPermission = rights.some(right => {
+      return permissionRoles.includes(right)
+    })
+    return hasPermission
+  } else {
+    console.error('need roles! Like v-permission="[\'admin\',\'editor\']"')
+    return false
+  }
+}

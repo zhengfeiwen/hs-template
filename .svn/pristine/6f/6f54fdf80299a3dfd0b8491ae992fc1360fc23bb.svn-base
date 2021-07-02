@@ -1,0 +1,10 @@
+<template>
+    <div class="collect-detail-container">
+        <el-dialog>
+            <div slot="footer" class="dialog-footer">
+                <el-button >取 消</el-button>
+                <el-button type="primary" >确 定</el-button>
+            </div>
+        </el-dialog>
+    </div>
+</template>

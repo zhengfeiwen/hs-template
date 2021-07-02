@@ -1,0 +1,89 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="!1" menuName="收费详情-业余学历">
+    <template slot="title">
+      <div class="title-right"><coverlap></coverlap></div>
+    </template>
+    <template slot="custom">
+      <UserInfo :userInfo="userInfo" /> <!-- 学生信息 -->
+    </template>
+    <template>
+      <hs-tabs v-model="activeName">
+      <hs-tab-pane label="收费信息" name="detail"></hs-tab-pane>
+      <hs-tab-pane label="个人总往来" name="PersonalIntercourse"></hs-tab-pane>
+      <hs-tab-pane label="缴费流水" name="FlowDetail"></hs-tab-pane>
+      <hs-tab-pane label="学生信息" name="StudentBaseInfo"></hs-tab-pane>
+    </hs-tabs>
+    <component v-if="isSussess" :userInfo="userInfo" :stuId="params.info.stuId" :is="activeName"></component>
+  </template>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleContainer from '@/components/container/index.vue'
+import UserInfo from '@/views/collect/components/userInfo.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+import detail from './collect.vue'
+import FlowDetail from '@/views/collect/components/flowdetail/index.vue'
+import StudentBaseInfo from '@/views/student/components/StudentBaseInfo/index.vue'
+import PersonalIntercourse from '@/views/student/components/PersonalIntercourse/index.vue'
+import util from '@/utils/busi/util'
+import { commonApi } from '@/api/common'
+@Component({
+  name: 'collect-manage-info',
+  components: {
+    SimpleContainer,
+    UserInfo,
+    Coverlap,
+    StudentBaseInfo,
+    PersonalIntercourse,
+    FlowDetail,
+    detail
+  }
+})
+export default class detailInfo extends Vue {
+  private activeName = 'detail'
+  private params = util.getRouterParams()
+  private userInfo = {}
+
+  private isSussess = !1
+
+  private async initData () {
+    this.activeName = 'detail'
+    this.isSussess = !1
+    this.params = util.getRouterParams()
+    await commonApi('stuCommonDetail', {
+      id: this.params.info.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        const { stuGradeId, stuSubjectId, stuSchoolId, stuCode, stuSex, stuBusinessId, stuSchoolCode, stuName, stuSexName, stuGradeName, stuSubjectName, stuSchoolName, subLenName, stuPaperworkNumber } = res.object.info
+        this.userInfo = {
+          stuGradeId,
+          stuSubjectId,
+          stuSchoolId,
+          stuBusinessId,
+          stuSchoolCode,
+          stuName,
+          stuSexName,
+          stuPaperworkNumber,
+          stuSubjectName,
+          stuSchoolName,
+          subLenName,
+          stuGradeName,
+          stuSex,
+          stuCode
+        }
+      }
+      this.isSussess = !0
+    })
+  }
+
+  activated () {
+    this.initData()
+  }
+
+  beforeMount () {
+    this.initData()
+  }
+}
+</script>

@@ -1,0 +1,363 @@
+<template>
+  <div class="grademanage-container">
+    <el-dialog append-to-body :close-on-click-modal="!1" title="毕业生处理" :visible.sync="visible" :before-close="onClose" width="900px" @open="open()">
+      <header>
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="业务类型">
+          <dict-select :val.sync="form.businessId" constant-group-name="businessType" @change="businessChange" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="院校">
+          <dict-select ref="school" @change="schoolChange()" :data="schoolItemData" :prop="{ key: 'id', value: 'showValue' }" :val.sync="form.schoolId" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="年级">
+          <dict-select ref="grade" @change="gradeChange" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="专业">
+          <dict-select ref="subject" @change="$forceUpdate()" :data="subjectItemData" :prop="{ key: 'id', value: 'showValue' }" :val.sync="form.subjectId" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="所属中心">
+          <dict-select ref="center" :option="options.center" :prop="{ key: 'id', value: 'centerName' }" :val.sync="form.stuBelongCenter" clearable></dict-select>
+        </el-form-item>
+        <el-form-item label="学生姓名">
+          <hs-input size="mini" v-model="form.stuName" placeholder="请输入学生姓名" ></hs-input>
+        </el-form-item>
+        <el-form-item class="query-block">
+          <hs-button type="danger" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </el-form-item>
+      </el-form>
+    </header>
+    <section>
+      <simple-table :width="10" :operator="{ width: 150 }" :data="tableData" :columns="columns" :isCheckbox="!0" @selection-change="selectionChange" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail">
+        <template slot="action-block">
+          <hs-button type="danger" icon="el-icon-edit" @click="onGraduationBatch" size="mini">批量毕业</hs-button>
+        </template>
+      </simple-table>
+    </section>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="info" size="mini" plain @click="onClose">关闭</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Prop } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { studentApi } from '@/api/studentcenter'
+import { getList } from '@/api/common'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import AddStuBaseInfoDialog from '@/views/student/studentsearch/addStudent/index.vue'
+@Component({
+  name: 'grade-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    AddStuBaseInfoDialog
+  }
+})
+export default class GradeManage extends Vue {
+  @Prop({ default: false }) private visible!: boolean;
+
+  private form = {
+    businessId: '',
+    schoolId: '',
+    gradeId: '',
+    subjectId: '',
+    stuBelongCenter: '',
+    stuName: ''
+  }
+
+  private schoolItemData: any = []
+
+  private subjectItemData: any = []
+
+  private constrantArray: any = {
+    businessType: [],
+    subjectLen: [],
+    subjectDegree: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.businessType = await getConstantByGroup('businessType')
+    this.constrantArray.subjectLen = await getConstantByGroup('subjectLen')
+    this.constrantArray.subjectDegree = await getConstantByGroup('subjectDegree')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private async getSchoolItem () {
+    const _data = this.form.businessId === '' ? {} : { businessId: this.form.businessId }
+    await getList({
+      url: this.options.school.url,
+      data: _data
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.schoolItemData = []
+        res.object.list.map((v: any) => {
+          v.showValue = `[${this.getValueByConstrantArray('businessType', Number(v.business))}]${v.schoolName}[${v.studyName}]`
+          this.schoolItemData.push(v)
+        })
+      }
+    })
+  }
+
+  private async getSubjectItem () {
+    const _data = { schoolId: this.form.schoolId || null, gradeId: this.form.gradeId || null }
+    await getList({
+      url: this.options.subject.url,
+      data: _data
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.subjectItemData = []
+        res.object.list.map((v: any) => {
+          v.showValue = `[${this.getValueByConstrantArray('subjectDegree', Number(v.degree))}]${v.subjectName}[${this.getValueByConstrantArray('subjectLen', Number(v.len))}年]`
+          this.subjectItemData.push(v)
+        })
+      }
+    })
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private columns = [
+    {
+      prop: 'stuName',
+      label: '学生名称'
+    },
+    {
+      prop: 'stuSexName',
+      label: '性别',
+      width: 50
+    },
+    {
+      prop: 'idCard',
+      label: '证件号'
+    },
+    {
+      prop: 'schoolRollStatusName',
+      label: '学籍状态',
+      width: 90
+    },
+    {
+      prop: 'businessName',
+      label: '业务名称'
+    },
+    {
+      prop: 'schoolNameAndstudyName',
+      label: '院校名称【学习类型】',
+      width: 250
+    },
+    {
+      prop: 'gradeName',
+      label: '年级名称'
+    },
+    {
+      prop: 'subjectName',
+      label: '专业名称'
+    },
+    {
+      prop: 'subjectLenName',
+      label: '学制',
+      width: 50
+    },
+    {
+      prop: 'centerName',
+      label: '所属中心'
+    }]
+
+  private options: any = {
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+      }
+    },
+    center: {
+      url: '/fcs/center/getCenterSelect',
+      data: {
+        isJoinUser: 0
+      }
+    }
+  }
+
+  private businessChange () {
+    this.form.schoolId = ''
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.form.stuBelongCenter = ''
+    this.schoolItemData = []
+    this.subjectItemData = []
+    this.options.center.data = this.form.businessId === '' ? { isJoinUser: 0 } : { businessId: this.form.businessId, isJoinUser: 0 }
+    this.options.grade.data = {};
+    (this.$refs.center as any).getList();
+    (this.$refs.grade as any).getList()
+    this.getSchoolItem()
+    this.getSubjectItem()
+  }
+
+  private schoolChange () {
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.options.grade.data.schoolId = this.form.schoolId || null
+    this.options.subject.data.schoolId = this.form.schoolId || null;
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+    this.getSubjectItem()
+  }
+
+  private gradeChange () {
+    this.form.subjectId = ''
+    this.getSubjectItem()
+  }
+
+  private currentPage = 1
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await studentApi('graduationList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      if (res.code === 10000) {
+        this.loading = !1
+        this.tableData.list = res.object.list.map((item: any) => {
+          item.schoolNameAndstudyName = item.schoolName + '【' + item.studyName + '】'
+          return item
+        })
+        this.tableData.totalCount = res.object.totalCount
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getTotalCount () {
+    const form = util.trimForm(this.form)
+    await studentApi('graduationListCount', {
+      ...form
+    }).then((res: any) => {
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private clear () {
+    this.form = {
+      businessId: '',
+      schoolId: '',
+      gradeId: '',
+      subjectId: '',
+      stuBelongCenter: '',
+      stuName: ''
+    }
+    this.schoolItemData = []
+    this.subjectItemData = []
+    this.options.center.data = this.form.businessId === '' ? { isJoinUser: 0 } : { businessId: this.form.businessId, isJoinUser: 0 }
+    this.options.grade.data = {};
+    (this.$refs.center as any).getList();
+    (this.$refs.grade as any).getList()
+    this.getSchoolItem()
+    this.getSubjectItem()
+    this.loading = !1
+  }
+
+  private onReset () {
+    this.clear()
+    this.onQuery()
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onGraduationBatch () {
+    if (this.selectedRow.length > 0) {
+      this.$confirm('确定要进行毕业吗?', '消息', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+        customClass: 'message-top'
+      }).then(async () => {
+        const _data = this.selectedRow.map((item: any) => {
+          return item.stuId
+        })
+        await studentApi('graduationBatch', _data
+        ).then((res: any) => {
+          if (res.code === 10000) {
+            this.$message({
+              showClose: !0,
+              duration: 1500,
+              message: res.message,
+              type: 'success'
+            })
+            this.onQuery()
+          }
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+      }).catch(() => {
+        this.$message({
+          showClose: !0,
+          duration: 1500,
+          type: 'info',
+          message: '已取消毕业操作'
+        })
+      })
+    } else {
+      this.$alert('请选择要毕业的学生', '消息', {
+        confirmButtonText: '确定',
+        customClass: 'message-top',
+        type: 'warning'
+      })
+    }
+  }
+
+  private onClose () {
+    this.clear()
+    this.$emit('update:visible', false)
+  }
+
+  public open (): void {
+    this.getConstrantList()
+    this.getSchoolItem()
+    this.getSubjectItem()
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+</style>

@@ -1,0 +1,102 @@
+<template>
+  <div class="personal-intercourse-container">
+    <div class="amount">
+      <p>账户余额</p>
+      <span>{{ moneyFormatter(amount) }}</span>元
+      <hs-button class="btn" type="text" size="small" @click="AccountBalanceDetailDialogVisible = true" v-permission="['fcsStuDetail']">明细详情></hs-button>
+      <hs-button class="btn" type="text" size="small" @click="HistoryIntercourseDialogVisible = true" v-permission="['fcsStuContactsDetailedList']">历史往来></hs-button>
+    </div>
+    <IntercourseTable :stuInfo="stuInfo" v-if="stuInfo.stuBusinessId == 2" v-permission="['fcsParttimeContactsDetailed']"></IntercourseTable>
+    <el-tabs type="card" v-model="activeName" @tab-click="handleClick" v-else v-permission="['fcsFullcontactsDetailed']">
+      <el-tab-pane :label="item.value" :name="item.key" v-for="(item, index) in yearList" :key="index">
+        <IntercourseTable :stuInfo="stuInfo" :year="item.key" v-if="item.key == nowpage"></IntercourseTable>
+      </el-tab-pane>
+    </el-tabs>
+    <AccountBalanceDetailDialog :stuId="stuId" :visible.sync="AccountBalanceDetailDialogVisible" v-permission="['fcsStuContactsDetailedList']"></AccountBalanceDetailDialog>
+    <HistoryIntercourseDialog :stuId="stuId" :visible.sync="HistoryIntercourseDialogVisible" v-permission="['fcsStuHistoryContactsList']"></HistoryIntercourseDialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Prop, Component } from 'vue-property-decorator'
+import AccountBalanceDetailDialog from '@/views/student/prestudentmanage/PersonalIntercourse/AccountBalanceDetailDialog/index.vue'
+import IntercourseTable from '@/views/student/prestudentmanage/PersonalIntercourse/IntercourseTable/index.vue'
+import HistoryIntercourseDialog from '@/views/student/prestudentmanage/PersonalIntercourse/HistoryIntercourseDialog/index.vue'
+import { studentApi } from '@/api/prestudentcenter'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'student-manage',
+  components: {
+    AccountBalanceDetailDialog,
+    IntercourseTable,
+    HistoryIntercourseDialog
+  }
+})
+export default class StudentCenterUpdateInput extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private AccountBalanceDetailDialogVisible = false
+
+  private HistoryIntercourseDialogVisible = false
+
+  private amount: Number = 0
+
+  private activeName = 1
+
+  private stuInfo:any = {}
+
+  private yearList: any[] = []
+
+  private nowpage = 1
+
+  private moneyFormatter (amount: Number) {
+    return util.generatingThousandthPer(amount)
+  }
+
+  private async getStuBalance () {
+    await studentApi('stuAccountDetail', { id: this.stuId }).then((res: any) => {
+      if (res.code === 10000) {
+        this.amount = (res.object.info.balance * 0.01) || 0
+      }
+    })
+  }
+
+  private async getDetail () {
+    await studentApi('stuDetail', {
+      id: this.stuId
+    }).then(async (res: any) => {
+      if (res.code === 10000) {
+        this.stuInfo = res.object.info
+        await studentApi('schoolFeeStandardYear', {
+          schoolId: res.object.info.stuSchoolId,
+          gradeId: res.object.info.stuGradeId,
+          subjectId: res.object.info.stuSubjectId
+        }).then((resYear: any) => {
+          if (resYear.code === 10000) {
+            this.yearList = resYear.object.list
+            this.nowpage = resYear.object.list[0].key
+            this.activeName = resYear.object.list[0].key
+          }
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private handleClick (tab: any) {
+    this.nowpage = tab.name
+  }
+
+  public mounted () {
+    this.getStuBalance()
+    this.getDetail()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

@@ -1,0 +1,104 @@
+import router from './router'
+import NProgress from 'nprogress'
+import 'nprogress/nprogress.css'
+import { Route } from 'vue-router'
+import { UserModule } from '@/store/modules/user'
+import { RightModule } from '@/store/modules/right'
+import { MenuModule } from '@/store/modules/menu'
+import { PermissionModule } from '@/store/modules/permission'
+import i18n from '@/lang' // Internationalization
+import settings from './settings'
+import { Message } from 'element-ui'
+
+NProgress.configure({ showSpinner: false })
+
+const whiteList = ['/login', '/auth-redirect']
+
+const that: any = this
+
+const getPageTitle = (key: string) => {
+  const hasKey = i18n.te(`route.${key}`)
+  if (hasKey) {
+    const pageName = i18n.t(`route.${key}`)
+    return `${pageName} - ${settings.title}`
+  }
+  return `${settings.title}`
+}
+
+router.beforeEach(async (to: Route, _: Route, next: any) => {
+  // Start progress bar
+  NProgress.start()
+  // Determine whether the user has logged in
+  if (UserModule.token) {
+    if (to.path === '/login') {
+      // If is logged in, redirect to the home page
+      UserModule.ResetToken()
+      next({ path: '/' })
+      NProgress.done()
+    } else {
+      if(to.name === 'Dashboard'){
+        MenuModule.updateMenuName('Dashboard')
+      }
+      // Check whether the user has obtained his permission roles
+      if (RightModule.accessroutes.length === 0) {
+        try {
+          if (!UserModule.rpcid) {
+            next({ ...to, replace: true })
+          } else {
+            // 获取菜单权限
+            if (UserModule.rpcid === -1) {
+              next(`/login?redirect=${to.path}`)
+            }
+            await RightModule.getRightInfo(UserModule.rpcid).then(() => {
+              // 初始化菜单权限
+              PermissionModule.GenerateRoutes(RightModule.accessroutes)
+              // 菜单权限加入到动态路由中
+              if (!RightModule.accessroutes || (RightModule.accessroutes as any).length === 0) {
+                throw new Error('获取菜单权限失败')
+              }
+              router.addRoutes(PermissionModule.dynamicRoutes)
+              next({ ...to, replace: true })
+            }).catch(res => {
+              RightModule.ResetAccessRoutes()
+              UserModule.ResetToken()
+              // Message.error(res.msg || '获取菜单权限失败')
+              next(`/login?redirect=${to.path}`)
+              NProgress.done()
+            })
+          }
+        } catch (err) {
+          // 移除token 返回到登录界面
+          UserModule.ResetToken()
+          RightModule.ResetAccessRoutes()
+          Message.error(err)
+          next(`/login?redirect=${to.path}`)
+          NProgress.done()
+        }
+      } else {
+        next()
+      }
+    }
+  } else {
+    // 移除token 返回到登录界面
+    UserModule.ResetToken()
+    RightModule.ResetAccessRoutes()
+    // Has no token
+    if (whiteList.indexOf(to.path) !== -1) {
+      // In the free login whitelist, go directly
+      next()
+    } else {
+      // Other pages that do not have permission to access are redirected to the login page.
+      next(`/login?redirect=${to.path}`)
+      NProgress.done()
+    }
+  }
+})
+
+router.afterEach((to: Route) => {
+  // Finish progress bar
+  // hack: https://github.com/PanJiaChen/vue-element-admin/pull/2939
+  NProgress.done()
+
+  // set page title
+  document.title = getPageTitle(to.meta.title)
+})

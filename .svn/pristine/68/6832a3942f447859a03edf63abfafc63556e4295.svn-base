@@ -1,0 +1,152 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <div class="dialog-select">
+    <hs-input
+      size="mini"
+      v-model="valueSync"
+      :disabled="!0"
+      @click.native="beforeOpen"
+      placeholder="请输入业务类型"
+    ></hs-input>
+    <hs-dialog :title="title" :visible.sync="visible" width="60%" :close-on-click-modal="!1" @open="open" append-to-body>
+      <div class="dialog-select-body">
+        <header>
+          <el-form ref="form" :model="form" label-width="98px" :inline="true">
+            <el-form-item :label="condition.label" v-for="(condition, i) in option.conditions" :key="i">
+              <hs-input
+                size="mini"
+                v-model="form[condition.value]"
+              ></hs-input>
+            </el-form-item>
+            <el-form-item>
+              <hs-button type="danger" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+              <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+            </el-form-item>
+          </el-form>
+        </header>
+        <section>
+          <simple-table :isCheckbox="!1" :data="tableData" :columns="option.table.columns" :operator="{ fixed: '-' }" :loading="loading" :pagination.sync="pagination" @query="onQuery">
+            <template slot="operator" slot-scope="{ scope }">
+              <hs-button
+                @click.native.prevent="select(scope.row)"
+                type="text"
+                size="small">
+                选择
+              </hs-button>
+            </template>
+          </simple-table>
+        </section>
+      </div>
+      <footer>
+        <span slot="footer" class="dialog-footer">
+          <el-button type="primary" @click="clear">清空</el-button>
+          <el-button @click="visible = !1">关闭</el-button>
+        </span>
+      </footer>
+  </hs-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+
+import util from '@/utils/busi/util'
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { getList } from '@/api/common'
+
+@Component({
+  name: 'dialog-select',
+  components: {
+    SimpleTable
+  }
+})
+
+export default class DialogSelect extends Vue {
+  @Prop({ type: String })
+  private title!: string
+
+  @PropSync('value', { type: [String, Number] })
+  private valueSync!: any
+
+  @Prop({ type: Object })
+  private option!: any
+
+  private visible = !1
+
+  private form: any = {}
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form }, this.option.table.columns)
+    !pagination && (this.pagination.currentPage = 1)
+    await getList({
+      url: this.option.table.url,
+      data: {
+        ...(Object.assign(this.option.params, form)),
+        ...pagination || this.pagination
+      }
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    Object.keys(this.form).map(key => {
+      this.form[key] = ''
+    })
+    this.onQuery()
+  }
+
+  private select (row: any) {
+    this.valueSync = row[this.option.key]
+    this.$listeners.select && this.$emit('select', row)
+    this.visible = !1
+  }
+
+  private clear () {
+    this.valueSync = ''
+    this.$listeners.select && this.$emit('select', {})
+    this.visible = !1
+  }
+
+  private beforeOpen () {
+    if (this.$listeners.open) {
+      this.$emit('open', () => {
+        this.visible = !0
+      })
+    } else {
+      this.visible = !0
+    }
+  }
+
+  private open () {
+    this.onQuery()
+  }
+}
+</script>
+<style lang="scss">
+  .dialog-select{
+    width: 100%;
+    height: 100%;
+    .hs-input input:disabled{
+      cursor: pointer;
+    }
+  }
+</style>

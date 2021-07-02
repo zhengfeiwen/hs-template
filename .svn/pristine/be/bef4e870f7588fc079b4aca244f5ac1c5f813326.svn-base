@@ -1,0 +1,87 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog title="内容新增" custom-class="sms-template-dialog" :visible.sync="visibleSync" width="60%" :close-on-click-modal="!1">
+    <div class="sms-template-container">
+      <hs-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+        <hs-form-item label="模板编号" prop="name">
+          <hs-input size="mini" v-model="form.name" placeholder="请输入模板编号" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="模板名称" prop="memo" class="line">
+          <hs-input size="mini" v-model="form.name" placeholder="请输入模板名称" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="模板说明" prop="memo" class="line">
+          <hs-input size="mini" v-model="form.memo" placeholder="请输入模板说明" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="模板内容" prop="content" class="double line">
+          <el-input type="textarea" maxlength="200" show-word-limit :rows="3" v-model="form.content" resize="none"></el-input>
+        </hs-form-item>
+      </hs-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="primary" @click="onSave">确认</hs-button>
+      <hs-button type="default" @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, PropSync, Vue } from 'vue-property-decorator'
+import { settingApi } from '@/api/settingmanage'
+import setting from '@/settings'
+
+@Component({
+  name: 'add-dialog'
+})
+
+export default class AddDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private form = {
+    name: '',
+    memo: ''
+  }
+
+  private rules = {
+    name: [
+      { required: true, message: '请输入栏目名称', trigger: 'blur' }
+    ],
+    memo: [
+      { required: true, message: '请输入备注', trigger: 'blur' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      await settingApi('addCatalog', {
+        ...this.form
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message.success(res.message)
+        }
+      })
+    })
+  }
+
+  private async imagesUploadHandler (blobInfo: any, succFun: any, failFun: any) {
+    var formData: any = new FormData()
+    formData.append('parentFolder', 'lb/schoolDetail')
+    formData.append('file', blobInfo.blob(), blobInfo.filename())
+    await settingApi('fileUploadPost', formData).then((res: any) => {
+      if (res.success) {
+        const path = setting.ossIp + '/' + res.fileInfos[0].savePath
+        succFun(path)
+      } else {
+        failFun()
+      }
+    })
+  }
+}
+</script>
+<style lang="scss">
+.sms-template-dialog{
+  min-width: 650px;
+}
+</style>

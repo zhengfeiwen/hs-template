@@ -1,0 +1,177 @@
+import { VuexModule, Module, Action, Mutation, getModule } from 'vuex-module-decorators'
+import { login, usersApi } from '@/api/users'
+import { resetRouter } from '@/router'
+import { setToken, getToken, removeToken, getCookie, setCookie, removeCookie } from '@/utils/cookies'
+import { LocalStorage } from '@/utils/storage'
+import { TagsViewModule } from './tags-view'
+import { RightModule } from './right'
+import store from '@/store'
+import { MessageBox } from 'element-ui'
+
+export interface IUserState {
+  uuid: string
+  token: string
+  rpcid: number
+  id: number
+  name: string
+  avatar: string
+  introduction: string
+  roles: string[]
+  email: string
+}
+
+@Module({ dynamic: true, store, name: 'user' })
+class User extends VuexModule implements IUserState {
+  uuid = getCookie('uuid') || ''
+  token = getToken() || ''
+  public name = ''
+  public id = getCookie('user_id') as any || -1
+  public rpcid = LocalStorage.getObj('user_rpc_id') as any || -1
+  public avatar = ''
+  public introduction = ''
+  public roles: string[] = []
+  public email = ''
+
+  @Mutation
+  private SET_TOKEN (token: string) {
+    this.token = token
+  }
+
+  @Mutation
+  private SET_UUID (uuid: string) {
+    this.uuid = uuid
+  }
+
+  @Mutation
+  private SET_ID (id: number) {
+    this.id = id
+  }
+
+  @Mutation
+  private SET_RPC_ID (id: number) {
+    this.rpcid = id
+  }
+
+  @Mutation
+  private SET_NAME (name: string) {
+    this.name = name
+  }
+
+  @Mutation
+  private SET_AVATAR (avatar: string) {
+    this.avatar = avatar
+  }
+
+  @Mutation
+  private SET_INTRODUCTION (introduction: string) {
+    this.introduction = introduction
+  }
+
+  @Mutation
+  private SET_ROLES (roles: string[]) {
+    this.roles = roles
+  }
+
+  @Mutation
+  private SET_EMAIL (email: string) {
+    this.email = email
+  }
+
+  @Action
+  public async Login (userInfo: { userAlias: string, password: string }) {
+    const { userAlias, password } = userInfo
+    await login({ userAlias: userAlias, password: password }).then((res: any) => {
+      if (res.code === 10000 || res.code === 0) {
+        this.initData(res)
+      } else {
+        console.error(res.message)
+        MessageBox({
+          title: '错误',
+          type: 'error',
+          message: res.message
+        })
+        throw new Error(res.message)
+      }
+    })
+  }
+
+  @Action
+  private initData (res: any) {
+    const data = res.object
+    const token = res.token
+    const uuid = res.uuid
+    this.SET_TOKEN(token)
+    this.SET_NAME(data.userName)
+    this.SET_UUID(uuid)
+    setCookie('uuid', uuid)
+    setToken(token)
+    this.SET_RPC_ID(data.tcsUserId)
+    this.SET_ID(data.id)
+    LocalStorage.setObj('user_rpc_id', data.tcsUserId)
+    LocalStorage.setObj('sysTypes', data.sysTypes)
+    setCookie('user_id', data.id)
+  }
+
+  @Action
+  public ResetToken () {
+    removeToken()
+    removeCookie('uuid')
+    LocalStorage.remove('user_rpc_id')
+    removeCookie('user_id')
+    this.SET_TOKEN('')
+    this.SET_UUID('')
+    this.SET_ROLES([])
+  }
+
+  @Action
+  public async GetUserInfo () {
+    if (this.token === '') {
+      throw Error('获取用户信息失败：token为定义')
+    }
+    const { data } = await usersApi('getUserInfo', {
+      id: this.id
+    })
+    if (!data) {
+      throw Error('验证失败，请重新登录')
+    }
+    const { id, name, avatar, introduction, email } = data.user
+    this.SET_ID(id)
+    this.SET_NAME(name)
+    this.SET_AVATAR(avatar)
+    this.SET_INTRODUCTION(introduction)
+    this.SET_EMAIL(email)
+  }
+
+  @Action
+  public async SetUserInfo (user: IUserState) {
+    if (!user) {
+      return
+    }
+    const { id, name, avatar, introduction, email } = user
+    this.SET_ID(id)
+    this.SET_NAME(name)
+    this.SET_AVATAR(avatar)
+    this.SET_INTRODUCTION(introduction)
+    this.SET_EMAIL(email)
+  }
+
+  @Action
+  public async Logout () {
+    if (this.token === '') {
+      throw Error('登出失败：token为定义')
+    }
+    removeToken()
+    removeCookie('uuid')
+    resetRouter()
+    RightModule.ResetAccessRoutes()
+
+    // 重置访问的视图和缓存的视图
+    TagsViewModule.delAllViews()
+    this.SET_TOKEN('')
+    this.SET_ROLES([])
+    localStorage.clear()
+    sessionStorage.clear()
+  }
+}
+
+export const UserModule = getModule(User)

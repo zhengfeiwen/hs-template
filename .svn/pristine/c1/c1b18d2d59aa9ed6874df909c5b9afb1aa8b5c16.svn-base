@@ -1,0 +1,85 @@
+<template>
+  <div class="prepaidmanageauth-container">
+    <batch-import :action="action" :permission="permission" :params="params" title="批量预付" :left-col-span="6" :auto-columns="['preMoney']" :fixedColumns="fixedColumns"  back-router="prepaidmanageauth"></batch-import>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import BatchImport from '@/views/collect/components/batchimport.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'prepaid-batch-import',
+  components: {
+    BatchImport
+  }
+})
+export default class PrepaidBatchImport extends Vue {
+  private params = util.getRouterParams()
+
+  private dict: any = {
+    1: { // 全日制
+      batchImport: 'unProcessedBatchInsert',
+      excelImport: 'unProcessedImportExcel',
+      excelImportPermission: ['fcsFullPreExcel'],
+      batchImportPermission: ['fcsFullPreBatch']
+    },
+    2: { // 业余学历
+      batchImport: 'preUnProcessedBatchInsert',
+      excelImport: 'preUnProcessedInportExcel',
+      excelImportPermission: ['fcsParttimePreUnProcessedExcel'],
+      batchImportPermission: ['fcsParttimePreUnProcessedBatchInsert']
+    }
+  }
+
+  private action = {
+    type: 'prepaid',
+    batchImport: this.params.businessId === 2 ? this.dict[this.params.businessId].batchImport : this.dict[1].batchImport,
+    excelImport: this.params.businessId === 2 ? this.dict[this.params.businessId].excelImport : this.dict[1].excelImport
+  }
+
+  private permission = {
+    excelImport: this.params.businessId === 2 ? this.dict[this.params.businessId].excelImportPermission : this.dict[1].excelImportPermission,
+    batchImport: this.params.businessId === 2 ? this.dict[this.params.businessId].batchImportPermission : this.dict[1].batchImportPermission,
+    addStudent: this.params.businessId === 2 ? 'fcsParttimePreSelectStu' : 'fcsFullPreSelectStu'
+  }
+
+  private fixedColumns = {
+    left: [
+      {
+        prop: 'stuName',
+        label: '学生姓名'
+      },
+      {
+        prop: 'stuCode',
+        label: '学生账号'
+      },
+      {
+        prop: 'idCard',
+        label: '身份证号'
+      },
+      {
+        prop: 'subjectName',
+        label: '专业名称'
+      },
+      {
+        prop: 'payTime',
+        label: '预付时间',
+        format: 'date'
+      },
+      {
+        prop: 'preMoney',
+        label: '本次预付'
+      }
+    ],
+    right: [
+    ]
+  }
+}
+</script>
+<style lang="scss">
+  .prepaidmanageauth-container{
+    width: 100%;
+    height: 100%;
+  }
+</style>

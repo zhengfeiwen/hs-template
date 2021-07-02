@@ -1,0 +1,286 @@
+<template>
+  <div class="feestandardmanage-container">
+    <header>
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+        <hs-form-item label="标准代码">
+          <hs-input size="mini" v-model="form.feeStandardCode" placeholder="标准代码"></hs-input>
+        </hs-form-item>
+        <hs-form-item label="收费项目">
+          <dict-select :val.sync="form.feeItemId" :option="{ url: '/fcs/item/select', data: {} }" :prop="{ key: 'id', value: 'feeItemName' }"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="是否有效">
+          <dict-select :val.sync="form.status" comm-group-name="radio"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="是否必缴">
+          <dict-select :val.sync="form.ifMust" comm-group-name="radio"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="允许退费">
+          <dict-select :val.sync="form.ifRefund" comm-group-name="radio"></dict-select>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" @click="onQuery" icon="hs-icon-search" size="mini">查询</hs-button>
+          <hs-button type="default" @click="onReset" icon="hs-icon-refresh-right" size="mini">取消</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table :columnable="!1" :isCheckbox="!0" :export-name="exportName" :exportable="exportable" :data="tableData" :pagination.sync="pagination" :columns="columns" :loading="loading" @query="onQuery" @row-dbclick="showDetail" :dicts="['businessState']">
+        <template slot="custom_status" slot-scope="{ scope }">
+          <hs-switch
+            :disabled="!stateDisabled"
+            v-model="scope.row.status"
+            :active-value="1"
+            :inactive-value="0"
+            @change="change(scope.row)"
+            active-color="#13ce66"
+            inactive-color="#d9d9d9">
+          </hs-switch>
+        </template>
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            查看
+          </hs-button>
+          <hs-button
+            v-permission="['fcsStandardUpdate']"
+            @click.native.prevent="onEdit(scope.row)"
+            type="text"
+            size="small">
+            编辑
+          </hs-button>
+          <hs-button
+            v-permission="['fcsStandardModifyLogList']"
+            @click.native.prevent="onLog(scope.row)"
+            type="text"
+            size="small">
+            变更记录
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="primary" @click="onAdd" v-permission="['fcsStandardInsert']" icon="hs-icon-plus" size="mini">新增</hs-button>
+        </template>
+      </simple-table>
+    </section>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible"></detail-dialog>
+    <add-dialog :visible.sync="visibleAdd" :data="addData" @save-back="onQuery"></add-dialog>
+    <log-dialog :visible.sync="visibleLog" :data="logData"></log-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import { checkPermission } from '@/utils/permission'
+import AddDialog from './add/index.vue'
+import LogDialog from './add/log.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { baseApi } from '@/api/base'
+import dayjs from 'dayjs'
+@Component({
+  name: 'fee-standard-manage',
+  components: {
+    AddDialog,
+    SimpleTable,
+    LogDialog,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class FeeStandardManage extends Vue {
+  get stateDisabled () {
+    return checkPermission(['fcsStandardEnable', 'fcsStandardDisable'])
+  }
+
+  private form: any = {
+    feeItem: '',
+    validate: '',
+    isMust: '',
+    ifRefund: ''
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    if (temp.date) {
+      temp.startDate = temp.date[0]
+      temp.endDate = temp.date[1]
+    }
+    delete temp.date
+    return util.trimForm({ ...temp }, this.columns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['orderExport']),
+    src: '/lb/order/export',
+    data: this.exportParam
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `收费标准-${day}`
+  }
+
+  private columns = [{
+    prop: 'feeStandardCode',
+    label: '收费标准代码'
+  },
+  {
+    prop: 'feeItemName',
+    label: '收费项目'
+  },
+  {
+    prop: 'feeItemCode',
+    label: '收费项目代码'
+  },
+  {
+    prop: 'amount',
+    label: '金额',
+    format: 'money'
+  },
+  {
+    prop: 'status',
+    label: '状态',
+    custom: !0
+  },
+  {
+    prop: 'ifMustName',
+    label: '是否必缴'
+  },
+  {
+    prop: 'ifRefundName',
+    label: '允许退费'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('standardList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {}
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await baseApi('standardDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          feeStandardCode: res.object.info.feeStandardCode,
+          feeItemName: res.object.info.feeItemName,
+          feeItemCode: res.object.info.feeItemCode,
+          amount: res.object.info.amount,
+          ifMustName: res.object.info.ifMustName,
+          ifRefundName: res.object.info.ifRefundName,
+          remark: res.object.info.remark
+        }
+      }
+    })
+  }
+
+  private async change (row: any) {
+    if (row.status === 1) {
+      await baseApi('standardEnable', { id: row.id })
+    } else {
+      await baseApi('standardHook', {
+        id: row.id
+      }).then(async (res: any) => {
+        if (res.code === 10000) {
+          if (res.object.totalCount > 0) {
+            this.$alert('当前收费标准已关联院校，请确认后无效！', { type: 'error' })
+            row.schoolState = 0
+            return
+          }
+          await baseApi('standardDisable', { id: row.id })
+        }
+      })
+    }
+  }
+
+  private visibleAdd = !1
+  private addData: any = {}
+
+  private async onEdit (row: any) {
+    await baseApi('standardDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visibleAdd = !0
+        this.addData = {
+          type: 'edit',
+          ...res.object.info
+        }
+      }
+    })
+  }
+
+  private onAdd () {
+    this.visibleAdd = !0
+    this.addData = {
+      type: 'add'
+    }
+  }
+
+  private visibleLog = !1
+
+  private logData = {}
+
+  private async onLog (row: any) {
+    this.visibleLog = !0
+    this.logData = row
+  }
+
+  private async addCallBack (data: any) {
+    await baseApi('standardDetail', { ...data }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          businessName: res.object.businessName,
+          businessState: res.object.businessStateName,
+          memo: res.object.memo
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+    util.initFlexForm()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

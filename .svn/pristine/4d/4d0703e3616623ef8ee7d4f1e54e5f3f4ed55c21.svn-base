@@ -1,0 +1,161 @@
+<template>
+  <div class="centerusermanage-container">
+    <div class="left-block">
+      <div class="tree-block">
+        <tree url="/fcs/business/school/businessTree" @node-click="handleNodeClick"></tree>
+      </div>
+    </div>
+    <div class="right-block">
+      <header>
+        <hs-form ref="form" :model="form" label-width="108px" :inline="true">
+          <hs-form-item label="用户名称">
+            <hs-input
+              size="mini"
+              v-model="form.userName"
+              placeholder="请输入用户名称"
+            ></hs-input>
+          </hs-form-item>
+          <hs-form-item>
+            <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+            <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+          </hs-form-item>
+        </hs-form>
+        <div class="action-bolck">
+          <hs-button type="primary" @click="onAdd" icon="hs-icon-plus" size="mini">新增</hs-button>
+          <hs-button type="danger" @click="onRemove" icon="hs-icon-minus" size="mini">删除</hs-button>
+        </div>
+      </header>
+      <section>
+        <simple-table :isCheckbox="!0" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" @selection-change="selectionChange" :pagination.sync="pagination" :dicts="['schoolState']"></simple-table>
+      </section>
+    </div>
+    <add :prams="params" :visible.sync="visible"></add>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import Add from './add/index.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import { userList, userCount, removeUser } from '@/api/setting'
+import { MessageBox } from 'element-ui'
+
+@Component({
+  name: 'center-user-manage',
+  components: {
+    SimpleTable,
+    Add,
+    Tree
+  }
+})
+export default class CenterUserManage extends Vue {
+  private form: any = {
+  }
+
+  private loading = !1
+
+  private visible = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'userName',
+    label: '用户名称'
+  },
+  {
+    prop: 'businessName',
+    label: '业务名称'
+  },
+  {
+    prop: 'center',
+    label: '所属中心'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm({ ...this.form }, this.columns)
+    !pagination && (this.pagination.currentPage = 1)
+    await userList({
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      await userCount({
+        ...form
+      }).then((resCnt: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = resCnt.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+    }
+    this.onQuery()
+  }
+
+  handleNodeClick (data: any) {
+    this.form.businessId = data.businessId
+    this.onQuery()
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onRemove () {
+    // 删除
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择用户')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    MessageBox.confirm(
+      '提示：是否删除所选用户', '删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }).then(async () => {
+      await removeUser({
+        ids: ids.join(',')
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message(res.message)
+        }
+      })
+    })
+  }
+
+  private onAdd () {
+    // do
+    this.visible = !0
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

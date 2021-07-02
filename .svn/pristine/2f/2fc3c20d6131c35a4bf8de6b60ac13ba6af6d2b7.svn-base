@@ -1,0 +1,293 @@
+<template>
+  <div class="dashboard-container">
+    <header>
+      <span>置顶通知:</span>
+      <div class="item" v-for="(item, i) in notices" :key="i">
+        <span>[{{ curDate }}]</span>
+        <hs-link type="primary" @click="onDetail">{{ item }}</hs-link>
+      </div>
+    </header>
+    <section>
+      <div class="user-message">
+        <div class="column">
+          <div class="line">
+            <hs-image class="head-img" :src="headImgUrl"></hs-image>
+            <span>欢迎您，{{ userName }}</span>
+          </div>
+          <div class="line">
+            <static-item label='角色' :width="400" align="flex-start">
+              {{ roles }}
+            </static-item>
+          </div>
+        </div>
+        <div class="column">
+          <div class="line">
+            {{ curDate }} 今日工作待办
+          </div>
+          <div class="line">
+            <div class="item" v-for="(item, i) in totalData" :key="i">
+              <div class="title">
+                {{ item.title }}
+              </div>
+              <div class="content">
+                {{ item.value }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <hs-tabs v-model="activeName" @tab-click="tabClick">
+        <hs-tab-pane name="1">
+          <el-badge  v-if="total.all" slot="label" :value="total.all">全部消息</el-badge>
+          <span slot="label" v-else>全部消息</span>
+        </hs-tab-pane>
+        <hs-tab-pane name="2">
+          <el-badge v-if="total.unread" slot="label" :value="total.unread">未读</el-badge>
+          <span slot="label" v-else>未读</span>
+        </hs-tab-pane>
+        <hs-tab-pane name="3">
+          <el-badge v-if="total.readed" slot="label" :value="total.readed">已读</el-badge>
+          <span slot="label" v-else>已读</span>
+        </hs-tab-pane>
+      </hs-tabs>
+      <hs-button plain @click="onMarkReaded" size="mini">标记已读</hs-button>
+      <simple-table :isCheckbox="!0" @selection-change="selectionChange" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="onDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+      </simple-table>
+      <detail-dialog title="详情" :data="detailData" :visible.sync="visible"></detail-dialog>
+    </section>
+  </div>
+</template>
+
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import DetailDialog from './detaildialog.vue'
+import { businessList, businessCount } from '@/api/base'
+import { RightModule } from '@/store/modules/right'
+import { SessionStorage } from '@/utils/storage'
+
+@Component({
+  name: 'Dashboard',
+  components: {
+    SimpleTable,
+    StaticItem,
+    DetailDialog
+  }
+})
+export default class extends Vue {
+  private activeName = '1'
+
+  private visible = !1
+
+  private detailData: any = {}
+
+  private mockData = {
+    curDate: '2021-05-01',
+    notices: ['测试', '0817财务管理系统'],
+    totalData: [{
+      title: '未读通知',
+      value: '0'
+    },
+    {
+      title: '待收费',
+      value: '21231'
+    }]
+  }
+
+  get headImgUrl () {
+    return RightModule.userInfo.headImgUrl
+  }
+
+  get userName () {
+    return RightModule.userInfo.userName || ''
+  }
+
+  private tabClick () {
+    this.onQuery()
+  }
+
+  private onDetail () {
+    this.visible = !0
+    this.detailData = {
+      title: '0817财务管理系统',
+      source: '产品经理',
+      content: '财务收费管理系统1.3.3.0817',
+      att: [{
+        fileName: '学生收费明细-导出模板（演示）.xls',
+        fileSize: '25.0kb',
+        fileStatus: '上传成功'
+      },
+      {
+        fileName: '学生收费明细-导出模板（演示）.xls',
+        fileSize: '25.0kb',
+        fileStatus: '上传成功'
+      },
+      {
+        fileName: '学生收费明细-导出模板（演示）.xls',
+        fileSize: '25.0kb',
+        fileStatus: '上传成功'
+      }],
+      isTop: '是',
+      isPublish: '是'
+    }
+  }
+
+  get roles () {
+    return SessionStorage.get('rpc-user-role-names')
+  }
+
+  private total = {
+    all: 10,
+    unread: 6,
+    readed: 0
+  }
+
+  private curDate = this.mockData.curDate
+
+  private notices = this.mockData.notices
+
+  private totalData = this.mockData.totalData
+
+  private loading = !1
+
+  private tableData = {
+    list: [{}],
+    totalCount: 0
+  }
+
+  private onMarkReaded () {
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择项目')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private columns = [{
+    prop: 'name',
+    label: '名称'
+  },
+  {
+    prop: 'publisher',
+    label: '发布者'
+  },
+  {
+    prop: 'status',
+    label: '状态'
+  },
+  {
+    prop: 'createTime',
+    label: '发布时间'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    !pagination && (this.pagination.currentPage = 1)
+    await businessList({
+      status: this.activeName,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      await businessCount({
+        status: this.activeName
+      }).then((resCnt: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = resCnt.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+}
+</script>
+<style lang="scss">
+  .dashboard-container{
+    height: 100%;
+    width: 100%;
+    header{
+      width: 100%;
+      padding: 20px;
+      border-bottom: 1px solid #d9d9d9;
+      display: flex;
+      .item{
+        margin-left: 10px;
+        width: 200px;
+        display: flex;
+        align-items: center;
+        span{
+          margin-right: 3px;
+        }
+      }
+    }
+    section{
+      width: 100%;
+      .user-message{
+        width: 100%;
+        display: flex;
+        .column{
+          width: 50%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          .line{
+            width: 100%;
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            .hs-image{
+              width: 50px;
+              height: 50px;
+              border-radius: 50%;
+              margin-right: 12px;
+            }
+            .static-item-container{
+              margin-left: -36px;
+            }
+            .item{
+              width: 80px;
+              height: 50px;
+              background-color: #e6e6e6;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              margin-left: 1px;
+              cursor: pointer;
+              .content{
+                padding: 6px;
+                color: #009688;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  .el-badge__content.is-fixed{
+    top: 6px;
+  }
+</style>

@@ -1,0 +1,298 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="!1">
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="收费项目代码">
+          <hs-input size="mini" v-model="form.feeItemCode" placeholder="请输入收费项目代码"></hs-input>
+        </el-form-item>
+        <el-form-item label="收费项目名称">
+          <hs-input size="mini" v-model="form.feeItemName" placeholder="请输入收费项目名称"></hs-input>
+        </el-form-item>
+        <!-- <el-form-item label="是否预收项目">
+          <dict-select :val.sync="form.preItem" constant-group-name="yesOrNo"></dict-select>
+        </el-form-item> -->
+        <el-form-item label="状态">
+          <dict-select :isInit="!0" :val.sync="form.status" constant-group-name="status"></dict-select>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table :columnable="!1" ref="hsTable" :export-name="exportName" :export-columns="columns" :exportable="exportable" :export-data="getExportData" :isCheckbox="!0" :data="tableData" @selection-change="selectionChange" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['preItem', 'status']">
+        <template slot="custom_status" slot-scope="{ scope }">
+            <hs-switch
+              :disabled="!stateDisabled"
+              v-model="scope.row.status"
+              :active-value="1"
+              :inactive-value="0"
+              @change="change(scope.row)"
+              active-color="#1c2e52"
+              inactive-color="#d9d9d9">
+            </hs-switch>
+          </template>
+          <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsItemDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+          <hs-button
+            v-permission="['fcsItemUpdate']"
+            @click.native.prevent="onEdit(scope.row)"
+            type="text"
+            size="small">
+            编辑
+          </hs-button>
+        </template>
+        <template slot="action">
+          <el-button type="danger" icon="hs-icon-plus" v-permission="['fcsItemInsert']" @click="onAdd" size="mini">新增</el-button>
+          <el-button type="info" :loading="delLoading" v-permission="['fcsItemDelete']" icon="hs-icon-minus" @click="onRemove" size="mini">删除</el-button>
+          <el-button type="danger" icon="hs-icon-download" v-permission="['fcsItemExport']" @click="onExport" size="mini">导出</el-button>
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" :dicts="['preItem']"></detail-dialog>
+    <add-dialog :visible.sync="visibleAdd" :data="addData" @save-back="onQuery"></add-dialog>
+    <import-dialog :visible.sync="visibleImport"></import-dialog>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import AddDialog from './add/index.vue'
+import ImportDialog from './add/importdialog.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import SimpleContainer from '@/components/container/index.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import dayjs from 'dayjs'
+import { checkPermission } from '@/utils/permission'
+import { baseApi } from '@/api/base'
+@Component({
+  name: 'fcsFeeitemMenu',
+  components: {
+    SimpleContainer,
+    SimpleTable,
+    ImportDialog,
+    AddDialog,
+    DetailDialog,
+    DictSelect,
+    Tree
+  }
+})
+export default class FeeitemManage extends Vue {
+  get stateDisabled () {
+    return checkPermission(['fcsItemEnable', 'fcsItemDisable'])
+  }
+
+  private form = {
+    status: 1
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'feeItemCode',
+    label: '收费项目代码'
+  },
+  {
+    prop: 'feeItemName',
+    label: '收费项目名称'
+  },
+  // {
+  //   prop: 'preItem',
+  //   label: '是否为预收项目'
+  // },
+  {
+    prop: 'remark',
+    label: '备注'
+  },
+  {
+    prop: 'status',
+    label: '状态',
+    export: 'statusName',
+    custom: !0
+  }]
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `收费项目信息-${day}`
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    return util.trimForm({ ...temp }, this.columns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['fcsItemExport']),
+    src: '/fcs/item/export',
+    data: this.exportParam
+  }
+
+  private onExport () {
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  get pickerOptions () {
+    return util.pickerOptions
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('itemList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      status: 1
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private visible = !1
+
+  private visibleAdd = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await baseApi('itemDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          feeItemCode: res.object.info.feeItemCode,
+          feeItemName: res.object.info.feeItemName,
+          // preItem: res.object.info.preItem,
+          memo: res.object.info.memo
+        }
+      }
+    })
+  }
+
+  private addData: any = {}
+
+  private async onEdit (row: any) {
+    await baseApi('itemDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visibleAdd = !0
+        this.addData = Object.assign({
+          type: 'edit'
+        }, res.object.info)
+      }
+    })
+  }
+
+  private async change (row: any) {
+    if (row.status === 1) {
+      if (!row.id) {
+        this.$alert('请先配置数据!')
+        row.status = 1
+      } else {
+        await baseApi('itemEnable', { id: row.id })
+      }
+    } else {
+      row.status = 1
+      await baseApi('itemHook', { id: row.id }).then(async (res: any) => {
+        if (res.code === 10000) {
+          if (res.object.totalCount > 0) {
+            this.$alert('当前收费项目已关联收费标准，请确认后无效！')
+            row.status = 1
+          } else {
+            this.$confirm('提示：确定要无效该收费项目？', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消'
+            }).then(async () => {
+              await baseApi('itemDisable', { id: row.id })
+              row.status = 0
+            }).catch(() => {
+              row.status = 1
+            })
+          }
+        }
+      })
+    }
+  }
+
+  private onAdd () {
+    this.visibleAdd = !0
+    this.addData = {
+      type: 'add'
+    }
+  }
+
+  private delLoading = !1
+
+  private async onRemove () {
+    // do something
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择项目')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    this.$confirm(
+      '提示：是否删除所选收费项目', '删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }).then(async () => {
+      this.delLoading = !0
+      await baseApi('itemDelete', ids).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message.success({ message: res.message, showClose: !0 })
+          this.delLoading = !1
+          this.onQuery()
+        } else {
+          this.$alert(res.message, { type: 'error' })
+        }
+      })
+    })
+  }
+
+  private visibleImport = !1
+
+  private onImport () {
+    this.visibleImport = !0
+  }
+
+  activated () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

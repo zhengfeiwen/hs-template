@@ -1,0 +1,136 @@
+<template>
+  <div class="grademanage-container">
+    <header>
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+        <hs-form-item label="年级代码">
+          <hs-input size="mini" v-model="form.gradeCode" placeholder="请输入年级代码"></hs-input>
+        </hs-form-item>
+        <hs-form-item label="年级名称">
+          <hs-input size="mini" v-model="form.gradeName" placeholder="请输入年级名称"></hs-input>
+        </hs-form-item>
+        <hs-form-item label="状态">
+          <dict-select :val.sync="form.status" constant-group-name="status"></dict-select>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table :columnable="!1" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['status']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsGradeDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+      </simple-table>
+    </section>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" :dicts="['status']"></detail-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { baseApi } from '@/api/base'
+@Component({
+  name: 'grade-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class GradeManage extends Vue {
+  private form = {
+    status: 1
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'gradeCode',
+    label: '年级代码'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级名称'
+  },
+  {
+    prop: 'status',
+    label: '状态',
+    'style-format': {
+      f: [0],
+      t: [1]
+    }
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('gradeList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      status: 1
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await baseApi('gradeDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          gradeCode: res.object.info.gradeCode,
+          gradeName: res.object.info.gradeName,
+          status: res.object.info.status
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

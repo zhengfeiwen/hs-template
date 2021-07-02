@@ -1,0 +1,159 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="!1">
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="年级代码">
+          <hs-input size="mini" v-model="form.gradeCode" placeholder="请输入年级代码"></hs-input>
+        </el-form-item>
+        <el-form-item label="年级名称">
+          <hs-input size="mini" v-model="form.gradeName" placeholder="请输入年级名称"></hs-input>
+        </el-form-item>
+        <el-form-item label="状态">
+          <dict-select :isInit="!0" :val.sync="form.status" constant-group-name="status"></dict-select>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table ref="hsTable" :columnable="!1" :export-name="exportName" :exportable="exportable" :export-columns="columns" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['status']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsGradeDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="danger" v-permission="['fcsGradeExport']" @click="onExport" icon="hs-icon-download" size="mini">导出</hs-button>
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" :dicts="['status']"></detail-dialog>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import SimpleContainer from '@/components/container/index.vue'
+import util from '@/utils/busi/util'
+import { baseApi } from '@/api/base'
+import dayjs from 'dayjs'
+import { checkPermission } from '@/utils/permission'
+@Component({
+  name: 'fcsGradeMenu',
+  components: {
+    SimpleTable,
+    SimpleContainer,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class GradeManage extends Vue {
+  private form = {
+    status: 1
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'gradeCode',
+    label: '年级代码'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级名称'
+  },
+  {
+    prop: 'status',
+    label: '状态',
+    'style-format': {
+      f: [0],
+      t: [1]
+    }
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    return util.trimForm({ ...temp }, this.columns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['fcsGradeExport']),
+    src: '/fcs/grade/export',
+    data: this.exportParam
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `年级信息-${day}`
+  }
+
+  private onExport () {
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('gradeList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      status: 1
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await baseApi('gradeDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          gradeCode: res.object.info.gradeCode,
+          gradeName: res.object.info.gradeName,
+          status: res.object.info.status
+        }
+      }
+    })
+  }
+
+  activated () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

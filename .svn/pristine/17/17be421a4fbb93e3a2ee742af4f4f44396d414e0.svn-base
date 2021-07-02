@@ -1,0 +1,12 @@
+.schoolFeeStandard-container{
+  height: 100%;
+  width: 100%;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  .active-school{
+    font-weight: bold;
+    font-size: 18px;
+  }
+}

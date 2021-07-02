@@ -1,0 +1,9 @@
+{
+  "name": "模板系统",
+  "short_name": "模板系统",
+  "icons": [],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fff",
+  "theme_color": "#4DBA87"
+}

@@ -1,0 +1,275 @@
+<template>
+  <el-dialog append-to-body :close-on-click-modal="!1" title="批量导入修改" :visible.sync="visible" :before-close="onClose" width="700px">
+    <div class="importStudent-dialog">
+      <el-steps simple :active="active" :process-status="processStatus" :finish-status="uploadRes.code === 10000 ? 'success' : 'error'">
+        <el-step title="批量导入"></el-step>
+        <el-step title="导入结果"></el-step>
+      </el-steps>
+      <div class="content" v-if="visible">
+        <div class="step1" v-if="active === 0">
+          <hs-plupload
+            ref="uploader"
+            :filters="filters"
+            :FilesAdded="filesAdded"
+            browseButton="browseButton_import"
+            :url="postUrl"
+            @inputUploader="inputUploader"
+            :headers="{ token: token, accept: 'application/json' }"
+            :multipart-params="{'parentFolder': parentFolder}"
+            :FileUploaded="FileUploaded"
+            :Error="error"
+          />
+          <el-link class="download-link" type="primary" :underline="false" href="http://tcsrcz.oss-cn-hangzhou.aliyuncs.com/fcs/template/stuUpdate.xlsx" target="_blank"><i class="hs-icon-download" />下载导入模板</el-link>
+          <div class="tag">
+            <hs-tag
+              v-if="files.length !== 0"
+              :type="'success'"
+              class="single-file"
+              :title="files[0].name"
+              :closable="!1">
+              <i class="hs-icon-document">&nbsp;{{ files[0].name }}</i>
+            </hs-tag>
+            <el-progress v-if="files.length !== 0" style="width: 100%" :percentage="files[0].percent" :status="uploadSuccess ? 'success' : ''"></el-progress>
+          </div>
+          <div class="line-btn">
+            <el-button :loading="uploadLoading" id="browseButton_import" type="danger" size="mini" icon="hs-icon-plus">选择文件</el-button>
+            <el-button :loading="importLoading" type="default" :disabled="fileInfos.length === 0" @click="onUpload" size="mini" icon="hs-icon-upload">导入修改</el-button>
+          </div>
+        </div>
+        <div class="step2" v-show="active === 1">
+          <div class="importSuccess" v-if="uploadRes.code === 10000">
+            <i class="hs-icon-success" />
+            <p class="result-info">提交成功</p>
+          </div>
+          <div class="importError" v-else>
+            <i class="hs-icon-error" />
+            <p class="result-info">提交失败</p>
+          </div>
+          <simple-table v-if="uploadRes.code === -9998" :columnable="!1" :isCheckbox="!1" :data="uploadRes.object" :width="10" :columns="columns" :pagination="!1">
+          </simple-table>
+          <div class="line-btn">
+            <el-button v-if="active === 1" type="danger" @click="onStep1" size="mini" icon="hs-icon-back">上一步</el-button>
+            <el-button type="info" plain size="mini" @click="onClose">关闭</el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </el-dialog>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Prop } from 'vue-property-decorator'
+import { studentApi } from '@/api/studentcenter'
+import dayjs from 'dayjs'
+import { UserModule } from '@/store/modules/user'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+@Component({
+  name: 'batch-import',
+  components: {
+    SimpleTable
+  }
+})
+export default class Batchimport extends Vue {
+  @Prop({ default: false }) private visible!: boolean;
+
+  private processStatus = 'process'
+
+  private active = 0
+
+  private uploadLoading = !1
+
+  private uploadSuccess = !1
+
+  private importLoading = !1
+
+  private uploadRes = {}
+
+  private fileInfos: any = []
+
+  private columns = [
+    {
+      prop: 'rowNum',
+      label: '行号',
+      width: '80'
+    },
+    {
+      prop: 'stuCode',
+      label: '学生账号'
+    },
+    {
+      prop: 'stuName',
+      label: '学生姓名'
+    },
+    {
+      prop: 'idCard',
+      label: '证件号码'
+    },
+    {
+      prop: 'errMsg',
+      label: '错误信息'
+    }
+  ]
+
+  private files: any[] = []
+  private up: any = {}
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private parentFolder = `fcs/fee/${dayjs(new Date()).format('YYYYMMDD')}`
+
+  get token () {
+    return UserModule.token
+  }
+
+  get postUrl () {
+    return `${process.env.VUE_APP_BASE_API}api/core/oss/file/fileUploadPost`
+  }
+
+  private filesAdded (up: any, files: any) {
+    if (files.length > 1) {
+      this.$message.error({ message: '每次只允许选择一个文件', showClose: !0, duration: 1500 })
+      return
+    }
+    if (up.files.length > 1) {
+      up.removeFile(up.files[0])
+    }
+    this.uploadSuccess = !1
+    this.importLoading = !0
+    this.up.start()
+  }
+
+  private FileUploaded (up: any, files: any, res: any) {
+    const response = JSON.parse(res.response)
+    this.files[0].name = response.fileInfos[0].originalFileName
+    this.files[0].path = response.fileInfos[0].savePath
+    this.$message({
+      showClose: !0,
+      duration: 1500,
+      message: response.msg,
+      type: response.success === true ? 'success' : 'error'
+    })
+    this.fileInfos = response.fileInfos
+    this.uploadSuccess = !0
+    this.importLoading = !1
+  }
+
+  private error (up: any, res: any) {
+    if (res.code === -601) {
+      this.$message.error({ message: '只能上传xlsx,xls格式', showClose: !0, duration: 1500 })
+      return
+    }
+    this.$message.error({ message: res.message, showClose: !0, duration: 1500 })
+  }
+
+  private async onUpload () {
+    this.uploadLoading = !0
+    this.importLoading = !0
+    await studentApi('import', {
+      filePath: 'http://tcsrcz.oss-cn-hangzhou.aliyuncs.com/' + this.fileInfos[0].savePath
+    }).then((res: any) => {
+      this.uploadRes = res
+      if (res.code === -10000) {
+        this.$message({
+          showClose: !0,
+          duration: 1500,
+          message: res.message,
+          type: 'error'
+        })
+      } else {
+        this.active = 1
+      }
+      this.uploadLoading = !1
+      this.importLoading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private onStep1 () {
+    this.files = []
+    this.fileInfos = []
+    this.active = 0
+  }
+
+  private clear () {
+    this.active = 0
+    this.importLoading = !1
+    this.uploadRes = {}
+    this.fileInfos = []
+    this.files = []
+  }
+
+  private onClose () {
+    if ((this.uploadRes as any).code === 10000) {
+      this.$emit('loadmethod')
+    }
+    this.clear()
+    this.$emit('update:visible', false)
+  }
+}
+</script>
+
+<style lang="scss">
+.importStudent-dialog{
+  .tag{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0;
+    .single-file{
+      margin-right: 10px;
+    }
+  }
+  .step1{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    .el-link--inner{
+      display: flex;
+      align-items: center;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+    .hs-icon-download{
+      font-size: 20px;
+    }
+  }
+  .step2{
+    .importError, .importSuccess{
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      margin: 30px 0;
+      .hs-icon-success{
+        font-size: 24px;
+        margin-right: 10px;
+        color: #67C23A;
+      }
+      .hs-icon-error{
+        font-size: 36px;
+        color: $mainRed;
+      }
+      .message{
+        margin-bottom: 20px;
+        font-size: 18px;
+      }
+      .result-info{
+        font-size: 24px;
+        font-weight: bolder;
+        margin: 0;
+      }
+    }
+  }
+  .line-btn{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+</style>

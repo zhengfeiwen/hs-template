@@ -1,0 +1,107 @@
+<template>
+  <hs-dialog append-to-body title="修改密码" :visible.sync="visible" width="40%" @close="onClose" :close-on-click-modal="!1" @open="open" >
+    <div class="reset-password-container">
+      <el-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+        <el-form-item label="原始密码" prop="oldPassword">
+          <hs-input show-password minlength="6" maxlength="18" oninput="value=value.replace(/[^\a-\z\A-\Z\d\._@#$%*+-]/g,'')" size="mini" v-model="form.oldPassword" placeholder="请输入原始密码" ></hs-input>
+        </el-form-item>
+        <el-form-item label="新密码" prop="password">
+          <hs-input show-password minlength="6" maxlength="18" oninput="value=value.replace(/[^\a-\z\A-\Z\d\._@#$%*+-]/g,'')" size="mini" v-model="form.password" placeholder="请输入新密码" ></hs-input>
+        </el-form-item>
+        <el-form-item label="重复新密码" prop="passwordAgain">
+          <hs-input show-password minlength="6" maxlength="18" oninput="value=value.replace(/[^\a-\z\A-\Z\d\._@#$%*+-]/g,'')" size="mini" v-model="form.passwordAgain" placeholder="请重复输入新密码" ></hs-input>
+        </el-form-item>
+      </el-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="danger" size="mini" @click="submit">确认</hs-button>
+      <hs-button type="default" size="mini" @click="visible = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import { usersApi } from '@/api/users'
+import { LocalStorage } from '@/utils/storage'
+import { isEmpty } from '@/utils/common'
+import md5 from 'md5'
+@Component({
+  name: 'reset-password',
+  components: {
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private visible!: boolean;
+
+  private form = {
+    oldPassword: '',
+    password: '',
+    passwordAgain: ''
+  }
+
+  private rules = {
+    oldPassword: [
+      { required: true, message: '请输入原始密码', trigger: 'blur' },
+      { min: 6, max: 18, message: '长度在 6-18 个字符', trigger: 'blur' }
+    ],
+    password: [
+      { required: true, message: '请输入新密码', trigger: 'blur' },
+      { min: 6, max: 18, message: '长度在 6-18 个字符', trigger: 'blur' }
+    ],
+    passwordAgain: [
+      { required: true, message: '请重复输入新密码', trigger: 'blur' },
+      { min: 6, max: 18, message: '长度在 6-18 个字符', trigger: 'blur' }
+    ]
+  }
+
+  private async submit () {
+    (this.$refs.form as any).validate(async (valid: any) => {
+      if (valid) {
+        const userInfoKey = LocalStorage.getObj('user_info_key')
+        if (!isEmpty(userInfoKey)) {
+          await usersApi('resetPassword', {
+            id: userInfoKey.id,
+            password: md5(this.form.password),
+            oldPassword: md5(this.form.oldPassword)
+          }).then((res: any) => {
+            this.$message({
+              showClose: !0,
+              message: res.code === 10000 ? '账户密码修改成功' : res.message,
+              type: res.code === 10000 ? 'success' : 'warning'
+            })
+            if (res.code === 10000) {
+              this.visible = !1
+            }
+          }).catch((err: any) => {
+            console.log('err', err)
+          })
+        } else {
+          this.$message({
+            showClose: !0,
+            message: '账户id获取失败',
+            type: 'warning'
+          })
+        }
+      } else {
+        console.log('error submit!!')
+        return false
+      }
+    })
+  }
+
+  private open () {
+    this.form = {
+      oldPassword: '',
+      password: '',
+      passwordAgain: ''
+    }
+  }
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

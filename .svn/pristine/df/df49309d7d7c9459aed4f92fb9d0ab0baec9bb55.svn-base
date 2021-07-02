@@ -1,0 +1,191 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="!1">
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="业务">
+          <dict-select @change="businessChange" constant-group-name="businessType" :val.sync="form.businessId"></dict-select>
+        </el-form-item>
+        <el-form-item label="学习类型">
+          <dict-select ref="study" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.studyId"></dict-select>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table :columnable="!1" :index="!0" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" :pagination.sync="pagination" @query="onQuery" :dicts="['yearType', 'businessId']">
+        <template slot="action">
+          <hs-button type="danger" v-permission="['schoolYearConfigureInsert']" @click="onAdd" size="mini" icon="hs-icon-plus">新增</hs-button>
+        </template>
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['schoolYearConfigureDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+          <hs-button
+            v-permission="['schoolYearConfigureUpdate']"
+            :disabled="scope.row.studyCode === '600006'"
+            @click.native.prevent="onEdit(scope.row)"
+            type="text"
+            size="small">
+            编辑
+          </hs-button>
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="detailVisible" :dicts="['yearType', 'businessId']"></detail-dialog>
+    <add-dialog :visible.sync="visible" :data="addData" @save-back="onQuery"></add-dialog>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import SimpleContainer from '@/components/container/index.vue'
+import AddDialog from './add/index.vue'
+import util from '@/utils/busi/util'
+import { baseApi } from '@/api/base'
+@Component({
+  name: 'schoolYearConfigure',
+  components: {
+    SimpleContainer,
+    SimpleTable,
+    AddDialog,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class SchoolYearConfigure extends Vue {
+  private form: any = {
+    studyId: '',
+    businessId: ''
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [{}],
+    totalCount: 0
+  }
+
+  private options = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {
+        businessId: this.form.businessId || null
+      }
+    }
+  }
+
+  private businessChange () {
+    this.options.study.data.businessId = this.form.businessId;
+    (this.$refs.study as any).getList()
+  }
+
+  private columns = [{
+    prop: 'businessId',
+    label: '业务'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'yearType',
+    label: '类型'
+  },
+  {
+    prop: 'startDate',
+    label: '学年开始月份'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('schoolYearConfigureList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list.map((v: any) => {
+        v.yearType = v.type
+        return v
+      })
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      studyId: '',
+      businessId: ''
+    }
+    this.onQuery()
+  }
+
+  private detailData = {}
+
+  private visible = !1
+
+  private detailVisible = !1
+
+  private async showDetail (row: any) {
+    await baseApi('schoolYearConfigureDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.detailVisible = !0
+        this.detailData = {
+          businessId: res.object.info.businessId,
+          studyName: res.object.info.studyName,
+          yearType: res.object.info.type,
+          schoolYearStartMonth: res.object.info.startDate
+        }
+      }
+    })
+  }
+
+  private addData = {}
+
+  private async onAdd () {
+    this.visible = !0
+    this.addData = {
+      optype: 'add'
+    }
+  }
+
+  private async onEdit (row: any) {
+    await baseApi('schoolYearConfigureDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.addData = {
+          ...res.object.info
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+
+  activated () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

@@ -1,0 +1,106 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog :title="title" :visible.sync="visibleSync" width="50%" :close-on-click-modal="!1" :open="open">
+    <div class="feestandard-log-container">
+      <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination"></simple-table>
+    </div>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { standardModifyList, standardModifyCount } from '@/api/base'
+
+@Component({
+  name: 'feestandard-log-container',
+  components: {
+    SimpleTable
+  }
+})
+
+export default class FeestandardLogContainer extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private data!: object|any
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'fieldName',
+    label: '字段'
+  },
+  {
+    prop: 'oldValue',
+    label: '原值'
+  },
+  {
+    prop: 'newValue',
+    label: '新值'
+  },
+  {
+    prop: 'businessStateName',
+    label: '操作账号'
+  },
+  {
+    prop: 'createName',
+    label: '操作人员'
+  },
+  {
+    prop: 'createTime',
+    label: '操作时间',
+    format: 'date'
+  }]
+
+  private loading = !1
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    !pagination && (this.pagination.currentPage = 1)
+    await standardModifyList({
+      standardId: this.data.id,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      await standardModifyCount({
+        standardId: this.data.id
+      }).then((resCnt: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = resCnt.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private open () {
+    this.onQuery()
+  }
+}
+</script>
+<style lang="scss">
+  .feestandard-log-container{
+    width: calc(100% + 10px);
+    height: calc(100% + 30px);
+    margin-top: -30px;
+    margin-left: -10px;
+  }
+</style>

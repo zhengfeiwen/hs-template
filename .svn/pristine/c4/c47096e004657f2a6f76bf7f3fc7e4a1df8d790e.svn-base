@@ -1,0 +1,129 @@
+<template>
+  <div class="busyschoolmanage-container">
+    <div class="left-block">
+      <div class="tree-block">
+        <tree url="/fcs/school/tree" :props="{ children: 'children', label: 'name' }" @node-click="handleNodeClick"></tree>
+      </div>
+    </div>
+    <div class="right-block">
+      <header>
+        <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+          <hs-form-item label="院校代码">
+            <hs-input
+              size="mini"
+              v-model="form.schoolCode"
+              placeholder="请输入院校代码"
+            ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="院校名称">
+            <hs-input
+              size="mini"
+              v-model="form.schoolName"
+              placeholder="请输入院校名称"
+            ></hs-input>
+          </hs-form-item>
+          <hs-form-item class="query-block">
+            <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+            <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+          </hs-form-item>
+        </hs-form>
+      </header>
+      <section>
+        <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['schoolState']"></simple-table>
+      </section>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import { businessSchoolList, businessSchoolCount } from '@/api/base'
+
+@Component({
+  name: 'busi-manage',
+  components: {
+    SimpleTable,
+    Tree
+  }
+})
+export default class BusiManage extends Vue {
+  private form: any = {
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'schoolCode',
+    label: '院校代码'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'schoolState',
+    label: '院校状态'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await businessSchoolList({
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      await businessSchoolCount({
+        ...form
+      }).then((resCnt: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = resCnt.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+    }
+    this.onQuery()
+  }
+
+  handleNodeClick (data: any) {
+    this.form.businessId = data.businessId
+    this.onQuery()
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

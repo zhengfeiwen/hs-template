@@ -1,0 +1,130 @@
+<!-- 业务树形 -->
+<template>
+  <div class="tree-container">
+    <hs-input size="mini" v-model="searchVal" placeholder="请输入关键字进行查询"></hs-input>
+    <hs-tree :highlight-current="!0" ref="tree" v-loading="loading" :filter-node-method="filterNode" :data="data" :props="props" @node-click="handleNodeClick" default-expand-all></hs-tree>
+  </div>
+</template>
+<script lang="ts">
+import { Vue, Component, Prop, Watch } from 'vue-property-decorator'
+import { getList } from '@/api/common'
+import { isEmpty } from '@/utils/common'
+
+@Component({
+  name: 'tree'
+})
+export default class Tree extends Vue {
+  @Prop({ type: String })
+  private url!: string
+
+  private data = []
+
+  @Prop({ type: Object, default: () => ({ children: 'children', label: 'lable' }) })
+  private props!: object|any
+
+  private handleNodeClick (obj: any, node: any, el: any) {
+    this.$listeners['node-click'] && this.$emit('node-click', obj, node, el)
+  }
+
+  @Watch('searchVal')
+  private searchValChange (val: any) {
+    (this.$refs.tree as any).filter(val)
+  }
+
+  private filterNode (value: any, data: any) {
+    if (!value) return true
+    return data.lable.indexOf(value) !== -1
+  }
+
+  private searchVal = ''
+
+  private loading = !1
+
+  private search () {
+    (this.$refs.tree as any).filter(this.searchVal)
+  }
+
+  // 仅支持三级树结构
+  private formatTree (data: any) {
+    const tree: any = []
+    const level: any = {
+      0: [],
+      1: [],
+      2: []
+    }
+    data.map((v: any) => {
+      if (v.pId === undefined) {
+        level[0].push({
+          children: [],
+          ...v
+        })
+      } else if (v.id === undefined && v.pId >= 0) {
+        level[2].push({ ...v })
+      } else {
+        level[1].push({
+          children: [],
+          ...v
+        })
+      }
+    })
+    level[0].map((v: any) => {
+      tree.push({
+        ...v
+      })
+    })
+    console.log(tree)
+    for (let i = 0; i < level[1].length; i++) {
+      for (let j = 0; j < level[2].length; j++) {
+        if (level[2][j].pId === level[1][i].id) {
+          level[1][i].children.push({ ...level[2][j] })
+        }
+      }
+      tree[0].children.push({
+        children: [],
+        ...level[1][i]
+      })
+    }
+    return tree
+  }
+
+  mounted () {
+    this.loading = !0
+    getList({
+      url: this.url
+    }).then((res: any) => {
+      if (res.object) {
+        this.data = this.formatTree(res.object.list)
+        this.loading = !1
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+}
+</script>
+
+<style lang="scss">
+.tree-container{
+  overflow: auto;
+  width: 100%;
+  height: 100%;
+  &::-webkit-scrollbar {/*滚动条整体样式*/
+    width: 6px;     /*高宽分别对应横竖滚动条的尺寸*/
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {/*滚动条里面小方块*/
+    border-radius: 10px;
+    -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    background: #535353;
+  }
+  &::-webkit-scrollbar-track {/*滚动条里面轨道*/
+    -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    border-radius: 10px;
+    background: #EDEDED;
+  }
+  .hs-tree-node>.hs-tree-node__children{
+    overflow: inherit;
+  }
+}
+</style>

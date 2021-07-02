@@ -1,0 +1,96 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog :title="title" :visible.sync="visibleSync" width="60%" :close-on-click-modal="!1" @open="open">
+    <div class="feestandard-log-container">
+      <simple-table :columnable="!1" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['business', 'schoolYear', 'tradeType']"></simple-table>
+    </div>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+
+@Component({
+  name: 'feestandard-log-container',
+  components: {
+    SimpleTable
+  }
+})
+
+export default class FeestandardLogContainer extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: String })
+  private title!: string
+
+  @Prop({ type: Object })
+  private data!: object|any
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 9999
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [
+    {
+      prop: 'stuName',
+      label: '学生姓名'
+    },
+    {
+      prop: 'stuPaperworkNumber',
+      label: '身份证号'
+    },
+    {
+      prop: 'stuSchoolName',
+      label: '院校'
+    },
+    {
+      prop: 'studyName',
+      label: '学习类型'
+    },
+    {
+      prop: 'stuGradeName',
+      label: '年级'
+    },
+    {
+      prop: 'stuSubjectName',
+      label: '专业'
+    },
+    {
+      prop: 'billNo',
+      label: '流水号'
+    },
+    {
+      prop: 'tradeType',
+      label: '类型'
+    },
+    {
+      prop: 'payTime',
+      label: '缴费时间',
+      format: 'date'
+    }]
+
+  private loading = !1
+
+  private open () {
+    this.tableData.list = this.data
+    this.tableData.totalCount = this.data.length
+  }
+}
+</script>
+<style lang="scss">
+  .feestandard-log-container{
+    width: calc(100% + 10px);
+    height: calc(100% + 30px);
+    margin-top: -20px;
+    margin-left: -10px;
+  }
+</style>

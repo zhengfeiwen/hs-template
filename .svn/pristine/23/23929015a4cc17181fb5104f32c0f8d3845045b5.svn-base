@@ -1,0 +1,148 @@
+import { RouteConfig } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+const Base: RouteConfig = {
+  path: '/base',
+  component: Layout,
+  redirect: 'noredirect',
+  name: 'basicDataMenu',
+  meta: {
+    permission: 'basicDataMenu',
+    title: 'base',
+    icon: 'peoples'
+  },
+  children: [{
+    path: 'businesssearch/index',
+    component: () => import(/* webpackChunkName: "businessSearch" */ '@/views/base/businesssearch/index.vue'),
+    name: 'businessSearch',
+    meta: {
+      title: 'businesssearch',
+      permission: 'businessSearch',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'schoolmanage/index',
+    component: () => import(/* webpackChunkName: "schoolManage" */ '@/views/base/schoolmanage/index.vue'),
+    name: 'schoolManage',
+    meta: {
+      title: 'schoolmanage',
+      permission: 'schoolManage',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'gradesearch/index',
+    component: () => import(/* webpackChunkName: "gradeSearch" */ '@/views/base/gradesearch/index.vue'),
+    name: 'gradeSearch',
+    meta: {
+      title: 'gradesearch',
+      permission: 'gradeSearch',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'subjectmanager/index',
+    component: () => import(/* webpackChunkName: "subjectManager" */ '@/views/base/subjectmanager/index.vue'),
+    name: 'subjectManager',
+    meta: {
+      title: 'subjectmanager',
+      permission: 'subjectManager',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'business-school/index',
+    component: () => import(/* webpackChunkName: "businessSchool" */ '@/views/base/businessschool/index.vue'),
+    name: 'businessSchool',
+    meta: {
+      title: 'businessschool',
+      permission: 'businessSchool',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'school-grade/index',
+    component: () => import(/* webpackChunkName: "schoolGrade" */ '@/views/base/schoolgrade/index.vue'),
+    name: 'schoolGrade',
+    meta: {
+      title: 'schoolgrade',
+      permission: 'schoolGrade',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'school-subject/index',
+    component: () => import(/* webpackChunkName: "schoolSubject" */ '@/views/base/schoolsubject/index.vue'),
+    name: 'schoolSubject',
+    meta: {
+      title: 'schoolsubject',
+      permission: 'schoolSubject',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'feeitem-manage/index',
+    component: () => import(/* webpackChunkName: "feeitemManage" */ '@/views/base/feeitemmanage/index.vue'),
+    name: 'feeitemManage',
+    meta: {
+      title: 'feeitemmanage',
+      permission: 'feeitemManage',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'study-search/index',
+    component: () => import(/* webpackChunkName: "studySearch" */ '@/views/base/studysearch/index.vue'),
+    name: 'studySearch',
+    meta: {
+      title: 'studysearch',
+      permission: 'studySearch',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'center-search/index',
+    component: () => import(/* webpackChunkName: "centerSearch" */ '@/views/base/centersearch/index.vue'),
+    name: 'centerSearch',
+    meta: {
+      title: 'centersearch',
+      permission: 'centerSearch',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'feestandardmanage/index',
+    component: () => import(/* webpackChunkName: "feeStandardManage" */ '@/views/base/feestandardmanage/index.vue'),
+    name: 'feeStandardManage',
+    meta: {
+      title: 'feestandardmanage',
+      permission: 'feeStandardManage',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'schoolfeestandard/index',
+    component: () => import(/* webpackChunkName: "schoolfeestandard" */ '@/views/base/schoolfeestandard/index.vue'),
+    name: 'schoolFeeStandard',
+    meta: {
+      title: 'schoolfeestandard',
+      permission: 'schoolFeeStandard',
+      noCache: true,
+      icon: 'guide'
+    }
+  }]
+}
+
+export default Base

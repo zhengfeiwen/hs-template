@@ -1,0 +1,162 @@
+<template>
+  <simple-container-column @on-query="onQuery" @on-reset="onReset" :menuName="menuName">
+    <template slot="left">
+      <tree url="/fcs/center/tree" @node-click="handleNodeClick" :props="{ children: 'children', label: 'name' }"></tree>
+    </template>
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="用户名称">
+          <hs-input
+            size="mini"
+            v-model="form.userName"
+            placeholder="请输入用户名称"
+          ></hs-input>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table :isCheckbox="!0" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" @selection-change="selectionChange" :pagination.sync="pagination" :dicts="['businessId']">
+        <template slot="action">
+          <el-button type="danger" @click="onAdd" icon="hs-icon-plus" size="mini">新增</el-button>
+          <el-button type="info" @click="onRemove" icon="hs-icon-minus" size="mini">删除</el-button>
+        </template>
+      </simple-table>
+    </template>
+    <add :params="params" :visible.sync="visible" @call-back="onQuery()"></add>
+  </simple-container-column>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import Add from './add/index.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import { settingApi } from '@/api/settingmanage'
+import { MessageBox } from 'element-ui'
+import SimpleContainerColumn from '@/components/container/column/index.vue'
+
+@Component({
+  name: 'fcsCenterUserManageMenu',
+  components: {
+    SimpleTable,
+    SimpleContainerColumn,
+    Add,
+    Tree
+  }
+})
+export default class CenterUserManage extends Vue {
+  private form: any = {
+  }
+
+  private loading = !1
+
+  private visible = !1
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private columns = [{
+    prop: 'userName',
+    label: '用户名称'
+  },
+  {
+    prop: 'businessId',
+    label: '业务名称'
+  },
+  {
+    prop: 'centerName',
+    label: '所属中心'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await settingApi('centerUserList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+    }
+    this.onQuery()
+  }
+
+  private params: any = {
+    centerId: -1
+  }
+
+  private menuName = ''
+
+  handleNodeClick (data: any) {
+    this.form.businessId = data.businessId
+    this.params.centerId = data.id
+    this.form.centerId = data.id
+    this.menuName = data.name
+    this.onQuery()
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onRemove () {
+    // 删除
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择用户')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    MessageBox.confirm(
+      '提示：是否删除所选用户', '删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }).then(async () => {
+      await settingApi('centerUserDelete', {
+        ids: ids.join(',')
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message.success({ message: res.message, showClose: !0 })
+          this.onQuery()
+        }
+      })
+    })
+  }
+
+  private onAdd () {
+    if (this.params.centerId <= 0) {
+      this.$alert('请先选择左侧中心', { type: 'error' })
+      return
+    }
+    this.visible = !0
+  }
+
+  activated () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

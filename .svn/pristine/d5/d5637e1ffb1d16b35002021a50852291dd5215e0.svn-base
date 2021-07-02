@@ -1,0 +1,133 @@
+<template>
+  <div class="multi-file-upload-container"
+    v-loading="loading"
+    element-loading-text="文件上传中"
+    element-loading-spinner="hs-icon-loading"
+  >
+    <hs-plupload
+      ref="uploader"
+      browseButton="browseButton_multi"
+      url="/test/api/core/oss/file/fileUploadPost"
+      @inputUploader="inputUploader"
+      :headers="{ token: token, accept: 'application/json' }"
+      :multipart-params="{'parentFolder': 'lb/schoolDetail'}"
+      :FileUploaded="FileUploaded"
+      :UploadComplete="UploadComplete"
+      :Error="error"
+    />
+    <hs-button type="primary" :disabled="loading" size="mini" id="browseButton_multi">选择文件</hs-button>
+    <hs-button type="success" :disabled="!allowUpload" size="mini" @click="up.start();loading = !0">开始上传</hs-button>
+    <hs-tag
+      :type="tag.status !== 5 ? 'info' : 'success'"
+      class="single-file"
+      :title="tag.name"
+      v-for="tag in datas"
+      :key="tag.id"
+      :closable="tag.status !== 5"
+      @close="deleteFile(tag.id)">
+      <i class="hs-icon-document">&nbsp;{{ tag.name }}</i><span v-if="tag.status === 4" style="color: red;">失败</span><span v-if="tag.status === 5" style="color: #67c23a;">成功</span>
+    </hs-tag>
+  </div>
+</template>
+<script lang='ts'>
+import { UserModule } from '@/store/modules/user'
+import { Component, PropSync, Vue, Watch } from 'vue-property-decorator'
+
+@Component({
+  name: 'multi-file-upload'
+})
+export default class MulitiFileUpload extends Vue {
+  @PropSync('list', { type: Array, default: () => ([]) })
+  private listSync!: any[]
+
+  get token () {
+    return UserModule.token
+  }
+
+  private loading = !1
+
+  private serverConfigUrl = ''
+  private files = []
+  private up: any = {}
+  private datas:any[] = []
+  get status () {
+    const files = this.files.length > 0 ? this.files[0] : null
+    return files ? (files as any).status : null
+  }
+
+  @Watch('files', { deep: !0 })
+  private handler () {
+    this.datas = []
+    this.files.forEach((e: any) => {
+      this.datas.push({
+        name: e.name,
+        size: e.size,
+        status: e.status,
+        id: e.id,
+        percent: e.percent
+      })
+    })
+  }
+
+  get allowUpload () {
+    if (!this.datas || this.datas.length === 0) return !1
+    return this.datas.filter((v) => v.status !== 5).length
+  }
+
+  private FileUploaded (up: any, files: any, res: any) {
+    const response = JSON.parse(res.response)
+    if (response.success) {
+      const files: any = response.fileInfos
+      this.listSync.push({
+        realName: files[0].originalFileName,
+        temName: files[0].newFileName,
+        path: files[0].savePath,
+        size: files[0].fileSize
+      })
+    }
+  }
+
+  private UploadComplete (up: any, files: any) {
+    this.loading = !1
+  }
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private deleteFile (id: any) {
+    const file = this.up.getFile(id)
+    this.up.removeFile(file)
+  }
+
+  private error (up: any, res: any) {
+    this.$message.error(res.message)
+  }
+
+  public clear () {
+    this.datas.map((v: any) => {
+      this.deleteFile(v.id)
+    })
+  }
+
+  mounted () {
+    this.listSync = []
+  }
+}
+</script>
+<style lang="scss">
+.multi-file-upload-container{
+  width: 100% !important;
+  height: calc(100% - 20px);
+  padding: 10px;
+  overflow: auto;
+  .single-file{
+    width: 100%;
+    display: flex;
+    margin-top: 6px;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+</style>

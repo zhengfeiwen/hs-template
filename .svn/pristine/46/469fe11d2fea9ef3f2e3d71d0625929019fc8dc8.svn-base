@@ -1,0 +1,51 @@
+// 根据字段key自动翻译字典
+import { getConstant } from '@/api/common'
+import { isEmpty } from 'xe-utils'
+import { isType } from '../common'
+import { LocalStorage } from '../storage'
+const dicts: any = {
+  status: { 0: '无效', 1: '正常' },
+  ifMust: { 0: '否', 1: '是' },
+  ifRefund: { 0: '否', 1: '是' },
+  openInvoice: { 0: '否', 1: '是' }
+}
+
+export const DICT_MONEY_KEY = dicts
+
+// 是否是常量
+const isDict = (key: any) => Object.keys(dicts).includes(key)
+
+// 获取常量列表
+export const getConstantByGroup = async (groupName: any) => {
+  if (!groupName) return {}
+  const key = `constant-${groupName}`
+  let constants: any = LocalStorage.getObj(key)
+  if (isEmpty(constants)) {
+    await getConstant({
+      groupName: groupName
+    }).then((res: any) => {
+      constants = res.object.list
+      LocalStorage.setObj(key, constants)
+    })
+  }
+  return constants
+}
+
+// 字典翻译
+const translate = async (key: any, obj: any, option: any = {}) => {
+  const dict: any = await getConstantByGroup(key)
+  const val = dict.filter((v: any) => v.key === obj[key])
+  const nameKey = `${key}Name`
+  if (val.length > 0) {
+    obj[nameKey] = val
+  } else {
+    obj[nameKey] = `字典不存在该值${key}:${obj[key]}`
+  }
+  return obj
+}
+
+// 常量字典标准化
+export const dictStandardization = async (key: any, val: any, option: any) => {
+  if (isDict(key) && isType(val, 'object')) return await translate(key, val, option)
+  return val
+}

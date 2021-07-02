@@ -1,0 +1,122 @@
+<template>
+  <div class="account-balance-detail-dialog-container">
+    <el-dialog title="余额详情" :visible.sync="visible" :before-close="onClose">
+      <div class="amount"><p>账户余额</p><span>{{ amount }}</span>元<p>余额明细记录余额产生与支出的流水来源</p></div>
+      <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="Pagination" :dicts="['schoolState']">
+      </simple-table>
+      <div slot="footer" class="dialog-footer">
+        <el-button >取 消</el-button>
+        <el-button type="primary" >确 定</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import util from '@/utils/busi/util'
+import { businessList } from '@/api/base'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private form = {
+    gradeState: 1
+  }
+
+  private amount = 123
+
+  private loading = !1
+
+  private tableData = {
+    list: [{
+      amount: '1',
+      state: '2021',
+      relevantWater: 1,
+      waterState: 2,
+      createTime: 3
+    },
+    {
+      amount: '1',
+      state: '2021',
+      relevantWater: 1,
+      waterState: 2,
+      createTime: 3
+    }],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'amount',
+    label: '金额'
+  },
+  {
+    prop: 'state',
+    label: '状态'
+  },
+  {
+    prop: 'relevantWater',
+    label: '关联流水',
+    format: 'money'
+  },
+  {
+    prop: 'waterState',
+    label: '流水状态',
+    format: 'money'
+  },
+  {
+    prop: 'createTime',
+    label: '创建时间',
+    format: 'money'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await businessList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      gradeState: 1
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  public mounted (): void {
+    this.onReset()
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

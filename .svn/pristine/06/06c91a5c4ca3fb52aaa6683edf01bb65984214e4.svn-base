@@ -1,0 +1,421 @@
+<template>
+  <div class="grademanage-container">
+    <header>
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+        <hs-form-item label="业务类型">
+          <dict-select :val.sync="form.businessId" constant-group-name="businessType" @change="businessChange"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="学习类型">
+          <dict-select ref="study" @change="studyChange" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.studyId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="院校">
+          <dict-select ref="school" @change="schoolChange" :option="options.school" :prop="{ key: 'id', value: 'schoolName' }" :val.sync="form.schoolId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="年级">
+          <dict-select ref="grade" @change="gradeChange" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="专业">
+          <dict-select ref="subject" @change="subjectChange" :option="options.subject" :prop="{ key: 'id', value: 'subjectName' }" :val.sync="form.subjectId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="学生姓名">
+          <hs-input size="mini" v-model="form.stuName" placeholder="请输入学生姓名" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="助记码">
+          <hs-input size="mini" v-model="form.mnemonicCode" placeholder="请输入助记码" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="证件后六位">
+          <hs-input size="mini" v-model="form.idCard" placeholder="请输入证件后六位" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="所属中心">
+          <dict-select ref="center" @change="centerChange" :option="options.center" :prop="{ key: 'id', value: 'centerName' }" :val.sync="form.stuBelongCenter"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="学生来源">
+          <dict-select :val.sync="form.stuSource" constant-group-name="stuSource"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="来源名称">
+          <hs-input size="mini" v-model="form.stuSourceName" placeholder="请输入来源名称" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="学籍状态">
+          <dict-select :val.sync="form.schoolRollStatus" constant-group-name="schoolRollStatus"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="教学点">
+          <hs-input size="mini" v-model="form.teachingPoint" placeholder="请输入教学点" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="创建时间">
+          <el-date-picker
+            range-separator="至"
+            value-format="timestamp"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            :picker-options="pickerOptions"
+            type="daterange"
+            format="yyyy-MM-dd HH:mm:ss"
+            :default-time="['00:00:00','23:59:59']"
+            v-model="form.createTime"
+            size="mini">
+          </el-date-picker>
+        </hs-form-item>
+        <hs-form-item label="学生状态">
+          <dict-select :val.sync="form.stuState" constant-group-name="available"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="联系电话">
+          <hs-input size="mini" v-model="form.stuPhone" placeholder="请输入联系电话" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="异动状态">
+          <dict-select :val.sync="form.abnormalState" constant-group-name="yesOrNo"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="同步状态">
+          <dict-select :val.sync="form.changeState" constant-group-name="changeState"></dict-select>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table :width="10" :operator="{ width: 150 }" :data="tableData" :columns="columns" :isCheckbox="!0" @selection-change="selectionChange" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail">
+        <template slot="custom_stuState" slot-scope="{ scope }">
+          <hs-switch
+            :disabled="!stateDisabled"
+            v-model="scope.row.stuState"
+            :active-value="1"
+            :inactive-value="0"
+            @change="change(scope.row)"
+            active-color="#13ce66"
+            inactive-color="#d9d9d9">
+          </hs-switch>
+        </template>
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="gotoDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+          <hs-button
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            修改密码
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="primary" icon="hs-icon-plus" @click="onAdd" size="mini">新增</hs-button>
+          <hs-button type="primary" icon="hs-icon-upload" @click="onImport" size="mini">导入</hs-button>
+          <hs-button type="primary" icon="hs-icon-download" @click="onExport" size="mini">导出</hs-button>
+          <hs-button type="primary" icon="hs-icon-download" @click="onRemove" size="mini">导出学生异动未同步单据</hs-button>
+          <hs-button type="primary" icon="hs-icon-download" @click="onRemove" size="mini">批量导出照片</hs-button>
+          <hs-button type="primary" icon="el-icon-edit" @click="onRemove" size="mini">毕业生处理</hs-button>
+          <hs-button type="primary" icon="el-icon-edit" @click="onRemove" size="mini">修改学籍状态</hs-button>
+          <hs-button type="primary" icon="hs-icon-upload" @click="onRemove" size="mini">缴费变更导入</hs-button>
+        </template>
+      </simple-table>
+    </section>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import { checkPermission } from '@/utils/permission'
+import util from '@/utils/busi/util'
+import { stuList, stuListCount } from '@/api/studentcenter'
+@Component({
+  name: 'grade-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class GradeManage extends Vue {
+  get stateDisabled () {
+    return checkPermission(['fcsStandardEnable', 'fcsStandardDisable'])
+  }
+
+  private form = {
+    businessId: '',
+    studyId: '',
+    schoolId: '',
+    gradeId: '',
+    subjectId: '',
+    stuName: '',
+    mnemonicCode: '',
+    idCard: '',
+    stuBelongCenter: '',
+    stuSource: '',
+    stuSourceName: '',
+    schoolRollStatus: '',
+    teachingPoint: '',
+    createTime: '',
+    stuState: '',
+    stuPhone: '',
+    abnormalState: '',
+    changeState: ''
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'stuCode',
+    label: '学生账号',
+    width: 100
+  },
+  {
+    prop: 'stuName',
+    label: '学生名称'
+  },
+  {
+    prop: 'stuPhone',
+    label: '联系电话'
+  },
+  {
+    prop: 'mnemonicCode',
+    label: '助记码'
+  },
+  {
+    prop: 'stuSexName',
+    label: '性别',
+    width: 50
+  },
+  {
+    prop: 'businessName',
+    label: '业务名称'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级名称'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业名称'
+  },
+  {
+    prop: 'centerName',
+    label: '所属中心'
+  },
+  {
+    prop: 'teachingPoint',
+    label: '教学点'
+  },
+  {
+    prop: 'sourceName',
+    label: '学生来源'
+  },
+  {
+    prop: 'stuSourceName',
+    label: '来源名称'
+  },
+  {
+    prop: 'paperworkNumber',
+    label: '证件后六位',
+    format: 'str:-6'
+  },
+  {
+    prop: 'schoolRollName',
+    label: '学籍状态'
+  },
+  {
+    prop: 'abnormalStateName',
+    label: '异动状态'
+  },
+  {
+    prop: 'stuState',
+    label: '状态',
+    custom: !0,
+    width: 70
+  }]
+
+  private options: any = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {
+        businessId: -1
+      }
+    },
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+        studyId: -1
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        schoolId: -1
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+        schoolId: -1
+      }
+    },
+    center: {
+      url: '/fcs/center/getCenterSelect',
+      data: {
+        isJoinUser: 0,
+        businessId: -1
+      }
+    }
+  }
+
+  private businessChange () {
+    this.form.studyId = ''
+    this.form.schoolId = ''
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.form.stuBelongCenter = ''
+    this.options.study.data.businessId = this.form.businessId
+    this.options.center.data.businessId = this.form.businessId
+    this.options.center.data.isJoinUser = 0
+    this.options.school.data.studyId = -1
+    this.options.grade.data.schoolId = -1
+    this.options.subject.data.schoolId = -1;
+    (this.$refs.study as any).getList();
+    (this.$refs.center as any).getList();
+    (this.$refs.school as any).getList();
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+  }
+
+  private studyChange () {
+    this.form.schoolId = ''
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.options.school.data.studyId = this.form.studyId
+    this.options.grade.data.schoolId = -1
+    this.options.subject.data.schoolId = -1;
+    (this.$refs.school as any).getList();
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+  }
+
+  private schoolChange () {
+    this.form.gradeId = ''
+    this.form.subjectId = ''
+    this.options.grade.data.schoolId = this.form.schoolId
+    this.options.subject.data.schoolId = this.form.schoolId;
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+  }
+
+  private currentPage = 1
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await stuList({
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      await stuListCount({
+        ...form
+      }).then((resCnt: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = resCnt.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getTotalCount () {
+    const form = util.trimForm(this.form)
+    await stuListCount({
+      ...form
+    }).then((res: any) => {
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      businessId: '',
+      studyId: '',
+      schoolId: '',
+      gradeId: '',
+      subjectId: '',
+      stuName: '',
+      mnemonicCode: '',
+      idCard: '',
+      stuBelongCenter: '',
+      stuSource: '',
+      stuSourceName: '',
+      schoolRollStatus: '',
+      teachingPoint: '',
+      createTime: '',
+      stuState: '',
+      stuPhone: '',
+      abnormalState: '',
+      changeState: ''
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async gotoDetail (row: any) {
+    this.$router.push({ path: '/student/student-manage/detail', query: { stuId: row.id } })
+    // await gradeDetail({ id: row.id }).then((res: any) => {
+    //   if (res.code === 10000) {
+    //     this.visible = !0
+    //     this.detailData = {
+    //       gradeCode: res.object.gradeCode,
+    //       gradeName: res.object.gradeName,
+    //       gradeState: res.object.gradeState
+    //     }
+    //   }
+    // })
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private onAdd () {
+    console.log(this.selectedRow)
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

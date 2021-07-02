@@ -1,0 +1,142 @@
+<template>
+  <div class="IntercourseTable-container">
+    <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="Pagination" :dicts="['schoolState']">
+    </simple-table>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import util from '@/utils/busi/util'
+import { businessList } from '@/api/base'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    SimpleTable
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private year!: number;
+
+  private form = {
+    gradeState: 1
+  }
+
+  private amount = 123
+
+  private loading = !1
+
+  private tableData = {
+    list: [{
+      chargeProject: '1',
+      year: '2021',
+      shouldCharge: 1,
+      remission: 2,
+      received: 3,
+      debt: 3,
+      refunded: 3,
+      pendingSettle: 3,
+      settled: 3,
+      unsettled: 3
+    },
+    {
+      chargeProject: '1',
+      year: '2021',
+      shouldCharge: 1,
+      remission: 2,
+      received: 3,
+      debt: 3,
+      refunded: 3,
+      pendingSettle: 3,
+      settled: 3,
+      unsettled: 3
+    }],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'chargeProject',
+    label: '收费项目'
+  },
+  {
+    prop: 'year',
+    label: '学年'
+  },
+  {
+    prop: 'shouldCharge',
+    label: '应收',
+    format: 'money'
+  },
+  {
+    prop: 'remission',
+    label: '减免',
+    format: 'money'
+  },
+  {
+    prop: 'received',
+    label: '已收',
+    format: 'money'
+  },
+  {
+    prop: 'debt',
+    label: '欠费',
+    format: 'money'
+  },
+  {
+    prop: 'refunded',
+    label: '已退',
+    format: 'money'
+  },
+  {
+    prop: 'pendingSettle',
+    label: '待结算',
+    format: 'money'
+  },
+  {
+    prop: 'settled',
+    label: '已结算',
+    format: 'money'
+  },
+  {
+    prop: 'unsettled',
+    label: '未结算',
+    format: 'money'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await businessList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      gradeState: 1
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+}
+</script>
+
+<style lang='scss'>
+</style>

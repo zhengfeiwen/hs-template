@@ -1,0 +1,36 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+const home: any = {
+  flushSettlementCount: '/fcs/notice/home/flushSettlementCount', // 未读通知统计
+  getReadNoticeListCount: '/fcs/notice/home/getReadNoticeList/count', // 首页已读通知列表总数
+  getReadNoticeList: '/fcs/notice/home/getReadNoticeList', // 首页已读通知列表列表
+  getNoReadNoticeListCount: '/fcs/notice/home/getNoReadNoticeList/count', // 首页未读通知列表总数
+  getNoReadNoticeList: '/fcs/notice/home/getNoReadNoticeList', // 首页未读通知列表
+  getNoticeListCount: '/fcs/notice/home/getNoticeList/count', // 首页全部消息列表总数
+  getNoticeList: '/fcs/notice/home/getNoticeList', // 首页全部消息列表
+  getHomeNoticeInfo: '/fcs/notice/home/getHomeNoticeInfo', // 首页内容查看(修改已读)
+  alreadyRead: '/fcs/notice/home/alreadyRead' // 批量标记为已读
+}
+
+const api: any = {}
+
+Object.keys(home).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${home[key]}`,
+      method: 'post',
+      data: params
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const homeApi = api

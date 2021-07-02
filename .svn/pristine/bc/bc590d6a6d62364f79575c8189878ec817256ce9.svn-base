@@ -1,0 +1,93 @@
+<template>
+  <div class="history-intercourse-detail-dialog-container">
+    <el-dialog title="历史往来详情" :visible.sync="visible" :before-close="onClose" :append-to-body="true" @open="open()">
+      <div class="intercourse-info">
+        业务：<span>{{ data.businessName }}</span>
+        院校：<span>{{ data.schoolName }}</span>
+        年级：<span>{{ data.gradeName }}</span>
+        专业：<span>{{ data.subjectName }}</span>
+      </div>
+      <IntercourseTable :ref="intercourseTable" :stuInfo="stuInfo" v-if="stuInfo.stuBusinessId == 2"></IntercourseTable>
+      <el-tabs type="card" v-model="activeName" @tab-click="handleClick" v-else>
+        <el-tab-pane :label="item.value" :name="item.key" v-for="(item, index) in yearList" :key="index">
+          <IntercourseTable :ref="intercourseTable" :stuInfo="stuInfo" :year="item.key" v-if="item.key == nowpage"></IntercourseTable>
+        </el-tab-pane>
+      </el-tabs>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="onClose">关  闭</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Prop, Component } from 'vue-property-decorator'
+import AccountBalanceDetailDialog from '@/views/student/prestudentmanage/PersonalIntercourse/AccountBalanceDetailDialog/index.vue'
+import IntercourseTable from '@/views/student/prestudentmanage/PersonalIntercourse/IntercourseTable/index.vue'
+import HistoryIntercourseDialog from '@/views/student/prestudentmanage/PersonalIntercourse/HistoryIntercourseDialog/index.vue'
+import { studentApi } from '@/api/prestudentcenter'
+@Component({
+  name: 'student-manage',
+  components: {
+    AccountBalanceDetailDialog,
+    IntercourseTable,
+    HistoryIntercourseDialog
+  }
+})
+export default class StudentCenterUpdateInput extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  @Prop({ default: false }) private data!: any;
+
+  private activeName = 1
+
+  private stuInfo:any = {}
+
+  private yearList: any[] = []
+
+  private nowpage = 1
+
+  private async getDetail () {
+    await studentApi('stuDetail', {
+      id: this.stuId
+    }).then(async (res: any) => {
+      if (res.code === 10000) {
+        this.stuInfo = res.object.info
+        await studentApi('schoolFeeStandardYear', {
+          schoolId: res.object.info.stuSchoolId,
+          gradeId: res.object.info.stuGradeId,
+          subjectId: res.object.info.stuSubjectId
+        }).then((resYear: any) => {
+          if (resYear.code === 10000) {
+            this.yearList = resYear.object.list
+            this.nowpage = resYear.object.list[0].key
+            this.activeName = resYear.object.list[0].key
+          }
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private handleClick (tab: any) {
+    this.nowpage = tab.name
+  }
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  public open (): void {
+    this.getDetail()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

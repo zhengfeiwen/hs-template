@@ -1,0 +1,133 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <el-popover
+    v-model="visible"
+    placement="right"
+    width="600"
+    :visible-arrow="!1"
+    @show="onStandardQuery"
+    trigger="manual">
+    <div class="line">
+      <static-item required label="标准代码" :width="300">
+        <dict-select :val.sync="standardForm.standardCode" :data="standardCodes"></dict-select>
+      </static-item>
+      <static-item required label="收费项目" :width="300">
+        <dict-select :val.sync="standardForm.feeItemId" :data="feeItemIds"></dict-select>
+      </static-item>
+    </div>
+    <div class="line">
+      <hs-button type="primary" @click="onStandardQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+      <hs-button type="default" @click="onStandardReset" size="mini" icon="hs-icon-refresh-right">取消</hs-button>
+    </div>
+    <simple-table :columnable="!1" :isCheckbox="!0" @selection-change="selectionChange" :data="standardTableData" :columns="standardColumns" :pagination.sync="pagination" :loading="loading" @query="onStandardQuery"></simple-table>
+    <hs-button type="primary" @click="onStandardSave" size="mini" icon="hs-icon-download">保存</hs-button>
+    <hs-button type="default" @click="visible = !visible" size="mini" icon="hs-icon-close">关闭</hs-button>
+    <el-button size="mini" :disabled="disabled" icon="hs-icon-plus" @click="visible = !visible" slot="reference">选择添加</el-button>
+  </el-popover>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { baseApi } from '@/api/base'
+
+@Component({
+  name: 'standard-dialog',
+  components: {
+    SimpleTable,
+    DictSelect,
+    StaticItem
+  }
+})
+
+export default class StandardDialog extends Vue {
+  @Prop({ type: Boolean, default: !1 })
+  private disabled!: boolean
+
+  private standardForm: any = {}
+  private onSave () {
+    // do
+  }
+
+  private standardTableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private standardColumns = [
+    {
+      prop: 'feeStandardCode',
+      label: '收费标准代码'
+    },
+    {
+      prop: 'feeItemName',
+      label: '收费项目'
+    },
+    {
+      prop: 'feeItemCode',
+      label: '收费项目代码'
+    },
+    {
+      prop: 'amount',
+      label: '金额',
+      format: 'money'
+    }
+  ]
+
+  private visible = !1
+
+  private loading = !1
+
+  private pagination = {
+    pageSize: -1,
+    currentPage: 1
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onStandardQuery () {
+    this.loading = !0
+    const form = util.trimForm({ ...this.standardForm })
+    await baseApi('standardList', {
+      ...form
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.standardTableData.list = res.object.list
+      this.standardTableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onStandardCancel () {
+    this.standardForm.standardCode = ''
+    this.standardForm.feeItemId = ''
+  }
+
+  private onStandardSave () {
+    if (this.$listeners.save) {
+      this.$emit('save', this.selectedRow, () => {
+        this.visible = !1
+      })
+    } else {
+      this.visible = !1
+    }
+  }
+}
+</script>
+<style lang="scss" scoped>
+.line{
+  width: 100%;
+  display: flex;
+  margin-bottom: 10px;
+}
+</style>

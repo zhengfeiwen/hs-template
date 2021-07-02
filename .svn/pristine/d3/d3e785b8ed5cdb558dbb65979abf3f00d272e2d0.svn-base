@@ -1,0 +1,261 @@
+<template>
+  <div class="preview-temp-container">
+    <div class="logo">
+      <hs-image :src="setting.ossIp + '/' + data.logo"></hs-image>
+      <div class="right">
+        <div class="item title">{{ data.schoolName }}</div>
+        <div class="item text-overflow-line" :title="data.degreeName">开设层次：{{ data.degreeName }}</div>
+        <div class="item text-overflow-line">
+          <hs-tag type='default' effect="plain" v-for="(label, i) in labels" :key="i">{{ label }}</hs-tag>
+        </div>
+        <div class="item">招生人数：{{ data.peopleNum }} <hs-button type="danger" round size="mini">去分享</hs-button></div>
+      </div>
+    </div>
+    <div class="body">
+      <template v-for="(item, i) in instrs">
+        <div class="item" :key="i" v-if="item.title || item.subtitle || item.content || (item.att && item.att.length >= 1)">
+          <header>
+            <div class="title">{{ item.title }}</div>
+            <div class="subtitle">{{ item.subtitle }}</div>
+          </header>
+          <section>
+            <div class="content">{{ item.content }}</div>
+            <hs-image v-if="item.att && item.att.length === 1" class="single" :src="setting.ossIp + '/' + item.att[0].path"></hs-image>
+            <hs-carousel v-if="item.att && item.att.length > 1" height="194px" style="overflow:hidden;">
+              <hs-carousel-item v-for="(img, i) in item.att" :key="i">
+                <hs-image style="width:100%;height:100%;" :src="setting.ossIp + '/' + img.path"></hs-image>
+              </hs-carousel-item>
+            </hs-carousel>
+          </section>
+        </div>
+      </template>
+    </div>
+    <div class="tools">
+      <div class="left">
+        <div class="share">
+          <hs-image :src="srcs.share"></hs-image>
+        </div>
+        <div class="icon">
+          <hs-image :src="srcs.link"></hs-image>
+          <span>复制链接</span>
+       </div>
+        <div class="icon">
+          <hs-image :src="srcs.pic"></hs-image>
+          <span>生成图片</span>
+       </div>
+        <div class="icon">
+          <hs-image :src="srcs.wechat"></hs-image>
+          <span>微信好友</span>
+       </div>
+      </div>
+      <div class="right">
+        <div class="icon">
+          <hs-image :src="srcs.book"></hs-image>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Prop } from 'vue-property-decorator'
+import setting from '@/settings'
+
+@Component({
+  name: 'preview-temp1'
+})
+
+export default class PreviewTemp1 extends Vue {
+  private setting = setting
+
+  private srcs = {
+    share: require('@/assets/statics/pics/share.png'),
+    link: require('@/assets/statics/pics/link.png'),
+    pic: require('@/assets/statics/pics/pic.png'),
+    wechat: require('@/assets/statics/pics/wechat.png'),
+    book: require('@/assets/statics/pics/book.png')
+  }
+
+  // 简章信息
+  @Prop({ type: Array })
+  private instrs!: any[]
+
+  // 基础信息
+  @Prop({ type: Object })
+  private data!: {}|any
+
+  @Prop({ type: String })
+  private logo!: string
+
+  get labels () {
+    return this.data.labelName ? this.data.labelName.split(',') : []
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+  .preview-temp-container{
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    user-select: none;
+    &::-webkit-scrollbar {/*滚动条整体样式*/
+      width: 3px;     /*高宽分别对应横竖滚动条的尺寸*/
+      height: 3px;
+    }
+    &::-webkit-scrollbar-thumb {/*滚动条里面小方块*/
+      border-radius: 10px;
+      -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+      background: #535353;
+    }
+    &::-webkit-scrollbar-track {/*滚动条里面轨道*/
+      -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+      border-radius: 10px;
+      background: #EDEDED;
+    }
+    .logo{
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 20px 0 10px 10px;
+      .hs-image{
+        width: 70px;
+        height: 70px;
+        border-radius: 100%;
+      }
+      .right{
+        margin-left: 10px;
+        width: calc(100% - 90px);
+        .item{
+          width: 100%;
+          margin-bottom: 8px;
+          .hs-tag{
+            border-radius: 15px;
+            margin-right: 6px;
+          }
+          .hs-button{
+            height: 22px;
+            padding: 0 5px !important;
+            margin-left: 10px;
+          }
+        }
+        .item:not(:last-child){
+          margin-bottom: 8px;
+        }
+        .title{
+          font-size: 14px;
+          font-weight: bold;
+        }
+      }
+    }
+    .body{
+      width: calc(100% - 32px);
+      display: flex;
+      flex-direction: column;
+      margin: 0 14px;
+      .item{
+      width: 100%;
+        display: flex;
+        flex-direction: column;
+        header{
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          border-bottom: 2px solid #E6E6E6;
+          margin-bottom: 10px;
+          &:after{
+           content: '';
+           height: 3px;
+           margin-bottom: -3px;
+           background-color: rgb(211, 39, 39);
+           width: 130PX;
+          }
+          .title{
+            font-size: 18px;
+            color: rgb(211, 39, 39);
+            font-weight: bold;
+            margin-bottom: 3px;
+          }
+          .subtitle{
+            font-size: 14PX;
+            color: rgb(144, 144, 144);
+            margin-bottom: 5px;
+          }
+        }
+        section{
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          margin-bottom: 30px;
+          .content{
+            width: 100%;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: rgb(51, 51, 51);
+          }
+          .single{
+            width: 100%;
+            height: 194px;
+          }
+        }
+      }
+    }
+    .tools{
+      position: absolute;
+      width: 306px;
+      padding: 10px 6px;
+      bottom: 70px;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      opacity: 0.7;
+      user-select: none;
+      z-index: 9;
+      .left{
+        width: 240px;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        background-color: rgb(75, 179, 11, 0.15);
+        border-radius: 60px;
+        .share{
+          height: 50px;
+          width: 50px;
+          .hs-image{
+            height: 60px;
+            width: 60px;
+            margin-top: -3px;
+            margin-left: -6px;
+          }
+        }
+        .icon{
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          .hs-image{
+            width: 25px;
+          }
+          span{
+            font-size: 12px;
+            color: rgb(119, 119, 119);
+          }
+        }
+      }
+      .right{
+        .icon{
+          .hs-image{
+            height: 65px;
+            width: 65px;
+          }
+        }
+      }
+    }
+  }
+</style>

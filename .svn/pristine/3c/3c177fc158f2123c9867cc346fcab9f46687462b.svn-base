@@ -1,0 +1,377 @@
+<template>
+  <simple-container-column @on-query="onQuery" @on-reset="onReset" :menuName="menuName">
+    <template slot="left">
+      <tree url="/fcs/school/tree" :props="{ children: 'children', label: 'name' }" @node-click="handleNodeClick"></tree>
+    </template>
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="年级">
+          <dict-select ref="grade" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId"></dict-select>
+        </el-form-item>
+        <el-form-item label="专业">
+          <dict-select ref="subject" :option="options.subject" :prop="{ key: 'id', value: 'showValue' }" format="subject"  :val.sync="form.subjectId"></dict-select>
+        </el-form-item>
+        <el-form-item label="标准代码">
+          <hs-input size="mini" v-model="form.feeStandardCode" placeholder="请输入标准代码"></hs-input>
+        </el-form-item>
+        <el-form-item label="学年">
+          <dict-select :val.sync="form.schoolYear" constant-group-name="schoolYear"></dict-select>
+        </el-form-item>
+        <el-form-item label="是否必缴">
+          <dict-select :val.sync="form.isMust" comm-group-name="radio"></dict-select>
+        </el-form-item>
+        <el-form-item label="允许退费">
+          <dict-select :val.sync="form.isRefund" comm-group-name="radio"></dict-select>
+        </el-form-item>
+        <el-form-item label="收费项目">
+          <dict-select :val.sync="form.feeItemId" :option="{ url: '/fcs/item/select', data: {} }" :prop="{ key: 'id', value: 'feeItemName' }"></dict-select>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table ref="hsTable" :columnable="!1" :isCheckbox="!1" :export-name="exportName" :export-columns="exportColumns" :exportable="exportable" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['ifMust', 'ifRefund', 'schoolYear']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="onRemove(scope.row)"
+            v-permission="['fcsSchoolFeeStandardDelete']"
+            type="text"
+            size="small">
+            移除<!-- -------移除收费标准，需判断是否绑定流水，有绑定要提示绑定多少条流水，并且支持查看流水信息 -->
+          </hs-button>
+          <hs-button
+            v-permission="['fcsSchoolFeeStandardDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            查看
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="danger" v-permission="['fcsSchoolFeeStandardInsert']" @click="onAdd" icon="hs-icon-plus" size="mini">新增</hs-button>
+          <hs-button type="danger" v-permission="['fcsSchoolFeeStandardExport']" @click="onExport" icon="hs-icon-download" size="mini">导出</hs-button>
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" :dicts="['ifMust', 'ifRefund', 'schoolYear']"></detail-dialog>
+    <add-dialog title="添加收费标准" :data="addData" :visible.sync="visibleAdd" @save-back="onQuery"></add-dialog>
+    <log-dialog :data="logData" :visible.sync="visibleLog"></log-dialog>
+  </simple-container-column>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import SimpleContainerColumn from '@/components/container/column/index.vue'
+import AddDialog from './add/index.vue'
+import LogDialog from './add/log.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import dayjs from 'dayjs'
+import { baseApi } from '@/api/base'
+import { checkPermission } from '@/utils/permission'
+import { isEmpty } from '@/utils/common'
+@Component({
+  name: 'fcsSchFeeStandardMenu',
+  components: {
+    SimpleContainerColumn,
+    SimpleTable,
+    DetailDialog,
+    LogDialog,
+    DictSelect,
+    AddDialog,
+    Tree
+  }
+})
+export default class SchoolFeeStandard extends Vue {
+  private form : any= {
+    gradeId: '',
+    subjectId: ''
+  }
+
+  private loading = !1
+
+  private curSchool: any = {
+    name: '',
+    studyName: ''
+  }
+
+  get curSchoolName () {
+    if (this.curSchool.name) return `${this.curSchool.name}_${this.curSchool.studyName}`
+    return ''
+  }
+
+  private visibleAdd = !1
+
+  private addData = {}
+
+  private detailData = {}
+
+  private menuName = ''
+
+  private handleNodeClick (data: any) {
+    this.curSchool = data
+    this.options.grade.data.schoolId = data.schoolId || null
+    this.options.subject.data.schoolId = data.schoolId || null
+    this.form.gradeId = ''
+    this.menuName = data.name
+    this.form.subjectId = '';
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+    this.onQuery()
+  }
+
+  private options = {
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        schoolId: this.curSchool.schoolId
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+        schoolId: this.curSchool.schoolId
+      }
+    },
+    standard: {
+      url: '/fcs/standard/list',
+      data: {
+        pageSize: 9999,
+        currentPage: 1
+      }
+    }
+  }
+
+  private tableData = {
+    list: [{}],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'gradeName',
+    label: '年级'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业'
+  },
+  {
+    prop: 'schoolYear',
+    label: '学年'
+  },
+  {
+    prop: 'feeStandardCode',
+    label: '收费标准代码'
+  },
+  {
+    prop: 'feeItemName',
+    label: '收费项目'
+  },
+  {
+    prop: 'feeItemCode',
+    label: '收费项目代码'
+  },
+  {
+    prop: 'amount',
+    label: '金额',
+    format: 'money'
+  },
+  {
+    prop: 'ifMust',
+    label: '是否必缴'
+  }]
+
+  private exportColumns = [{
+    prop: 'gradeName',
+    label: '年级'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业'
+  },
+  {
+    prop: 'degreeName',
+    label: '学历层次'
+  },
+  {
+    prop: 'lenName',
+    label: '学制'
+  },
+  {
+    prop: 'schoolYearName',
+    label: '学年'
+  },
+  {
+    prop: 'feeItemName',
+    label: '收费项目'
+  },
+  {
+    prop: 'amount',
+    label: '金额',
+    format: 'money'
+  },
+  {
+    prop: 'ifMustName',
+    label: '是否必缴'
+  },
+  {
+    prop: 'ifRefundName',
+    label: '允许退费'
+  }]
+
+  private exportParam () {
+    const temp = { ...this.form }
+    temp.schoolId = this.curSchool.schoolId
+    return util.trimForm({ ...temp }, this.columns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['fcsSchoolFeeStandardExport']),
+    src: '/fcs/schoolFeeStandard/export',
+    data: this.exportParam
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `${this.curSchool.name}-收费标准-${day}`
+  }
+
+  private onExport () {
+    if (isEmpty(this.curSchool.schoolId)) {
+      this.$alert('请先选择院校', { type: 'error' })
+      return
+    }
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  get pickerOptions () {
+    return util.pickerOptions
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    const form = util.trimForm({ ...this.form })
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('schoolFeeStandardList', {
+      schoolId: this.curSchool.schoolId,
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      gradeId: '',
+      subjectId: ''
+    }
+    this.onQuery()
+  }
+
+  private currentPage = 1
+
+  private visible = !1
+
+  private async showDetail (row: any) {
+    await baseApi('schoolFeeStandardDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          schoolName: res.object.info.schoolName,
+          gradeName: res.object.info.gradeName,
+          schoolYear: res.object.info.schoolYear,
+          subjectName: res.object.info.subjectName,
+          feeStandardCode: res.object.info.feeStandardCode,
+          feeItemCode: res.object.info.feeItemCode,
+          feeItemName: res.object.info.feeItemName,
+          amount: res.object.info.amount,
+          ifMust: res.object.info.ifMust,
+          ifRefund: res.object.info.ifRefund,
+          createTime: res.object.info.createTime,
+          remark: res.object.info.remark
+        }
+      }
+    })
+  }
+
+  private visibleLog = !1
+
+  private logData: any = []
+
+  private async onRemove (row: any) {
+    this.$confirm('提示：确定要移除该院校收费标准？', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    }).then(async () => {
+      await baseApi('payRecordItemListCount', {
+        id: row.id
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          if (res.object.totalCount > 0) {
+            this.$confirm(`状态变更失败，该收费标准存在${res.object.totalCount}笔收费未处理，请手动处理后在变更`, '警告', {
+              distinguishCancelAndClose: true,
+              confirmButtonText: '查看',
+              cancelButtonText: '取消'
+            }).then(async () => {
+              this.visibleLog = !0
+              this.logData.id = row.id
+            }).catch(() => {
+              // do
+            })
+          } else {
+            this.schoolFeeStandardDelete(row.id)
+          }
+        } else {
+          this.$message.error({ message: res.message, showClose: !0 })
+        }
+      })
+    })
+  }
+
+  private async schoolFeeStandardDelete (id: any) {
+    await baseApi('schoolFeeStandardDelete', {
+      ids: id
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.$message.success({ message: res.message, showClose: !0 })
+        this.onQuery()
+      }
+    })
+  }
+
+  private onAdd () {
+    // do something
+    if (isEmpty(this.curSchool.schoolId)) {
+      this.$alert('请先选择院校', { type: 'error' })
+      return
+    }
+    this.visibleAdd = !0
+    this.addData = {
+      schoolId: this.curSchool.schoolId,
+      schoolName: this.curSchool.name,
+      schoolCode: this.curSchool.schoolCode
+    }
+  }
+
+  activated () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

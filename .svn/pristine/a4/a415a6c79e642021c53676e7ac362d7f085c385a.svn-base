@@ -1,0 +1,119 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog :title="'栏目' + (data.type === 'add' ? '新增' : '编辑')" :visible.sync="visibleSync" width="50%" :close-on-click-modal="!1" @open="open">
+    <div class="notice-catalog-container">
+      <el-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+        <el-form-item label="栏目名称" prop="catalogName">
+          <hs-input size="mini" v-model="form.catalogName" placeholder="请输入栏目名称" ></hs-input>
+        </el-form-item>
+        <el-form-item v-if="data.type === 'edit'" label="是否有效" prop="catalogState">
+          <dict-select :val.sync="form.catalogState" constant-group-name="available"></dict-select>
+        </el-form-item>
+        <el-form-item label="备注" prop="memo" class="double line">
+          <el-input type="textarea" maxlength="200" show-word-limit :rows="3" v-model="form.memo" resize="none"></el-input>
+        </el-form-item>
+      </el-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="danger" @click="onSave">确认</hs-button>
+      <hs-button type="info" plain @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import { settingApi } from '@/api/settingmanage'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+
+@Component({
+  name: 'add-dialog',
+  components: {
+    DictSelect
+  }
+})
+
+export default class AddDialog extends Vue {
+  @Prop({ type: Object })
+  private data!: object|any
+
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private form = {
+    id: '',
+    catalogName: '',
+    catalogState: 1,
+    memo: ''
+  }
+
+  private rules = {
+    catalogName: [
+      { required: true, message: '请输入栏目名称', trigger: 'blur' }
+    ],
+    catalogState: [
+      { required: true, message: '请选择是否有效', trigger: 'blur' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      const data = this.data.type === 'add' ? {
+        catalogName: this.form.catalogName,
+        memo: this.form.memo
+      } : {
+        id: this.form.id,
+        catalogName: this.form.catalogName,
+        memo: this.form.memo,
+        catalogState: this.form.catalogState
+      }
+      if (this.data.type === 'add') {
+        await settingApi('addCatalog', data).then((res: any) => {
+          if (res.code === 10000) {
+            this.$message.success(res.message)
+            this.visibleSync = !1
+            this.$listeners['save-back'] && this.$emit('save-back')
+          } else if (res.code === -10000) {
+            this.$alert(res.message, { type: 'error' })
+          }
+        })
+      } else {
+        await settingApi('updateCatalog', data).then((res: any) => {
+          if (res.code === 10000) {
+            this.$message.success(res.message)
+            this.visibleSync = !1
+            this.$listeners['save-back'] && this.$emit('save-back')
+          } else if (res.code === -10000) {
+            this.$alert(res.message, { type: 'error' })
+          }
+        })
+      }
+    })
+  }
+
+  private open () {
+    if (this.data.type === 'add') {
+      this.form = {
+        id: '',
+        catalogName: '',
+        catalogState: 1,
+        memo: ''
+      }
+      return
+    }
+    this.form = Object.assign(this.form, this.data)
+    console.log(this.form)
+  }
+}
+</script>
+<style lang="scss">
+  .notice-catalog-container{
+    width: 100%;
+    min-width: 500px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+</style>

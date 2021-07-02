@@ -1,0 +1,257 @@
+<template>
+  <div class="baseinfo-container">
+    <div class="title">
+      <span>学生基础信息</span><el-button type="primary" size="mini" @click="stuBaseinfoDialogFormVisible = true" v-permission="['fcsPreStuUpdate']">编辑</el-button>
+    </div>
+    <hs-form v-loading="loading" ref="stuInfo" :model="stuInfo" label-width="98px" class="border-style2">
+      <table class="simple-table" border="1">
+        <tr>
+          <td>
+            <hs-form-item label="姓名" prop="userName">
+                {{ stuInfo.stuName }}
+            </hs-form-item>
+          </td>
+          <td rowspan="4">
+            <hs-form-item class="photo-block" label="照片" prop="photo">
+            <!-- <hs-plupload
+              browseButton="browseButton"
+              url="/api/core/oss/file/fileUploadPost"
+              :FilesAdded="filesAdded"
+              :headers="{ token: token, accept: 'application/json' }"
+              :multipart-params="{'parentFolder': 'lb/schoolDetail'}"
+              @inputUploader="inputUploader"
+              :UploadComplete="UploadComplete"
+              :FileUploaded="FileUploaded"
+              :Error="error"
+            /> -->
+            <hs-image v-if="stuInfo.attachment" class="image-dashed" :src="setting.ossIp + '/' + stuInfo.attachment.filePath"></hs-image>
+            <!-- <hs-link id="browseButton" v-else class="add-image image-dashed" icon="hs-icon-plus">添加照片</hs-link> -->
+          </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="性别" prop="sexName">
+              {{ stuInfo.stuSexName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="民族" prop="stuEthnicName">
+              {{ stuInfo.stuEthnicName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="业务" prop="businessName">
+              {{ stuInfo.businessName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="院校" prop="schoolName">
+              {{ stuInfo.stuSchoolName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="专业" prop="subjectName">
+              {{ stuInfo.stuSubjectName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="年级" prop="gradeName">
+              {{ stuInfo.stuGradeName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="学籍状态" prop="stuSchoolRollStatusName">
+              {{ stuInfo.stuSchoolRollStatusName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="第二学历" prop="secondDegree">
+              {{ stuInfo.stuTwoEducationName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr v-if="stuInfo.stuTwoEducation === 1">
+          <td>
+            <hs-form-item label="第二院校" prop="stuTwoEducationSchool">
+              {{ stuInfo.stuTwoEducationSchoolName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="第二专业" prop="stuTwoEducationSubject">
+              {{ stuInfo.stuTwoEducationSubjectName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr v-if="stuInfo.stuTwoEducation === 1">
+          <td>
+            <hs-form-item label="第二年级" prop="stuTwoEducationGrade">
+              {{ stuInfo.stuTwoEducationGradeName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="第二学籍状态" prop="stuTwoEducationSchoolRollStatus">
+              {{ stuInfo.stuTwoEducationSchoolRollStatusName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="所属中心" prop="centerName">
+              {{ stuInfo.stuBelongCenterName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="教学点" prop="point">
+              {{ stuInfo.stuTeachingPoint }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="学生来源" prop="sourceKeyName">
+              {{ stuInfo.sourceKeyName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="来源名称" prop="oraginName">
+              {{ stuInfo.stuSourceName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="证件类型" prop="cardName">
+              {{ stuInfo.stuPaperworkTypeName }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="证件号码" prop="cardId">
+              {{ stuInfo.stuPaperworkNumber }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="联系电话" prop="phone">
+              {{ stuInfo.stuPhone }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="备用手机号" prop="sparePhone">
+              {{ stuInfo.relativesMobile }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <hs-form-item label="准考证号" prop="id">
+              {{ stuInfo.stuExamNumber }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="学号" prop="no">
+              {{ stuInfo.stuNumber }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr v-if="stuInfo.stuBusinessId === 1">
+          <td>
+            <hs-form-item label="上门次数" prop="id">
+              {{ stuInfo.visits }}
+            </hs-form-item>
+          </td>
+          <td>
+            <hs-form-item label="缴费状态" prop="payState">
+              {{ stuInfo.payStatusName }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="家庭住址" prop="address">
+              {{ stuInfo.stuAddress }}
+            </hs-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <hs-form-item label="备注" prop="memo">
+              {{ stuInfo.stuRemark }}
+            </hs-form-item>
+          </td>
+        </tr>
+      </table>
+    </hs-form>
+    <ChangeStuBaseInfoDialog @loadmethod="() => { this.$emit('fresh') }" :stuId="stuId" :visible.sync="stuBaseinfoDialogFormVisible"></ChangeStuBaseInfoDialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import ChangeStuBaseInfoDialog from '@/views/student/prestudentmanage/StudentBaseInfo/BaseInfo/ChangeStuBaseInfoDialog/index.vue'
+import setting from '@/settings'
+import { studentApi } from '@/api/prestudentcenter'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    DictSelect,
+    ChangeStuBaseInfoDialog
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  private loading = !1
+
+  private setting = setting
+
+  private up: any = {}
+
+  private files: any[] = []
+
+  private stuInfo: any = {}
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private async getDetail () {
+    await studentApi('stuDetail', {
+      id: this.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.stuInfo = res.object.info
+        this.loading = !1
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private stuBaseinfoDialogFormVisible = false
+
+  public load () {
+    this.loading = !0
+    this.getDetail()
+  }
+
+  mounted () {
+    this.load()
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

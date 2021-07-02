@@ -1,0 +1,32 @@
+<template>
+  <div class="personal-intercourse-container">
+    <div class="amount"><p>账户余额</p><span>{{ amount }}</span>元<hs-button class="btn" type="text" size="small">明细详情></hs-button></div>
+    <el-tabs type="card" v-model="activeName" @tab-click="handleClick">
+      <el-tab-pane label="第三学年" name="first">第三学年</el-tab-pane>
+      <el-tab-pane label="第二学年" name="second">第二学年</el-tab-pane>
+      <el-tab-pane label="第一学年" name="third">第一学年</el-tab-pane>
+    </el-tabs>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import StudentBaseInfo from '@/views/student/studentmanage/StudentBaseInfo/index.vue'
+@Component({
+  name: 'student-manage',
+  components: {
+    StudentBaseInfo
+  }
+})
+export default class StudentCenterUpdateInput extends Vue {
+  private activeName = 'first'
+
+  private stuId = 123456
+
+  private amount = 123
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

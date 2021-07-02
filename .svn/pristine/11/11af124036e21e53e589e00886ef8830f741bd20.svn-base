@@ -1,0 +1,659 @@
+<template>
+  <div class="fulltime-refund-manage-container">
+    <header>
+      <div class="header">
+        <span class="title">学生退款-全日制</span>
+        <hs-tabs v-model="activeName" type="card">
+          <hs-tab-pane label="待处理" name="undeal"></hs-tab-pane>
+          <hs-tab-pane label="已处理" name="dealed"></hs-tab-pane>
+        </hs-tabs>
+      </div>
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+        <hs-form-item label="院校">
+          <dict-select ref="school" @change="schoolChange" :option="options.school" :prop="{ key: 'id', value: 'showValue' }" format="school" :val.sync="form.stuSchoolId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="年级">
+          <dict-select ref="grade" @change="gradeChange" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.stuGradeId"></dict-select>
+        </hs-form-item>
+        <!-- <hs-form-item label="学年">
+          <dict-select @change="schoolYearChange" :val.sync="form.schoolYear" constant-group-name="schoolYear"></dict-select>
+        </hs-form-item> -->
+        <hs-form-item label="专业">
+          <dict-select ref="subject" format="subject" @change="gradeChange" :option="options.subject" :prop="{ key: 'id', value: 'showValue' }" :val.sync="form.stuSubjectId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="学生姓名">
+          <hs-input size="mini" v-model="form.stuName" placeholder="请输入学生姓名" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="助记码">
+          <hs-input size="mini" v-model="form.stuMnemonicCode" placeholder="请输入助记码" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="身份证号">
+          <hs-input size="mini" v-model="form.stuPaperworkNumber" placeholder="请输入身份证号" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="操作人" v-if="isDealed">
+          <hs-input size="mini" v-model="form.createName" placeholder="请输入操作人" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="退费时间" v-if="isDealed">
+          <el-date-picker
+            range-separator="至"
+            value-format="timestamp"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            :picker-options="pickerOptions"
+            type="daterange"
+            format="yyyy-MM-dd HH:mm"
+            :default-time="['00:00:00','23:59:59']"
+            v-model="form.refundDate"
+            size="mini">
+          </el-date-picker>
+        </hs-form-item>
+        <hs-form-item label="创建时间" v-if="isDealed">
+          <el-date-picker
+            range-separator="至"
+            value-format="timestamp"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            :picker-options="pickerOptions"
+            type="daterange"
+            format="yyyy-MM-dd HH:mm"
+            :default-time="['00:00:00','23:59:59']"
+            v-model="form.createTime"
+            size="mini">
+          </el-date-picker>
+        </hs-form-item>
+        <hs-form-item label="学籍状态">
+          <dict-select :val.sync="form.stuSchoolRollStatus" constant-group-name="stuSchoolRollStatus"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="流水号" v-if="isDealed">
+          <hs-input size="mini" v-model="form.billNo" placeholder="请输入流水号" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="流水状态" v-if="isDealed">
+          <dict-select :val.sync="form.orderStatus" constant-group-name="feesStatus" :exclude="[3]"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="学习类型">
+          <dict-select ref="study" @change="studyChange" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.study"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="所属中心">
+          <dict-select ref="center" @change="centerChange" :option="options.center" :prop="{ key: 'id', value: 'centerName' }" :val.sync="form.centerId"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="学生来源">
+          <el-cascader :show-all-levels="!1" clearable size="mini" v-model="form.stuSource" :props="{ emitPath: !1, checkStrictly: !1, label: 'optionValue', value: 'optionKey' }" :options="stuSourceData"></el-cascader>
+        </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="danger" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table v-show="!isDealed" :isCheckbox="!1" :data="undealTableData" :columns="undealColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['stuSex','stuSchoolRollStatus']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="pay(scope.row)"
+            type="text"
+            size="small">
+            退费
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="primary" icon="hs-icon-plus" @click="batchCollect" size="mini">批量导入</hs-button>
+        </template>
+      </simple-table>
+      <simple-table @column-set-save="columnSetSave" :operator="{ width: 120 }" ref="hsTable" v-show="isDealed" :export-name="exportName" :exportable="exportable" :isCheckbox="!0" @selection-change="selectionChange" :data="dealedTableData" :columns="dealedColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['abnormalState', 'stuSex','stuSchoolRollStatus','openInvoice', 'feesStatus']">
+        <template slot="custom_payType" slot-scope="{ scope }">
+          {{ initPayType(scope.row.payType) }}
+        </template>
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsFullRefProcessedDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            查看
+          </hs-button>
+          <hs-button
+            v-permission="['fcsFullRefProcessedUpdate']"
+            @click.native.prevent="editDetail(scope.row)"
+            type="text"
+            size="small">
+            编辑
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="danger" icon="hs-icon-close" @click="onInvalid" size="mini">作废</hs-button>
+          <hs-button type="primary" icon="hs-icon-download" v-permission="['fullTimeRefundExport']" @click="onExport" size="mini">导出</hs-button>
+          <hs-button type="primary" icon="hs-icon-c-scale-to-original" v-permission="['fcsOpenInvoice']" @click="onOpen" size="mini">开票</hs-button>
+        </template>
+      </simple-table>
+    </section>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Watch, Prop } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import util from '@/utils/busi/util'
+import dayjs from 'dayjs'
+import { checkPermission } from '@/utils/permission'
+import { collectApi } from '@/api/collect'
+import { getConstantDict } from '@/utils/common'
+import { isEmpty } from 'xe-utils'
+import { commonApi } from '@/api/common'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import { LocalStorage } from '@/utils/storage'
+@Component({
+  name: 'refund-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    DrawerSelect
+  }
+})
+export default class RefundManage extends Vue {
+  @Prop({ type: Object })
+  private params!: object|any
+
+  private activeName = 'undeal'
+
+  get isDealed () {
+    return this.activeName === 'dealed'
+  }
+
+  private form = {
+    studyId: null,
+    refundDate: '',
+    createTime: '',
+    stuSchoolId: null,
+    stuGradeId: '',
+    subject: ''
+  }
+
+  private loading = !1
+
+  private undealTableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private dealedTableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private undealColumns = [{
+    prop: 'stuName',
+    label: '学生姓名'
+  },
+  {
+    prop: 'stuSex',
+    label: '性别'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'stuSchoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'stuGradeName',
+    label: '年级'
+  },
+  {
+    prop: 'stuSubjectName',
+    label: '专业名称'
+  },
+  {
+    prop: 'stuBelongCenterName',
+    label: '所属中心'
+  },
+  {
+    prop: 'stuSourceName',
+    label: '学生来源'
+  },
+  {
+    prop: 'stuPaperworkNumber',
+    label: '身份证号',
+    format: 'str:-6'
+  },
+  {
+    prop: 'stuSchoolRollStatus',
+    label: '学籍状态'
+  }]
+
+  private payTypes: any = {}
+
+  private initPayType (payType: any) {
+    return payType ? payType.split('|').map((v: any) => this.payTypes[v]).join('|') : ''
+  }
+
+  private dealedColumns = [{
+    prop: 'billNo',
+    label: '流水号'
+  },
+  {
+    prop: 'stuName',
+    label: '学生姓名'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业'
+  },
+  {
+    prop: 'abnormalState',
+    label: '异动状态',
+    export: 'abnormalStateName'
+  },
+  {
+    prop: 'stuSourceName',
+    label: '学生来源'
+  },
+  {
+    prop: 'stuBelongCenterName',
+    label: '所属中心',
+    hidden: !0
+  },
+  {
+    prop: 'refundAmount',
+    label: '本次退款',
+    format: 'money'
+  },
+  {
+    prop: 'payType',
+    label: '付款方式',
+    export: 'payTypeName',
+    custom: !0
+  },
+  {
+    prop: 'createName',
+    label: '操作人'
+  },
+  {
+    prop: 'payTime',
+    label: '退费时间',
+    format: 'date'
+  },
+  {
+    prop: 'createTime',
+    label: '创建时间',
+    format: 'date'
+  },
+  {
+    prop: 'feesStatus',
+    label: '状态',
+    export: 'statusName',
+    'style-format': {
+      f: [2],
+      t: [1, 3]
+    }
+  },
+  {
+    prop: 'printNum',
+    label: '打印次数'
+  },
+  {
+    prop: 'openInvoice',
+    label: '开票',
+    export: 'openInvoiceName'
+  }]
+
+  private options: any = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {
+        businessId: this.params.business.key
+      }
+    },
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+        businessId: this.params.business.key
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        // stuSchoolId: -1
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+        // stuSchoolId: -1
+      }
+    },
+    center: {
+      url: '/fcs/center/getCenterSelect',
+      data: {
+        // businessId: 1
+      }
+    }
+  }
+
+  private studyChange () {
+    this.options.school.data.studyId = this.form.studyId || null;
+    (this.$refs.school as any).getList()
+  }
+
+  private schoolChange () {
+    this.options.grade.data.schoolId = this.form.stuSchoolId || null
+    this.options.subject.data.schoolId = this.form.stuSchoolId || null;
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+  }
+
+  private schoolYearChange () {
+    // do
+  }
+
+  private gradeChange () {
+    // do
+  }
+
+  private subjectChange () {
+    // do
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `全日制学生退费-${day}`
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    return util.trimForm({ ...temp }, this.isDealed ? this.dealedColumns : this.undealColumns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['fullTimeRefundExport']),
+    src: '/fcs/fulltime/refund/already/process/export/list',
+    data: this.exportParam
+  }
+
+  private columnSetSave (row: any) {
+    this.dealedColumns = row
+  }
+
+  private onExport () {
+    const menuName = LocalStorage.getObj('menu-name')
+    this.$confirm('确认要导出' + menuName + '数据?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      const columnKeys:any = []
+      this.dealedColumns.forEach((item:any) => {
+        if (!item.hidden) {
+          columnKeys.push({
+            prop: item.export || item.prop,
+            label: item.label
+          })
+        }
+      })
+      const params = this.getParams()
+      const { data, headers } = await collectApi('fullTimeRefundExport', { ...params, businessId: this.params.business.key, exportHeads: columnKeys })
+      if (!data) {
+        return
+      }
+      util.exportData(data, menuName + '数据.' + headers['content-file-suffix'])
+      this.$message({
+        type: 'success',
+        message: '导出成功!'
+      })
+    }).catch(() => { console.log('catch error') })
+  }
+
+  private async onOpen () {
+    this.$confirm('是否确定开票?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      const ids = this.selectedRow.map((v: any) => v.payRecordId)
+      await commonApi('openInvoice', ids).then((res:any) => {
+        if (res.code === 10000) {
+          this.$message.success('开票成功')
+          this.onQuery()
+        } else {
+          this.$message.error(res.message)
+        }
+      })
+      this.onQuery()
+    }).catch(() => {
+      console.log('catch error')
+      this.loading = false
+    })
+  }
+
+  private showDetail (row: any) {
+    this.$router.push({
+      name: 'refundpay',
+      params: Object.assign(row, { action: 'view', business: this.params.business.key, payTime: row.payTime })
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  private editDetail (row: any) {
+    this.$router.push({
+      name: 'refundpay',
+      params: Object.assign(row, { action: 'edit', business: this.params.business.key })
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  private async onInvalid () {
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择项目')
+      return
+    }
+    this.$confirm('确认要作废该数据?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      const ids = this.selectedRow.map((v: any) => v.id)
+      await collectApi('refundAlreadyProcessNullifyPayRecord', {
+        ids: ids.join(',')
+      }).then((res:any) => {
+        if (res.code === 10000) {
+          this.$message.success('作废成功')
+        } else {
+          this.$message.error(res.message)
+        }
+      })
+    }).catch(() => {
+      console.log('catch error')
+      this.loading = false
+    })
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  @Watch('activeName')
+  private activeNameChange () {
+    this.undealTableData = {
+      list: [],
+      totalCount: 0
+    }
+    this.dealedTableData = {
+      list: [],
+      totalCount: 0
+    }
+    this.onQuery()
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private stuSourceDict: any = []
+
+  private stuSourceData: any = []
+
+  private getParams () {
+    const form = util.trimForm({ ...this.form })
+    form.schoolId = form.stuSchoolId
+    if (form.refundDate && form.refundDate.length === 2) {
+      form.beginPayTime = form.refundDate[0]
+      form.endPayTime = form.refundDate[1]
+      delete form.refundDate
+    }
+    if (form.createTime && form.createTime.length === 2) {
+      form.beginCreateTime = form.createTime[0]
+      form.endCreateTime = form.createTime[1]
+      delete form.createTime
+    }
+    return {
+      ...form,
+      stuBusinessId: this.params.business.key,
+      paperworkNumber: form.stuPaperworkNumber,
+      status: form.orderStatus,
+      business: this.params.business.key
+    }
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    !pagination && (this.pagination.currentPage = 1)
+    const form = this.getParams()
+    if (this.isDealed) {
+      await collectApi('refundAlreadyProcessList', {
+        ...form,
+        ...pagination || this.pagination
+      }).then(async (res: any) => {
+        this.loading = !1
+        this.dealedTableData.list = res.object.list.map((v: any) => {
+          const item = this.stuSourceDict.filter((f:any) => f.key === v.stuSource)
+          v.stuSourceName = item.length === 0 ? v.stuSource : item[0].value
+          v.feesStatus = v.status
+          return v
+        })
+        this.dealedTableData.totalCount = res.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    } else {
+      await collectApi('refundUntreatedList', {
+        ...form,
+        ...pagination || this.pagination
+      }).then(async (res: any) => {
+        this.loading = !1
+        this.undealTableData.list = res.object.list.map((v: any) => {
+          const item = this.stuSourceDict.filter((f:any) => f.key === v.stuSource)
+          v.stuSourceName = item.length === 0 ? v.stuSource : item[0].value
+          return v
+        })
+        this.undealTableData.totalCount = res.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }
+  }
+
+  private onReset () {
+    this.form = {
+      studyId: null,
+      refundDate: '',
+      createTime: '',
+      stuSchoolId: null,
+      stuGradeId: '',
+      subject: ''
+    }
+    this.options.school.data.studyId = this.form.studyId
+    this.options.grade.data.schoolId = this.form.stuSchoolId
+    this.options.subject.data.schoolId = this.form.stuSchoolId;
+    (this.$refs.school as any).getList();
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async pay (row: any) {
+    this.$router.push({
+      name: 'refundpay',
+      params: Object.assign({ action: 'add', business: this.params.business.key }, row)
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  private batchCollect () {
+    if (Number(this.params.business.key) === 0) {
+      this.$alert('请选择业务', { type: 'error' })
+      return
+    }
+    this.$router.push({
+      name: 'refundbatchimport',
+      params: Object.assign({ businessId: this.params.business.key })
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  private constrantArray: any = {
+    businessType: [],
+    subjectLen: [],
+    subjectDegree: []
+  }
+
+  private async initData () {
+    if (isEmpty(this.payTypes)) {
+      const payType = await getConstantDict('payType')
+      payType.map((v: any) => {
+        this.payTypes[v.key] = v.value
+      })
+    }
+    await commonApi('studentSourceTree').then((res: any) => {
+      if (res.code === 10000) {
+        this.stuSourceData = res.object.list
+      }
+    })
+    this.stuSourceDict = await getConstantByGroup('stuSource', { update: !0 })
+    await this.onQuery()
+  }
+
+  mounted () {
+    this.initData()
+  }
+}
+</script>

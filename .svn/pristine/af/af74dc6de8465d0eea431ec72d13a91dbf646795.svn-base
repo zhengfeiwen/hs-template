@@ -1,0 +1,109 @@
+<!-- 新增 -->
+<template>
+  <hs-dialog title="代理结算" :visible.sync="visibleSync" width="60%" :close-on-click-modal="!1" @open="open">
+    <div class="proxy-settlement-add-container">
+      <hs-table ref="hsTable" :data="data.list" :border="!0" header-row-class-name="header-style">
+        <hs-table-column prop="stuName" label="学生姓名"></hs-table-column>
+        <hs-table-column prop="schoolName" label="院校名称【学习类型】"></hs-table-column>
+        <hs-table-column prop="grageName" label="年级"></hs-table-column>
+        <hs-table-column prop="subjectName" label="专业"></hs-table-column>
+        <hs-table-column prop="xjzt" label="学籍状态"></hs-table-column>
+        <hs-table-column prop="ysje" label="已收金额"></hs-table-column>
+        <hs-table-column prop="yetf" label="结算金额">
+          <template slot-scope="scope">
+            <hs-input v-money size="mini" v-model.trim="data.list[scope.$index].jsje"></hs-input>
+          </template>
+        </hs-table-column>
+      </hs-table>
+      <div class="footer">
+        <static-item label="结算时间" :width="300">
+          <el-date-picker
+            v-show="action !== 'view'"
+            v-model="form.settleTime"
+            type="datetime"
+            format="yyyy-MM-dd HH:mm:ss"
+            size="mini"
+            value-format="timestamp"
+            placeholder="选择日期时间">
+          </el-date-picker>
+        </static-item>
+        <static-item label="结算备注" :width="300">
+          <hs-input style="margin: 6px 0;" v-money size="mini" v-model.trim="form.memo"></hs-input>
+        </static-item>
+        <el-button type="primary" size="mini" :loading="saveLoading" icon="hs-icon-plus" @click="onSave">结算</el-button>
+        <el-button size="mini" @click="visibleSync = !1">关闭</el-button>
+      </div>
+    </div>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import { baseApi } from '@/api/base'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+
+@Component({
+  name: 'feeitem-add',
+  components: {
+    StaticItem
+  }
+})
+
+export default class ProxySettlementAdd extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  @Prop({ type: Object })
+  private data!: object|any
+
+  private saveLoading = !1
+
+  private form = {
+    memo: '',
+    settleTime: ''
+  }
+
+  private async onSave () {
+    await baseApi('itemInsert', {
+      ...util.trimForm(this.form)
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.$message.success(res.message)
+        this.visibleSync = !1
+        this.$listeners['save-back'] && this.$emit('save-back')
+      } else if (res.code === -10000) {
+        this.$alert(res.message, { type: 'error' })
+      }
+    })
+  }
+
+  private open () {
+    this.form = Object.assign(this.form, this.data)
+    this.data.list = [{}, {}, {}, {}]
+  }
+}
+</script>
+<style lang="scss">
+  .proxy-settlement-add-container{
+    width: 100%;
+    min-width: 500px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    .footer{
+      display: flex;
+      align-items: center;
+      background-color: #FAFAFA;
+      padding: 10px;
+      margin-top: -10px;
+      border-left: 1px solid #EBEEF5;
+      border-right: 1px solid #EBEEF5;
+      border-bottom: 1px solid #EBEEF5;
+      .el-button{
+        margin-left: 10px;
+      }
+    }
+  }
+</style>

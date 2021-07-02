@@ -1,0 +1,246 @@
+<template>
+  <div class="noticemanage-container">
+    <div class="left-block">
+      <div class="tree-block">
+        <tree url="/fcs/noticeCatalog/tree" :props="{ children: 'children', label: 'name' }" @node-click="handleNodeClick"></tree>
+      </div>
+    </div>
+    <div class="right-block">
+      <header>
+        <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+          <hs-form-item label="标题">
+            <hs-input
+              size="mini"
+              v-model="form.title"
+              placeholder="请输入标题"
+            ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="来源">
+            <hs-input
+              size="mini"
+              v-model="form.oragin"
+              placeholder="请输入来源"
+            ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="发布时间">
+            <el-date-picker
+              range-separator="至"
+              value-format="date"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              :picker-options="pickerOptions"
+              format="yyyy-MM-dd HH:mm"
+              :default-time="['00:00','23:59']"
+              type="daterange"
+              v-model="form.createTime"
+              size="mini">
+            </el-date-picker>
+          </hs-form-item>
+          <hs-form-item class="query-block">
+            <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+            <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+          </hs-form-item>
+        </hs-form>
+        <div class="action-bolck">
+          <hs-button type="primary" @click="onAdd" icon="hs-icon-plus" size="mini">新增</hs-button>
+          <hs-button type="danger" @click="onRemove" v-permission="['noticeAddDelete']" icon="hs-icon-minus" size="mini">删除</hs-button>
+        </div>
+      </header>
+      <section>
+        <simple-table :index="!0" :isCheckbox="!1" @selection-change="selectionChange" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['open']">
+          <template slot="operator" slot-scope="{ scope }">
+            <hs-button
+              v-permission="['noticeCatalogEdit']"
+              @click.native.prevent="onEdit(scope.row)"
+              type="text"
+              size="small">
+              编辑
+            </hs-button>
+            <hs-button
+              v-permission="['noticeOpen']"
+              @click.native.prevent="onOpen(scope.row)"
+              type="text"
+              size="small">
+              取消发布
+            </hs-button>
+            <hs-button
+              @click.native.prevent="showDetail(scope.row)"
+              type="text"
+              size="small">
+              详情
+            </hs-button>
+          </template>
+        </simple-table>
+      </section>
+    </div>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+    <add-dialog :visible.sync="visibleAdd" ></add-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import AddDialog from './add/index.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import { MessageBox } from 'element-ui'
+import { settingApi } from '@/api/settingmanage'
+
+@Component({
+  name: 'busi-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    AddDialog,
+    Tree
+  }
+})
+export default class BusiManage extends Vue {
+  private form: any = {
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  get pickerOptions () {
+    return util.pickerOptions
+  }
+
+  private columns = [{
+    prop: 'catalogTitle',
+    label: '标题'
+  },
+  {
+    prop: 'source',
+    label: '信息来源'
+  },
+  {
+    prop: 'openTime',
+    label: '发布时间',
+    format: 'date'
+  },
+  {
+    prop: 'createName',
+    label: '创建人',
+    disabled: !0
+  },
+  {
+    prop: 'open',
+    label: '是否发布'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await settingApi('noticeList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private visibleAdd = !1
+
+  private visible = !1
+
+  private onReset () {
+    this.form = {
+    }
+    this.onQuery()
+  }
+
+  handleNodeClick (data: any) {
+    this.form.catalogId = data.id
+    this.onQuery()
+  }
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await settingApi('noticeDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          catalogTitle: res.object.info.catalogTitle,
+          source: res.object.info.source,
+          catalogContent: res.object.info.catalogContent,
+          atts: res.object.info.atts,
+          top: res.object.info.top,
+          open: res.object.info.open
+        }
+      }
+    })
+  }
+
+  private onEdit (row: any) {
+    // do
+  }
+
+  private onOpen (row: any) {
+    // do
+  }
+
+  private onAdd () {
+    if (this.form.businessId) {
+      this.$message.error('请选择左边的管理内容')
+      return
+    }
+    this.visibleAdd = !0
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onRemove () {
+    // 删除
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择栏目')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    MessageBox.confirm(
+      '提示：是否删除所选栏目', '删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }).then(async () => {
+      await settingApi('removeNotice', {
+        ids: ids.join(',')
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message.success(res.message)
+        }
+      })
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

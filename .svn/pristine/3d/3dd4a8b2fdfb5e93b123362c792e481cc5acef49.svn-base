@@ -1,0 +1,269 @@
+<template>
+  <div class="baseinfo-container">
+    <div class="title">
+      <span class="subtitle">学生基础信息</span><el-button type="danger" size="mini" @click="stuBaseinfoDialogFormVisible = true" v-permission="['fcsStuUpdate']">编辑</el-button>
+    </div>
+    <el-form v-loading="loading" ref="stuInfo" :model="stuInfo" label-width="98px" class="border-style2">
+      <table class="simple-table" border="1">
+        <tr>
+          <td>
+            <el-form-item label="姓名" prop="userName">
+                {{ stuInfo.stuName }}
+            </el-form-item>
+          </td>
+          <td rowspan="4">
+            <el-form-item class="photo-block" label="照片" prop="photo">
+            <hs-image v-if="stuInfo.attachment" class="image-dashed" :src="setting.ossIp + '/' + stuInfo.attachment.filePath">
+              <div slot="error" class="image-slot" style="display: flex;justify-content: center;align-items: center; height: 100%; background-color: #eaeaea">
+                暂无头像
+              </div>
+            </hs-image>
+          </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="性别" prop="sexName">
+              {{ stuInfo.stuSexName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="民族" prop="stuEthnicName">
+              {{ stuInfo.stuEthnicName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="业务" prop="businessName">
+              {{ stuInfo.businessName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="院校" prop="schoolName">
+              {{ stuInfo.stuSchoolName }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="专业" prop="subjectName">
+              {{ stuInfo.stuSubjectName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="年级" prop="gradeName">
+              {{ stuInfo.stuGradeName }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="学籍状态" prop="stuSchoolRollStatusName">
+              {{ stuInfo.stuSchoolRollStatusName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <el-form-item label="第二学历" prop="secondDegree">
+              {{ stuInfo.stuTwoEducationName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr v-if="stuInfo.stuTwoEducation === 1">
+          <td>
+            <el-form-item label="第二院校" prop="stuTwoEducationSchool">
+              {{ stuInfo.stuTwoEducationSchoolName }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="第二专业" prop="stuTwoEducationSubject">
+              {{ stuInfo.stuTwoEducationSubjectName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr v-if="stuInfo.stuTwoEducation === 1">
+          <td>
+            <el-form-item label="第二年级" prop="stuTwoEducationGrade">
+              {{ stuInfo.stuTwoEducationGradeName }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="第二学籍状态" prop="stuTwoEducationSchoolRollStatus">
+              {{ stuInfo.stuTwoEducationSchoolRollStatusName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="所属中心" prop="centerName">
+              {{ stuInfo.stuBelongCenterName }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="教学点" prop="point">
+              {{ stuInfo.stuTeachingPoint }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="学生来源" prop="sourceKeyName">
+              {{ stuInfo.sourceKeyName }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="来源名称" prop="oraginName">
+              {{ stuInfo.stuSourceName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="证件类型" prop="cardName">
+              {{ stuInfo.stuPaperworkTypeName }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="证件号码" prop="cardId">
+              {{ stuInfo.stuPaperworkNumber }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="联系电话" prop="phone">
+              {{ stuInfo.stuPhone }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="备用手机号" prop="sparePhone">
+              {{ stuInfo.relativesMobile }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <el-form-item label="准考证号" prop="id">
+              {{ stuInfo.stuExamNumber }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="学号" prop="no">
+              {{ stuInfo.stuNumber }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr v-if="stuInfo.stuBusinessId === 1">
+          <td>
+            <el-form-item label="上门次数" prop="id">
+              {{ stuInfo.visits }}
+            </el-form-item>
+          </td>
+          <td>
+            <el-form-item label="缴费状态" prop="payState">
+              {{ stuInfo.payStatusName }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <el-form-item label="家庭住址" prop="address">
+              {{ stuInfo.stuAddress }}
+            </el-form-item>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <el-form-item label="备注" prop="memo">
+              {{ stuInfo.stuRemark }}
+            </el-form-item>
+          </td>
+        </tr>
+      </table>
+    </el-form>
+    <ChangeStuBaseInfoDialog @loadmethod="() => { this.$emit('fresh') }" :stuId="stuId" :visible.sync="stuBaseinfoDialogFormVisible" @update-userinfo = "updateUserinfo"></ChangeStuBaseInfoDialog>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import ChangeStuBaseInfoDialog from '@/views/student/components/StudentBaseInfo/BaseInfo/ChangeStuBaseInfoDialog/index.vue'
+import setting from '@/settings'
+import { commonApi } from '@/api/common'
+import { studentApi } from '@/api/studentcenter'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    DictSelect,
+    ChangeStuBaseInfoDialog
+  }
+})
+export default class extends Vue {
+  @Prop({ type: Object }) private userInfo!: object|any
+  @Prop({ default: false }) private stuId!: number
+
+  private loading = !1
+
+  private setting = setting
+
+  private up: any = {}
+
+  private files: any[] = []
+
+  private stuInfo: any = {}
+
+  private inputUploader (up: any) {
+    this.up = up
+    this.files = up.files
+  }
+
+  private async getDetail () {
+    await studentApi('stuDetail', {
+      id: this.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.stuInfo = res.object.info
+        this.loading = !1
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private stuBaseinfoDialogFormVisible = false
+
+  public load () {
+    this.loading = !0
+    this.getDetail()
+  }
+
+  activated () {
+    if (!this.stuId) return
+    this.load()
+  }
+
+  mounted () {
+    if (!this.stuId) return
+    this.load()
+  }
+
+  private async updateUserinfo () {
+    await commonApi('stuCommonDetail', {
+      id: this.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        Object.keys(this.userInfo).map((key: any) => {
+          this.userInfo[key] = res.object.info[key]
+        })
+      }
+    })
+  }
+}
+</script>
+
+<style lang='scss'>
+</style>

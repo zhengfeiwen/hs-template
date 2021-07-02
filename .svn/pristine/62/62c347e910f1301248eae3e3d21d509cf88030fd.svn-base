@@ -1,0 +1,95 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+const baseConfig: any = {
+  getSchoolList: { url: '/fcs/school/list' }, // 院校列表
+  getSchoolListCount: { url: '/fcs/school/list/count' }, // 院校列表总数
+  standardList: { url: '/fcs/standard/list', headers: { 'data-format': 'money' } }, // 获取收费标准列表
+  standardListCount: { url: '/fcs/standard/list/count' }, // 获取收费标准列表-总数
+  standardDetail: { url: '/fcs/standard/detail', headers: { 'data-format': 'money' } }, // 获取收费标准详情
+  standardInsert: { url: '/fcs/standard/insert' }, // 收费标准插入
+  standardUpdate: { url: '/fcs/standard/update' }, // 收费标准修改
+  standardEnable: { url: '/fcs/standard/enable' }, // 收费标准启用
+  standardDisable: { url: '/fcs/standard/disable' }, // 收费标准禁用
+  schoolFeeStandardBatchFeesSelectList: { url: '/fcs/schoolFeeStandard/batch/fees/select/list' }, // 收费标准禁用
+  schoolFeeStandardBatchFeesSelectListCount: { url: '/fcs/schoolFeeStandard/batch/fees/select/list/count' }, // 收费标准禁用
+  standardModifyList: { url: '/fcs/standard/modify/log/list' }, // 获取收费标准-变更记录列表
+  standardModifyListCount: { url: '/fcs/standard/modify/log/list/count' }, // 获取收费标准-变更记录列表-总数
+  standardHook: { url: '/fcs/standard/hook' }, // 校验是否已挂钩院校
+  itemList: { url: '/fcs/item/list' }, // 获取院校收费项目列表
+  itemListCount: { url: '/fcs/item/list/count' }, // 获取院校收费项目总数
+  itemDetail: { url: '/fcs/item/detail' }, // 获取院校收费项目详情
+  itemEnable: { url: '/fcs/item/enable' }, // 收费项目启用
+  itemInsert: { url: '/fcs/item/insert' }, // 收费项目新增
+  itemImport: { url: '/fcs/item/import' }, // 收费项目导入
+  itemDelete: { url: '/fcs/item/delete' }, // 收费项目删除
+  itemExport: { url: '/fcs/item/export' }, // 收费项目导出
+  itemUpdate: { url: '/fcs/item/update' }, // 收费项目编辑
+  itemDisable: { url: '/fcs/item/disable' }, // 收费项目禁用
+  businessDetail: { url: '/fcs/business/detail' }, // 获取业务详情
+  businessList: { url: '/fcs/business/search', headers: { 'data-format': 'money|dict' } }, // 获取业务列表
+  businessListCount: { url: '/fcs/business/list/count' }, // 获取业务列表-总数
+  schoolDetail: { url: '/fcs/school/detail' }, // 获取院校详情
+  gradeList: { url: '/fcs/grade/list' }, // 获取年级列表
+  gradeListCount: { url: '/fcs/grade/list/count' }, // 获取年级列表总数
+  gradeDetail: { url: '/fcs/grade/detail' }, // 获取年级详情
+  subjectList: { url: '/fcs/subject/list' }, // 获取专业列表
+  subjectListCount: { url: '/fcs/subject/list/count' }, // 获取专业列表总数
+  subjectDetail: { url: '/fcs/subject/detail' }, // 获取专业详情
+  businessSchoolList: { url: '/fcs/schoolBusiness/list' }, // 获取业务院校列表
+  businessSchoolListCount: { url: '/fcs/schoolBusiness/list/count' }, // 获取业务院校列表-总数
+  schoolGradeList: { url: '/fcs/schoolGrade/list' }, // 获取院校列表
+  schoolGradeListCount: { url: '/fcs/schoolGrade/list/count' }, // 获取院校列表-总数
+  schoolSubjectList: { url: '/fcs/schoolSubject/list' }, // 获取院校专业列表
+  schoolSubjectListCount: { url: '/fcs/schoolSubject/list/count' }, // 获取院校专业列表总数
+  studyList: { url: '/fcs/study/list' }, // 获取学习类型列表
+  studyListCount: { url: '/fcs/study/list/count' }, // 获取学习类型列表-总数
+  studyDetail: { url: '/fcs/study/detail' }, // 获取学习类型详情
+  centerList: { url: '/fcs/center/list' }, // 获取中心-列表
+  centerListCount: { url: '/fcs/center/list/count' }, // 获取中心-列表-总条数
+  centerDetail: { url: '/fcs/center/info' }, // 获取中心-详情
+  schoolFeeStandardList: { url: '/fcs/schoolFeeStandard/list', headers: { 'data-format': 'money' } }, // 获取院校收费标准列表
+  schoolFeeStandardListCount: { url: '/fcs/schoolFeeStandard/list/count' }, // 获取院校收费标准列表-总数
+  schoolFeeStandardDelete: { url: '/fcs/schoolFeeStandard/delete' }, // 获取院校收费标准-删除
+  payRecordItemList: { url: '/fcs/schoolFeeStandard/payRecordItem/list' }, // 院校收费存在的有效收费流水
+  schoolFeeStandardDetail: { url: '/fcs/schoolFeeStandard/detail', headers: { 'data-format': 'money' } }, // 获取院校收费标准-详情
+  schoolYearList: { url: '/fcs/schoolYearBasis/list' }, // 获取学年列表
+  schoolYearListCount: { url: '/fcs/schoolYearBasis/list/count' }, // 获取学年列表-总数
+  schoolYearDetail: { url: '/fcs/schoolYearBasis/detail' }, // 获取学年-详情
+  schoolYearUpdate: { url: '/fcs/schoolYearBasis/update' }, // 修改学年
+  schoolYearConfigureList: { url: '/fcs/schoolYearConfigure/list' }, // 获取学年匹配列表
+  schoolYearConfigureListCount: { url: '/fcs/schoolYearConfigure/list/count' }, // 获取学年匹配列表-总数
+  schoolYearConfigureDetail: { url: '/fcs/schoolYearConfigure/detail' }, // 获取学年匹配-详情
+  schoolYearConfigureUpdate: { url: '/fcs/schoolYearConfigure/update' }, // 修改学年匹配
+  schoolYearConfigureInsert: { url: '/fcs/schoolYearConfigure/insert' }, // 新增学年匹配
+  schoolFeeStandardInsert: { url: '/fcs/schoolFeeStandard/insert' } // 新增院校标准
+}
+
+export const api: any = {}
+
+Object.keys(baseConfig).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${baseConfig[key].url}`,
+      method: 'post',
+      data: params,
+      headers: baseConfig[key].headers
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const baseApi = (key: any, params: any = {}) => {
+  if (api[key]) {
+    return api[key](params)
+  } else {
+    throw Error('不存在该方法：' + key)
+  }
+}

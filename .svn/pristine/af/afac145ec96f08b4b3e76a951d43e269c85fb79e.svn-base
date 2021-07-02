@@ -1,0 +1,111 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+const fullTime: any = {
+  getStudentList: { url: '/fcs/student/list' }, // 获取学生列表
+  fulltimeReduceBatchPayBatchInsert: { url: '/fcs/fulltime/reduce/batchPay/batchInsert' }, // 全日制-减免页面批量新增
+  fulltimeRefundBatchPayBatchInsert: { url: '/fcs/fulltime/refund/batchPay/batchInsert' }, // 全日制-退费页面批量新增
+  importData: { url: 'parttime' }, // 导入数据
+  reduceUntreatedList: { url: '/fcs/fulltime/reduce/untreated/list' }, // 减免待处理列表
+  reduceUntreatedListCount: { url: '/fcs/fulltime/reduce/untreated/list/count' }, // 减免待处理列表总数
+  reduceAlreadyList: { url: '/fcs/fulltime/reduce/already/process/list', headers: { 'data-format': 'money:response' } }, // 减免已处理列表
+  reduceAlreadyListCount: { url: '/fcs/fulltime/reduce/already/process/list/count' }, // 减免已处理列表总数
+  reduceAlreadyNullifyPayRecord: { url: '/fcs/fulltime/reduce/already/process/nullifyPayRecord' }, // 减免作废
+  reduceAlreadyUpdatePayRecord: { url: '/fcs/fulltime/reduce/already/process/updatePayRecord' }, // 减免修改
+  reduceUntreatedVerifyReduce: { url: '/fcs/fulltime/reduce/untreated/verifyReduce', headers: { 'data-format': 'money:request' } }, // 减免新增验证
+  getReduceItem: { url: '/fcs/fulltime/reduce/untreated/getReduceItem', headers: { 'data-format': 'money:response|dict' } }, // 减免项目列表
+  reduceUntreatedInsert: { url: '/fcs/fulltime/reduce/untreated/insert' }, // 减免新增
+  unPayList: { url: '/fcs/ft/un/pay/list' }, // 全日制收费待处理列表
+  unPayListCount: { url: '/fcs/ft/un/pay/list/count' }, // 全日制收费待处理列表条数
+  ftPayList: { url: '/fcs/ft/pay/list', headers: { 'data-format': 'money:response' } }, // 全日制收费已处理列表
+  ftPayListCount: { url: '/fcs/ft/pay/list/count' }, // 全日制收费已处理列表条数
+  ftPayInvalid: { url: '/fcs/ft/pay/invalid' }, // 全日制收费已处理作废
+  ftPayExport: { url: '/fcs/ft/pay/export', responseType: 'blob', headers: { responseData: 'all' } }, // 收费-全日制-已处理-列表-导出
+  ftProcessedInvalid: { url: '/fcs/ft/pre/processed/invalid' }, // 预收-全日制-已处理-作废
+  stuItemList: { url: '/fcs/ft/un/pay/stu/item/list', headers: { 'data-format': 'money:response' } }, // 全日制收费待收费项目
+  refundUntreatedList: { url: '/fcs/fulltime/refund/untreated/list', headers: { 'data-format': 'money:response' } }, // 退费待处理列表
+  refundUntreatedListCount: { url: '/fcs/fulltime/refund/untreated/list/count' }, // 退费待处理列表总数
+  getRefundItem: { url: '/fcs/fulltime/refund/untreated/getRefundItem', headers: { 'data-format': 'trim:response|money:response' } }, // 退费项目列表
+  refundAlreadyProcessInsert: { url: '/fcs/fulltime/refund/already/process/insert' }, // 退费新增
+  refundUntreatedVerifyRefund: { url: '/fcs/fulltime/refund/untreated/verifyRefund' }, // 退费新增验证
+  refundAlreadyProcessUpdate: { url: '/fcs/fulltime/refund/already/process/update' }, // 退费修改
+  refundAlreadyProcessList: { url: '/fcs/fulltime/refund/already/process/list', headers: { 'data-format': 'money:response' } }, // 退费已处理列表
+  refundAlreadyProcessListCount: { url: '/fcs/fulltime/refund/already/process/list/count' }, // 退费已处理列表总数
+  refundAlreadyProcessNullifyPayRecord: { url: '/fcs/fulltime/refund/already/process/nullifyPayRecord' }, // 退费作废
+  reduceAlreadyProcessDetail: { url: '/fcs/fulltime/reduce/already/process/detail', headers: { 'data-format': 'money:response|dict:response' } }, // 减免详情
+  refundAlreadyProcessDetail: { url: '/fcs/fulltime/refund/already/process/detail', headers: { 'data-format': 'trim:response|money:response|dict:response' } }, // 退费详情
+  invoice: { url: '/fcs/common/fees/open/invoice' }, // 开票
+  unProcessedList: { url: '/fcs/ft/pre/un/processed/list' }, // 预收-待处理-列表
+  unProcessedListCount: { url: '/fcs/ft/pre/un/processed/list/count' }, // 预收-待处理-列表分页数
+  payRecordInfo: { url: '/fcs/ft/pay/payRecordInfo', headers: { 'data-format': 'money:response' } }, // 预收-待处理-列表分页数
+  payInsert: { url: '/fcs/ft/pay/insert', headers: { 'data-format': 'money:request' } }, // 全日制收费新增
+  payUpdate: { url: '/fcs/ft/pay/update', headers: { 'data-format': 'money:request' } }, // 全日制收费修改
+  processedInsert: { url: '/fcs/ft/pre/un/processed/person/insert', headers: { 'data-format': 'money:request' } }, // 预付新增
+  processedUpdate: { url: '/fcs/ft/pre/processed/update', headers: { 'data-format': 'money:request' } }, // 预付修改
+  preProcessedList: { url: '/fcs/ft/pre/processed/list', headers: { 'data-format': 'money:response' } }, // 预收-已处理-列表
+  preProcessedListCount: { url: '/fcs/ft/pre/processed/list/count' }, // 预收-已处理-列表总数
+  preProcessedItemList: { url: '/fcs/ft/pre/un/processed/stu/item/list', headers: { 'data-format': 'money:response' } }, // 预收-待处理-学生项目列表
+  preProcessedDetail: { url: '/fcs/ft/pre/processed/detail', headers: { 'data-format': 'money:response' } }, // 预收-待处理-学生项目列表
+  preProcessedExportList: { url: '/fcs/ft/pre/processed/export/list', responseType: 'blob', headers: { responseData: 'all' } }, // 预收-全日制-已处理-列表-导出
+  stuFeesBatchFeesSelectList: { url: '/fcs/stu/fees/batch/fees/select/list' }, // 批量导入的学生信息, responseData:'all'
+  schoolFeeStandardBatchFeesSelectList: { url: '/fcs/schoolFeeStandard/batch/fees/select/list', headers: { 'data-format': 'money:response' } }, // 批量收费-选择标准列表
+  fullTimeReduceBatchPayFromExcel: { url: '/fcs/fulltime/reduce/batchPay/fromExcel' }, // 全日制-减免表格导入
+  fullTimeRefundBatchPayFromExcel: { url: '/fcs/fulltime/refund/batchPay/fromExcel' }, // 全日制-退费表格导入
+  ftBatchPayFromExcel: { url: '/fcs/ft/batchPay/fromExcel' }, // 全日制-excel导入批量收费
+  fullTimeReduceExport: { url: '/fcs/fulltime/reduce/already/process/export/list', responseType: 'blob', headers: { responseData: 'all' } }, // 全日制减免已处理导出
+  fullTimeRefundExport: { url: '/fcs/fulltime/refund/already/process/export/list', responseType: 'blob', headers: { responseData: 'all' } }, // 全日制退费已处理导出
+  mathNowYear: { url: '/fcs/schoolYearBasis/math/now/year' } // 学年-计算院校、年级当前学年
+}
+
+const partTime = {
+  preUnProcessedBatchInsert: { url: '/fcs/amateur/pre/un/processed/batch/insert', headers: { 'data-format': 'money:request' } }, // 预收-业余-待处理-批量预付-页面批量保存
+  preUnProcessedInportEcel: { url: '/fcs/amateur/pre/un/processed/import/excel' }, // 预收-业余-待处理-批量预付-文件导入
+  ftBatchPayFromData: { url: '/fcs/ft/batchPay/fromData', headers: { 'data-format': 'money:request' } }, // 预收-业余-待处理-批量预付-页面批量保存
+  partTimeReduceExport: { url: '/fcs/parttime/reduce/already/process/export/list', responseType: 'blob', headers: { responseData: 'all' } }, // 业余减免已处理导出
+  partTimeRefundExport: { url: '/fcs/parttime/refund/already/process/export/list', responseType: 'blob', headers: { responseData: 'all' } }, // 业余退费已处理导出
+  parttimeReduceBatchPayFromExcel: { url: '/fcs/parttime/reduce/batchPay/fromExcel' }, // 业余学历-减免表格导入
+  parttimeReduce: { url: '/fcs/parttime/reduce/untreated/list', headers: { 'data-format': 'money:response' } }, // 业余学历-减免待处理列表
+  parttimeReduceUntreatedListCount: { url: '/fcs/parttime/reduce/untreated/list/count' }, // 业余学历-减免待处理列表总数
+  parttimeReduceAlreadyProcessDetail: { url: '/fcs/parttime/reduce/already/process/detail', headers: { 'data-format': 'money:response' } }, // 业余学历-减免详情
+  parttimeReduceUntreatedGetReduceItem: { url: '/fcs/parttime/reduce/untreated/getReduceItem', headers: { 'data-format': 'money:response' } }, // 业余学历-减免项目列表
+  parttimeReduceUntreatedInsert: { url: '/fcs/parttime/reduce/untreated/insert' }, // 业余学历-减免新增
+  parttimeReduceUntreatedVerifyReduce: { url: '/fcs/parttime/reduce/untreated/verifyReduce' }, // 业余学历-减免新增验证
+  parttimeReduceAlreadyProcessUpdatePayRecord: { url: '/fcs/parttime/reduce/already/process/updatePayRecord', headers: { 'data-format': 'money:request' } }, // 业余学历-减免修改
+  parttimeReduceBatchPayBatchInsert: { url: '/fcs/parttime/reduce/batchPay/batchInsert', headers: { 'data-format': 'money:request' } }, // 业余学历-减免页面批量新增
+  parttimeReduceAlreadyProcessExportList: { url: '/fcs/parttime/reduce/already/process/export/list' }, // 业余学历-减免已处理导出
+  parttimeReduceAlreadyProcessList: { url: '/fcs/parttime/reduce/already/process/list', headers: { 'data-format': 'money:response' } }, // 业余学历-减免已处理列表
+  parttimeReduceAlreadyProcessListCount: { url: '/fcs/parttime/reduce/already/process/list/count' }, // 业余学历-减免已处理列表总数
+  parttimeReduceAlreadyProcessNullifyPayRecord: { url: '/fcs/parttime/reduce/already/process/nullifyPayRecord' } // 业余学历-减免作废
+}
+
+const collectConfig = Object.assign(fullTime, partTime)
+
+export const api: any = {}
+
+Object.keys(collectConfig).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${collectConfig[key].url}`,
+      method: 'post',
+      data: params,
+      headers: collectConfig[key].headers,
+      responseType: collectConfig[key].responseType
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const collectApi = (key: any, params: any = {}) => {
+  if (api[key]) {
+    return api[key](params)
+  } else {
+    throw Error('不存在该方法：' + key)
+  }
+}

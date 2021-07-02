@@ -1,0 +1,250 @@
+$RigthtfontSize: 16px;
+$RigthtfontBigSize: 18px;
+
+.app-wrapper {
+  @include clearfix;
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  .sidebar-container {
+    transition: width 0.28s;
+    width: $sideBarWidth !important;
+    height: 100%;
+    position: relative;
+    font-size: 0px;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1001;
+    overflow: hidden;
+  }
+  .right-body{
+    width: calc(100% - #{$sideBarWidth});
+    height: 100%;
+    .container-header{
+      height: 50px;
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      // background-color: $menuBg !important;
+      box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+      .header-menu{
+        display: flex;
+        flex-direction: row;
+        height: 100%;
+        align-items: center;
+        overflow-x: auto;
+        .header-menu-item{
+          cursor: pointer;
+          color: #000;
+          font-size: $RigthtfontSize;
+          margin-right: 2px;
+          user-select: none;
+          padding: 0 10px;
+          min-width: 80px;
+          line-height: 3;
+          height: 100%;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          word-break: break-all;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          &.active{
+            // border-bottom: 4px solid $subMenuHover !important;
+            color: $subMenuHover !important;
+            position: relative;
+            font-weight: bolder;
+            // background-color: $subMenuHover;
+            // background-color: $subMenuHover !important;
+          }
+          &:hover{
+            font-weight: bolder;
+            color: $subMenuActiveText !important;
+            background-color: $subMenuHover !important;
+          }
+        }
+      }
+      .right-menu {
+        min-width: 80px;
+        margin: 0 12px;
+        height: 100%;
+        color: #000;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        &:focus {
+          outline: none;
+        }
+        .right-menu-item {
+          display: flex;
+          margin: 0 3px;
+          cursor: pointer;
+          font-size: $RigthtfontSize;
+          color: #000;
+          vertical-align: text-bottom;
+          overflow: hidden;
+          i{
+            margin: auto;
+            color: #000;
+            font-size: $RigthtfontSize + 4px;
+            font-weight: bold;
+            margin: auto 6px;
+            font-size: $RigthtfontSize + 4px;
+            font-weight: bold;
+            &:hover{
+              color: $subMenuHover;
+            }
+          }
+          &.hover-effect {
+            cursor: pointer;
+            transition: background 0.3s;
+            &:hover {
+              color: $subMenuHover;
+            }
+          }
+          .avatar-wrapper {
+            display: flex;
+            justify-content: center;
+            flex-wrap: nowrap;
+            align-items: center;
+            .head-img{
+              width: $RigthtfontSize + 4px;
+              margin-right: 3px;
+            }
+            .ring-icon{
+              width: auto;
+              height: 40px;
+              line-height: 40px;
+              text-align: center;
+              color: #212121;
+              font-size: 16px;
+              font-weight: 400;
+              margin-left: 3px;
+              padding: 0 6px;
+              &:hover{
+                opacity: 0.6;
+              }
+            }
+          }
+        }
+        .helper{
+          font-size: 14px;
+          user-select: none;
+          &:after{
+            content: '>';
+            margin: 0 3px;
+          }
+          &:hover{
+            color: $subMenuHover;
+          }
+        }
+      }
+      .hamburger-container {
+        line-height: 42px;
+        height: 47px;    
+        float: left;
+        padding: 0 15px;
+        cursor: pointer;
+        transition: background 0.3s;
+        -webkit-tap-highlight-color: transparent;
+    
+        &:hover {
+          background: rgba(0, 0, 0, 0.025);
+        }
+      }
+    }
+    .container-body{
+      height: calc(100% - 50px);
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      .main-container {
+        min-height: 100%;
+        transition: margin-left 0.28s;
+        // margin-left: $sideBarWidth;
+        position: relative;
+        overflow: hidden;
+        width: 100%;
+        .fixed-header {
+          position: relative;
+          top: 0;
+          right: 0;
+          z-index: 9;
+          width: 100%;
+          transition: width 0.28s;
+        }
+      }
+    }
+  }
+}
+
+.drawer-bg {
+  background: #000;
+  opacity: 0.3;
+  width: 100%;
+  top: 0;
+  height: 100%;
+  position: absolute;
+  z-index: 999;
+}
+
+.hideSidebar {
+  .main-container {
+    margin-left: 0px;
+  }
+  .sidebar-container {
+    width: 54px !important;
+  }
+  .right-body{
+    width: calc(100% - 54px);
+    height: 100%;
+  }
+
+  .fixed-header {
+    width: 100%;
+  }
+}
+
+/* for mobile response 适配移动端 */
+.mobile {
+  .main-container {
+    margin-left: 0px;
+  }
+
+  .sidebar-container {
+    transition: transform 0.28s;
+    width: $sideBarWidth !important;
+  }
+
+  &.openSidebar {
+    position: fixed;
+    top: 0;
+  }
+
+  &.hideSidebar {
+    .sidebar-container {
+      pointer-events: none;
+      transition-duration: 0.3s;
+      transform: translate3d(-$sideBarWidth, 0, 0);
+      width: 0 !important;
+    }
+  }
+
+  .fixed-header {
+    width: 100%;
+  }
+}
+
+.withoutAnimation {
+  .main-container,
+  .sidebar-container {
+    transition: none;
+  }
+}

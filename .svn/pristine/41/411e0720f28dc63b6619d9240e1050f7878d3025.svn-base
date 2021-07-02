@@ -1,0 +1,491 @@
+<!-- 简单列表业务组件 暂不支持多级表头列表 -->
+<template>
+  <div class="simple-table">
+    <transition name="fade-transform" mode="out-in">
+      <span v-if="selection && selects && selects.length === 0" style="color: #f56c6c;">{{selection.tip || '点击行可以选中数据'}}</span>
+      <div v-if="selection" class="selected-block">
+        <hs-tag
+          v-for="tag in selects"
+          :title="tag[selection.label]"
+          :key="tag[selection.key]"
+          type="danger"
+          closable
+          @close="selectionTagClose(tag[selection.key])">
+          {{ tag[selection.label] }}
+        </hs-tag>
+      </div>
+    </transition>
+    <hs-table :show-summary="showSummary" :summary-method="getSummaries" :empty-text="defaultEmptyText" :cell-class-name="cellClassName" :class="hsTableClass" @column-set-save="columnSetSave" :columnable="columnable" :export-name="exportName" :row-class-name="_rowClassName" :columns="columnsSet" :isCheckbox="isCheckbox" :export-columns="_exportColumns" :exportable="exportable.exportable" :export-data="getExportData" style="width: 100%" :loading="loading" element-loading-text="加载中" element-loading-spinner="el-icon-loading" :data="data.list" border @select="select" @row-click="rowClick" @selection-change="selectionChange" ref="hsTable" :header-cell-style="headerCellStyle" @row-dblclick="rowDbclick">
+      <!-- 复选框start -->
+      <hs-table-column
+        align="center"
+        header-align="center"
+        v-if="isCheckbox"
+        :selectable="selectable"
+        type="selection"
+        width="55">
+      </hs-table-column>
+      <!-- 复选框end -->
+      <!-- 序号start -->
+      <hs-table-column
+        v-if="index"
+        type="index"
+        label="序号"
+        header-align="center"
+        align="center"
+        width="50">
+      </hs-table-column>
+      <!-- 序号end -->
+      <!-- 通用列start -->
+      <template v-for="(column, i) in columnsSet">
+        <hs-table-column
+          v-if="!column.hidden && !column.noview && !column.custom && !column.format"
+          :align="column.align || 'left'"
+          :header-align="column.align || 'left'"
+          :key="i"
+          :fixed="column.fixed"
+          :show-overflow-tooltip="true"
+          :prop="column.prop"
+          :formatter="column.formatter"
+          :label="column.label"
+          :width="column.width">
+          <template slot-scope="scope">
+            <span  v-if="dicts && dicts.includes(column.prop)">
+              {{dictMap(column.prop, scope.row[column.prop])}}
+            </span>
+            <span v-else>{{scope.row[column.prop]}}</span>
+          </template>
+        </hs-table-column>
+        <hs-table-column
+          v-else-if="column.format && !column.hidden && !column.noview"
+          :align="column.format==='money' ? 'right' : 'left'"
+          :header-align="column.format==='money' ? 'right' : 'left'"
+          :key="i"
+          :fixed="column.fixed"
+          :show-overflow-tooltip="true"
+          :prop="column.prop"
+          :formatter="formatter"
+          :label="column.label"
+          :width="column.width">
+        </hs-table-column>
+        <hs-table-column
+          v-else-if="!column.hidden && !column.noview"
+          align="center"
+          header-align="center"
+          :key="i"
+          :show-overflow-tooltip="true"
+          :prop="column.prop"
+          :label="column.label"
+          :width="column.width">
+          <template slot-scope="scope">
+            <slot :name="'custom_' + column.prop" :scope="scope"></slot>
+          </template>
+        </hs-table-column>
+      </template>
+      <!-- 通用列end -->
+
+      <!-- 操作列end -->
+      <hs-table-column
+        v-if="$scopedSlots.operator"
+        align="center"
+        header-align="center"
+        :fixed="(operator ? operator.fixed === '-' ? null : operator.fixed || 'right' : 'right')"
+        :label="operator.label || '操作'"
+        :width="operator.width">
+        <template slot-scope="scope">
+          <slot name="operator" :scope="scope"></slot>
+        </template>
+      </hs-table-column>
+      <!-- 操作列end -->
+      <template slot="pagination" v-if="pagination && pagination.pageSize">
+      <div class="action-block">
+        <slot name="action"></slot>
+      </div>
+        <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          :current-page.sync="pagination.currentPage"
+          :page-sizes="[10, 20, 30, 40, 50, 100]"
+          :page-size="pagination.pageSize"
+          :hide-on-single-page="false"
+          :pager-count="pagerCount"
+          :layout="'total, sizes, prev, pager, next, jumper'"
+          :total="data.totalCount">
+        </el-pagination>
+      </template>
+    </hs-table>
+  </div>
+</template>
+<script lang="ts">
+import { Vue, Component, Ref, Prop, PropSync, Watch } from 'vue-property-decorator'
+import { Pagination, TableData } from '@/utils/types/tables'
+import { getExportList } from '@/api/common'
+import { dictMap, initDictMap } from './tabledict'
+import { format, formatValue } from './format'
+import { isEmpty } from '@/utils/common'
+@Component({
+  name: 'simple-table'
+})
+
+export default class SimpleTable extends Vue {
+  @Ref('table')
+  private table: any
+
+  // 列设置
+  @Prop({ type: Boolean, default: !0 })
+  private columnable!: boolean
+
+  // 序号列
+  @Prop({ type: Boolean, default: !1 })
+  private index!: boolean
+
+  // showSummary
+  @Prop({ type: Boolean, default: !1 })
+  private showSummary!: boolean
+
+  // getSummaries
+  @Prop({ type: Function })
+  private getSummaries!: Function
+
+  // 加载遮罩
+  @Prop({ type: Boolean, default: !1 })
+  private loading!: boolean
+
+  // 页数最多个数
+  @Prop({ type: Number, default: 7 })
+  private pagerCount!: number
+
+  // CheckBox 是否可以勾选
+  @Prop({ type: Function })
+  private selectable!: Function
+
+  // 导出文件名
+  @Prop({ type: String, default: 'xxx' })
+  private exportName!: string
+
+  // 导出列信息
+  @Prop({ type: Array })
+  private exportColumns!: any[]
+
+  // 导出配置
+  @Prop({ type: Object, default: () => ({ exportable: !1 }) })
+  private exportable!: object|any
+
+  // 列表数据与总数配置
+  @Prop({ type: Object })
+  private data!: TableData
+
+  // 操作列配置
+  @Prop({ type: Object, default: () => ({}) })
+  private operator!: object
+
+  // 列配置
+  @Prop({ type: Array })
+  private columns!: object[]
+
+  // 翻译字典 ditcs: ['time']
+  @Prop({ type: Array })
+  private dicts!: object[]
+
+  // 复选框
+  @Prop({ type: Boolean, default: !1 })
+  private isCheckbox!: boolean
+
+  // 格式化配置 format: 'date'
+  @Prop({ type: String })
+  private format!: string
+
+  // 空数据显示
+  @Prop({ type: String })
+  private emptyText!: string
+
+  private defaultEmptyText = ' '
+
+  // 表头格子样式
+  @Prop({ type: [Object, Function], default: () => ({ 'background-color': '#FAFAFA' }) })
+  private headerCellStyle!: object|Function
+
+  // 行样式
+  @Prop({ type: [Function, String] })
+  private rowClassName!: Function|string
+
+  // 分页信息
+  @PropSync('pagination', {
+    type: Object,
+    default: () => ({
+      currentPage: 1,
+      pageSize: 10
+    })
+  })
+  private paginationSync!: Pagination
+
+  // 选择展示块
+  @Prop({ type: Object })
+  private selection!: object|any
+
+  private styleFormat: any = {}
+
+  get hsTableClass () {
+    if (this.selection) {
+      return 'over-flow-block'
+    }
+  }
+
+  public selects = []
+
+  public exportHandle () {
+    (this.$refs.hsTable as any).exportHandle()
+  }
+
+  private currentPage = 1
+
+  private dictMap = dictMap
+
+  getExportData (callback: Function) {
+    // 导出时候判断是否配置了导出接口，否则取列表数据
+    if (this.exportable.src) {
+      getExportList({
+        url: this.exportable.src,
+        data: this.exportable.data()
+      }).then((res: any) => {
+        if (res.object) {
+          let list: any[] = res.object.list
+          Object.keys(this.formatStr).forEach(key => {
+            list = format(list, this.formatStr[key], key)
+          })
+          if (this.dicts && this.dicts.length > 0) {
+            list = list.map((v: any) => {
+              this.dicts.map((key: any) => {
+                v[key] = dictMap(key, v[key])
+              })
+              return v
+            })
+          }
+          console.log(list)
+          callback(list)
+        }
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    } else {
+      callback(this.data.list)
+    }
+  }
+
+  @Watch('data.totalCount')
+  private totalCountChange (v: any) {
+    if (v === 0) {
+      this.defaultEmptyText = this.emptyText
+    }
+  }
+
+  // 页数变化
+  private handleSizeChange (val: any) {
+    this.$listeners['handle-size-change'] && this.$emit('handle-size-change', val)
+    this.paginationSync.pageSize = val
+    this.paginationSync.currentPage = this.paginationSync.currentPage || 1
+    this.$listeners.query && this.$emit('query', this.paginationSync)
+  }
+
+  // 翻页
+  private handleCurrentChange (val: any) {
+    this.$listeners['handle-current-change'] && this.$emit('handle-current-change', val)
+    this.paginationSync.pageSize = this.paginationSync.pageSize || 10
+    this.$listeners.query && this.$emit('query', {
+      pageSize: this.paginationSync.pageSize || 10,
+      currentPage: val
+    })
+  }
+
+  // 勾选变化
+  private selectionChange (selection: any, row: any) {
+    this.$listeners['selection-change'] && this.$emit('selection-change', selection, row)
+  }
+
+  // 勾选该行
+  public setCurrentRow (row: any) {
+    (this.$refs.hsTable as any).setCurrentRow(row)
+  }
+
+  // 切换行状态
+  public toggleRowSelection (row: any, selected: any) {
+    if (selected) {
+      (this.$refs.hsTable as any).toggleRowSelection(row, !0)
+    } else {
+      (this.$refs.hsTable as any).toggleRowSelection(row)
+    }
+  }
+
+  // 清空勾选
+  public clearSelection () {
+    (this.$refs.hsTable as any).clearSelection()
+  }
+
+  // 清空勾选
+  private clear () {
+    (this.$refs.hsTable as any).clearSelection()
+  }
+
+  // 行双击
+  private rowDbclick (row: any, column: any, event: any) {
+    this.$listeners['row-dbclick'] && this.$emit('row-dbclick', row, column, event)
+  }
+
+  // 行点击
+  private rowClick (row: any, column: any, event: any) {
+    this.$listeners['row-click'] && this.$emit('row-click', row, column, event)
+    if (!isEmpty(this.selection)) {
+    // 选中内容
+      let flag = !1
+      this.selects.map((val: any) => {
+        if (row[this.selection.key] === val[this.selection.key]) {
+          flag = !0
+        }
+      })
+      flag || this.selects.push({
+        [this.selection.key]: row[this.selection.key],
+        [this.selection.label]: row[this.selection.label]
+      } as never)
+    }
+  }
+
+  private _rowClassName ({ row }: any) {
+    const flag = this.selects.filter((v: any) => v[this.selection.key] === row[this.selection.key])
+    const selectActive = flag.length > 0 ? 'row-active' : ''
+    if (typeof this.rowClassName === 'string') {
+      return selectActive + ' ' + this.rowClassName
+    } else if (typeof this.rowClassName === 'function') {
+      return selectActive + ' ' + this.rowClassName({ row })
+    }
+    return selectActive
+  }
+
+  private _exportColumns = this.exportColumns
+
+  private columnSetSave (columns: any) {
+    const hiddencolumns: any = []
+    columns.map((v: any) => {
+      if (!v.hidden) {
+        hiddencolumns.push(v.prop)
+      }
+    })
+    this._exportColumns = (this.exportColumns || this.columns).filter((ev: any) => hiddencolumns.includes(ev.prop))
+    this.$listeners['column-set-save'] && this.$emit('column-set-save', columns)
+  }
+
+  private async selectionTagClose (key: any) {
+    if (typeof this.selection.beforeRemove === 'function') {
+      this.selection.beforeRemove(() => {
+        const temp = this.selects
+        this.selects = temp.filter((val: any) => val[this.selection.key] !== key)
+      }, key)
+    } else {
+      const temp = this.selects
+      this.selects = temp.filter((val: any) => val[this.selection.key] !== key)
+    }
+  }
+
+  // 勾选事件
+  private select (selection: any, row: any) {
+    this.$listeners.select && this.$emit('select', selection, row)
+  }
+
+  private columnsSet: any[] = []
+
+  private formatStr: any = {}
+
+  // 格式化函数
+  private formatter (row: any, column: any, cellValue: any) {
+    if (!this.formatStr[column.property]) return cellValue
+    return formatValue(cellValue, this.formatStr[column.property])
+  }
+
+  private cellClassName ({ row, column }: any) {
+    const item = this.styleFormat[column.property]
+    if (!isEmpty(item)) {
+      const val: any = row[column.property]
+      for (const cn in item) {
+        if (item[cn].includes(val)) return cn
+      }
+    }
+  }
+
+  // 获取格式化信息 初始化列设置配置
+  beforeMount () {
+    this.columns.map((v: any) => {
+      v.format && (this.formatStr[v.prop] = v.format)
+      v.hidden = !!v.hidden
+      this.columnsSet.push({
+        ...v
+      })
+      v['style-format'] && (this.styleFormat[v.prop] = v['style-format'])
+    })
+    this._exportColumns = this.exportColumns
+    this.selects = []
+    !isEmpty(this.dicts) && initDictMap(this.dicts)
+  }
+}
+</script>
+<style lang="scss">
+.simple-table{
+  height: 100%;
+  .selected-block{
+    width: 100%;
+    max-height: 76px;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+    overflow: auto;
+    .text-overflow-line{
+      width: 100px;
+    }
+    .hs-tag{
+      margin-right: 6px;
+      margin-top: 6px;
+    }
+  }
+  .table-setting .alert-bolck{
+    width: 100%;
+    display: block;
+    margin: 10px 0 0 0;
+    background-color: #e8e8e8;
+    padding: 8px 6px;
+    border-radius: 3px;
+    border: 1px solid #dedede;
+    i{
+      margin: 0 6px;
+      color: #333;
+      font-size: 16px;
+      opacity: 0.6;
+    }
+    a{
+      color: #FE4066;
+      margin-left: 16px;
+      margin-top: -5px;
+      &:hover{
+        color: #FE4066;
+        opacity: 0.6;
+      }
+    }
+  }
+  .row-active{
+    background-color: #dedede !important;  }
+}
+.block-pagination{
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+.hs-table.over-flow-block{
+  height: calc(100% - 90px);
+  overflow: auto;
+}
+.hs-table .el-table th{
+  padding: 5px 0;
+}
+.hs-table .el-table td{
+  padding: 5px 0;
+}
+</style>

@@ -1,0 +1,467 @@
+<template>
+  <div class="flex">
+      <!-- sidebar -->
+      <div class="inner-sidebar">
+        <p class="bs-item" v-for="item in businessList" :class="{ active: bsItem===item.value }" :key="item.value">
+          {{ item.label }}
+        </p>
+      </div>
+      <!-- sidebar  end -->
+      <div class="grademanage-container">
+        <!-- header -->
+        <div class="align-between">
+          <span class="f20">学生收费</span>
+          <hs-tabs v-model="activeName" type="card">
+            <hs-tab-pane label="待处理" name="undeal"></hs-tab-pane>
+            <hs-tab-pane label="已处理" name="dealed"></hs-tab-pane>
+          </hs-tabs>
+        </div>
+        <!-- header end -->
+        <!-- form -->
+        <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+          <hs-form-item label="院校">
+            <dict-select ref="school" @change="schoolChange" :option="options.school" :prop="{ key: 'id', value: 'schoolName' }" :val.sync="form.schoolId"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="年级">
+            <dict-select ref="grade" @change="gradeChange" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="学年">
+            <dict-select @change="schoolYearChange" :val.sync="form.schoolYear" constant-group-name="schoolYear"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="专业">
+            <dict-select ref="subject" @change="subjectChange" :option="options.subject" :prop="{ key: 'id', value: 'subjectName' }" :val.sync="form.subjectId"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="学生姓名">
+            <hs-input size="mini" v-model="form.studentName" placeholder="请输入学生姓名" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="助记码">
+            <hs-input size="mini" v-model="form.stuMnemonicCode" placeholder="请输入助记码" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="身份证号">
+            <hs-input size="mini" v-model="form.stuPaperworkNumber" placeholder="请输入身份证号" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="学籍状态">
+            <dict-select :val.sync="form.schoolRollStatus" constant-group-name="schoolRollStatus"></dict-select>
+          </hs-form-item>
+          <hs-form-item class="query-block">
+            <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+            <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+          </hs-form-item>
+        </hs-form>
+          <!-- form end -->
+          <!-- table -->
+          <section>
+            <simple-table @selection-change="handleSelectionChange"
+            v-show="!isDealed" :isCheckbox="true" :data="tableData" :columns="undealColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="add" :dicts="['stuSex','schoolRollStatus']">
+              <template slot="operator" slot-scope="{ scope }">
+                <hs-button
+                  @click.native.prevent="add(scope.row)"
+                  type="text"
+                  size="small">
+                  收费
+                </hs-button>
+              </template>
+              <template slot="action">
+                <hs-button type="primary" icon="hs-icon-plus" @click="batchCollect" size="mini">批量收费</hs-button>
+              </template>
+            </simple-table>
+            <simple-table :operator="{ width: 120 }" @selection-change="handleSelectionChange"
+             v-show="isDealed" :isCheckbox="true" :data="tableData" :columns="dealedColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="view"  :dicts="['status']">
+              <template slot="operator" slot-scope="{ scope }" >
+                  <hs-button
+                    @click.native.prevent="view(scope.row)"
+                    type="text"
+                    size="small">
+                    查看
+                  </hs-button>
+                  <hs-button
+                    @click.native.prevent="edit(scope.row)"
+                    type="text"
+                    size="small">
+                    编辑
+                  </hs-button>
+              </template>
+              <template slot="action">
+                <hs-button type="danger"  :disabled="selectList.length===0" icon="hs-icon-close" @click="onInvalid" size="mini">作废</hs-button>
+                <hs-button type="primary" icon="hs-icon-download" @click="onExport" size="mini">导出</hs-button>
+                <hs-button type="primary" :disabled="selectList.length!==1" icon="hs-icon-tickets" @click="onPrint" size="mini">打印</hs-button>
+                <hs-button type="primary" :disabled="selectList.length===0" icon="hs-icon-c-scale-to-original" @click="onOpen" size="mini">开票</hs-button>
+              </template>
+            </simple-table>
+          </section>
+          <!-- table -->
+      </div>
+      <!-- print -->
+      <print-receipt
+        :receiptVisible="receiptVisible"
+        :handleClose="receiptClose"
+        :collectFeesCode="turnoverID"
+        @callback="receiptClose"
+      />
+      <!-- print -->
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Watch } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import PrintReceipt from '@/components/PrintReceipt/index.vue'// 打印小票
+import { commonApi } from '@/api/common'
+import { collectApi } from '@/api/collect'
+
+@Component({
+  name: 'collect-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    PrintReceipt
+  }
+})
+export default class collectManage extends Vue {
+  private loading = false
+  private form = {
+    studyId: '',
+    schoolId: '',
+    gradeId: '',
+    subject: ''
+  }
+
+  private bsItem = '10000' // 业务类型
+  // 业务ID
+  private businessList = [
+    {
+      value: '10000',
+      label: '全日制'
+    },
+    {
+      value: '10002',
+      label: '业余'
+    },
+    {
+      value: '10003',
+      label: '本科'
+    },
+    {
+      value: '10004',
+      label: '其他'
+    }
+  ]
+
+  private turnoverID = '' // 流水ID
+
+  // 打印小票显示
+  private receiptVisible = false
+
+  // 多选数据
+  private selectList:any = []
+
+  private activeName = 'undeal'
+  get isDealed () {
+    return this.activeName === 'dealed'
+  }
+
+  // tab监听
+  @Watch('activeName')
+  private activeNameChange () {
+    if (this.isDealed) {
+      util.initFlexFormOption.max = 10
+    } else {
+      util.initFlexFormOption.max = 7
+    }
+    this.tableData = {
+      list: [],
+      totalCount: 0
+    }
+    util.statusChange('extend')
+    this.onReset()
+  }
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  // 待处理列表
+  private undealColumns = [
+    {
+      prop: 'stuName',
+      label: '学生姓名'
+    },
+    {
+      prop: 'stuSex',
+      label: '性别'
+    },
+    {
+      prop: 'studyName',
+      label: '学习类型'
+    },
+    {
+      prop: 'schoolName',
+      label: '院校名称'
+    },
+    {
+      prop: 'gradeName',
+      label: '年级'
+    },
+    {
+      prop: 'subjectName',
+      label: '专业名称'
+    },
+    {
+      prop: 'idCard',
+      label: '证件后6位'
+    },
+    {
+      prop: 'schoolRollStatus',
+      label: '学籍状态'
+    }
+  ]
+
+  // 已处理列表
+  private dealedColumns = [
+    {
+      prop: 'billNo',
+      label: '流水号'
+    },
+    {
+      prop: 'stuName',
+      label: '学生姓名'
+    },
+    {
+      prop: 'studyName',
+      label: '学习类型'
+    },
+    {
+      prop: 'schoolName',
+      label: '院校名称'
+    },
+    {
+      prop: 'gradeName',
+      label: '年级'
+    },
+    {
+      prop: 'subjectName',
+      label: '专业名称'
+    },
+    {
+      prop: 'receivableAmount',
+      label: '本次应收'
+    },
+    {
+      prop: 'payAmount',
+      label: '本次收费'
+    },
+    {
+      prop: 'arrearsAmount',
+      label: '本次欠费'
+    },
+    {
+      prop: 'accountAmount',
+      label: '本次产生余额'
+    },
+    {
+      prop: 'payType',
+      label: '付款方式'
+    },
+    {
+      prop: 'createName',
+      label: '操作人'
+    },
+    {
+      prop: 'payTime',
+      label: '缴费时间',
+      format: 'date'
+    },
+    {
+      prop: 'createTime',
+      label: '创建时间',
+      format: 'date'
+    },
+    {
+      prop: 'status',
+      label: '状态'
+    },
+    {
+      prop: 'printNum',
+      label: '打印次数'
+    },
+    {
+      prop: 'openInvoice',
+      label: '开票'
+    }
+  ]
+
+  // 院校专业年级等联动
+  private options: any = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {}
+    },
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {}
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        schoolId: -1
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+        schoolId: -1
+      }
+    },
+    center: {
+      url: '/fcs/center/getCenterSelect',
+      data: {
+        businessId: 1
+      }
+    }
+  }
+
+  private pagination: any = { currentPage: '1', pageSize: '10' }
+  // 查询
+  private async onQuery () {
+    this.loading = true
+    const form = util.trimForm({ ...this.form })
+    if (this.isDealed) { // 已处理
+      await collectApi('ftPayList', { ...form, ...this.pagination }).then(async (res: any) => {
+        this.loading = false
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = res.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = false
+      })
+    } else { // 待处理
+      await collectApi('unPayList', { ...form, ...this.pagination }).then(async (res: any) => {
+        this.loading = false
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = res.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = false
+      })
+    }
+    this.loading = false
+  }
+
+  // 重置
+  private onReset () {
+    this.form = {
+      studyId: '',
+      schoolId: '',
+      gradeId: '',
+      subject: ''
+    }
+    this.options.school.data.studyId = this.form.studyId
+    this.options.grade.data.schoolId = this.form.schoolId
+    this.options.subject.data.schoolId = this.form.schoolId;
+    (this.$refs.school as any).getList();
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+    this.onQuery()
+    this.pagination = {
+      currentPage: 1,
+      pageSize: 10
+    }
+  }
+
+  private studyChange () {
+    this.options.school.data.studyId = this.form.studyId;
+    (this.$refs.school as any).getList()
+  }
+
+  private schoolChange () {
+    this.options.grade.data.schoolId = this.form.schoolId
+    this.options.subject.data.schoolId = this.form.schoolId;
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+  }
+
+  // 多选
+  private handleSelectionChange (selection:any) {
+    this.selectList = selection
+  }
+
+  // 打印小票相关
+  private receiptClose () { this.receiptVisible = false }
+  private visible = false
+  private onPrint () {
+    this.receiptVisible = true
+    this.turnoverID = this.selectList[0].payRecordId
+  }
+
+  // 作废
+  private async onInvalid () {
+    const ids = this.selectList.map((v: any) => v.payRecordId)
+    await collectApi('ftPayInvalid', ids).then((res:any) => {
+      if (res.code === 10000) {
+        this.$message.success('作废成功')
+      } else {
+        this.$message.error(res.message)
+      }
+    })
+    this.onQuery()
+  }
+
+  //  开票
+  private async onOpen () {
+    const ids = this.selectList.map((v: any) => v.payRecordId)
+    await commonApi('openInvoice', ids).then((res:any) => {
+      if (res.code === 10000) {
+        this.$message.success('开票成功')
+      } else {
+        this.$message.error(res.message)
+      }
+    })
+    this.onQuery()
+  }
+
+  // 批量收费
+  private batchCollect () {
+    //
+  }
+
+  // 新增操作
+  private async add (row: any) {
+    this.$router.push(
+      { name: 'collectmanagedetail', params: { info: row, type: 'add' } },
+      () => { this.loading = false })
+  }
+
+  // 修改操作
+  private async edit (row: any) {
+    this.$router.push(
+      { name: 'collectmanagedetail', params: { info: row, type: 'edit' } },
+      () => { this.loading = false })
+  }
+
+  // 查看操作
+  private async view (row: any) {
+    this.$router.push(
+      { name: 'collectmanagedetail', params: { info: row, type: 'view' } },
+      () => { this.loading = false })
+  }
+
+  mounted () {
+    this.onQuery()
+    util.initFlexForm({ max: 4 }) // 最多显示多少个下拉选择
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+@import "../collect";
+
+::v-deep .el-tabs__nav {
+  float: right;
+}
+</style>

@@ -1,0 +1,237 @@
+<template>
+  <el-dialog append-to-body title="退费流水详情" :visible.sync="visible" :before-close="onClose" width="70%" @open="open()">
+    <div class="collect-detail-container">
+      <div class="header">
+          <div class="line">
+              <i class="hs-icon-user" /><span class="student-name">{{ info.stuName }}</span>
+          </div>
+          <div class="line">
+              <static-item label="性别">{{ stuInfo.stuSexName }}</static-item>
+              <static-item label="证件号" style="white-space: nowrap;">{{ stuInfo.stuPaperworkNumber }}</static-item>
+          </div>
+      </div>
+      <section>
+        <div class="line">
+          <static-item label="流水号">{{ info.billNo }}</static-item>
+          <static-item label="创建时间">{{ timeConvert(info.createTime) }}</static-item>
+          <static-item label="流水状态">{{ getValueByConstrantArray('feesStatus', info.status) }}</static-item>
+          <static-item label="操作人">{{ info.createName }}</static-item>
+        </div>
+        <div class="line">
+          <static-item label="缴费时间">{{ timeConvert(info.payTime) }}</static-item>
+          <static-item label="缴费类型">退费</static-item>
+          <static-item label="是否退学">{{ getValueByConstrantArray('yesOrNo', info.outSchool) }}</static-item>
+        </div>
+        <div class="subtitle">缴费明细</div>
+        <hs-table
+          id="refundTable"
+          :data="list"
+          :border="!0"
+          :show-summary="!0"
+          :summary-method="getSummaries"
+          style="width: 100%"
+          :loading="loading"
+          header-row-class-name="header-style">
+          <hs-table-column align="center" prop="schoolName" label="缴费院校"></hs-table-column>
+          <hs-table-column align="center" prop="gradeName" label="缴费年级"></hs-table-column>
+          <hs-table-column align="center" prop="subjectName" label="缴费专业"></hs-table-column>
+          <hs-table-column align="center" prop="feeItemName" label="收费项目"></hs-table-column>
+          <hs-table-column align="center" prop="schoolYear" :formatter="(row, column, cellValue) => this.getValueByConstrantArray('schoolYear', cellValue)" label="学年"></hs-table-column>
+          <hs-table-column align="center" prop="feeMust" :formatter="(row, column, cellValue) => this.getValueByConstrantArray('yesOrNo', cellValue)" label="必缴"></hs-table-column>
+          <hs-table-column align="center" prop="receivableAmount" :formatter="formatterMoney" label="应收"></hs-table-column>
+          <hs-table-column align="center" prop="acceptedAmount" :formatter="formatterMoney" label="已收"></hs-table-column>
+          <hs-table-column align="center" prop="alreadyReductionAmount" :formatter="formatterMoney" label="已减免"></hs-table-column>
+          <hs-table-column align="center" prop="alreadyRefundAmount" :formatter="formatterMoney" label="已退"></hs-table-column>
+          <hs-table-column align="center" prop="refundAmount" :formatter="formatterMoney" label="本次退费"></hs-table-column>
+          <hs-table-column align="center" prop="surplusRefundAmount" :formatter="formatterMoney" label="余额退费"></hs-table-column>
+        </hs-table>
+        <div class="line auto">
+          <el-tooltip class="item" effect="dark" content="本次退款=本次退费+余额退费" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+          <static-item label="本次退款">{{ generatingThousandthPer(info.refundAmount) }}</static-item>
+          <el-tooltip class="item" effect="dark" content="剩余余额=个人账户余额-本次余额退款总额" placement="top"><i class="hs-icon-warning" /></el-tooltip>
+          <static-item label="剩余余额">{{ generatingThousandthPer(info.accountAmount) }}</static-item>
+        </div>
+        <div class="line">
+          流水摘要：{{ info.remark }}
+        </div>
+      </section>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="info" size="mini" plain @click="onClose">关闭</el-button>
+      </div>
+    </div>
+  </el-dialog>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+import { studentApi } from '@/api/studentcenter'
+import dayjs from 'dayjs'
+import { getConstantDictVal } from '@/utils/common'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+@Component({
+  name: 'collect-detail',
+  components: {
+    SimpleTable,
+    StaticItem
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private flowId!: number;
+
+  @Prop({ default: false }) private isAmateur!: boolean;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private loading = !0
+
+  private info = {
+    feesStatusName: '',
+    outSchoolName: ''
+  }
+
+  private list = []
+
+  private stuInfo = {}
+
+  private schoolYearName = ''
+
+  private feeMustName = ''
+
+  private async getPrepaidProcessedDetail () {
+    await studentApi(this.isAmateur ? 'parttimeRefundProcessedDetail' : 'refundProcessedDetail', {
+      id: this.flowId
+    }).then(async (res: any) => {
+      if (res.code === 10000) {
+        this.list = res.object.info.items
+        this.info = res.object.info
+        await studentApi('stuDetail', {
+          id: res.object.info.stuId
+        }).then((resStu: any) => {
+          if (resStu.code === 10000) {
+            this.stuInfo = resStu.object.info
+            this.loading = !1
+          }
+        }).catch((err: any) => {
+          console.log('err', err)
+        })
+      }
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private async getDetail () {
+    //
+  }
+
+  private getSummaries (param: any) {
+    const { columns, data } = param
+    const sums:any = {}
+    columns.forEach((column: { property: string|number }, index: number) => {
+      if (index === 0) {
+        sums[index] = '总价'
+        return
+      }
+      const values = data.map((item: { [x: string]: any }) => Number(item[column.property]))
+      if (!values.every((value: number) => isNaN(value))) {
+        sums[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)
+        sums[index] = util.generatingThousandthPer(sums[index])
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private timeConvert (timeStamp: number) {
+    return !timeStamp ? '' : dayjs(timeStamp).format('YYYY-MM-DD HH:mm')
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private generatingThousandthPer (value: any) {
+    return util.generatingThousandthPer(value)
+  }
+
+  private async getConstantDictVal (groupName:string, key:any) {
+    return await getConstantDictVal(groupName, key)
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      if (document.querySelector('#refundTable')) {
+        var current = (document as any)
+          .querySelector('#refundTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '6'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+        cell[5].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private clear () {
+    this.list = []
+    this.info = {
+      feesStatusName: '',
+      outSchoolName: ''
+    }
+    this.stuInfo = {}
+    this.loading = !1
+  }
+
+  private onClose () {
+    this.clear()
+    this.$emit('update:visible', false)
+  }
+
+  private constrantArray: any = {
+    schoolYear: [],
+    feesStatus: [],
+    yesOrNo: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.schoolYear = await getConstantByGroup('schoolYear')
+    this.constrantArray.feesStatus = await getConstantByGroup('feesStatus')
+    this.constrantArray.yesOrNo = await getConstantByGroup('yesOrNo')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private formatterConstrant (row: any, column: any, cellValue: any, groupName: string) {
+    this.getValueByConstrantArray(groupName, cellValue)
+  }
+
+  public mounted (): void {
+    // 获取常量列表
+    this.getConstrantList()
+  }
+
+  public open (): void {
+    this.setColSpan()
+    this.loading = !0
+    this.getPrepaidProcessedDetail()
+  }
+}
+</script>

@@ -1,0 +1,188 @@
+<template>
+  <div class="operatelogsearch-container">
+    <header>
+      <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+        <hs-form-item label="操作用户">
+          <hs-input size="mini" v-model="form.user" placeholder="请输入操作用户" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="操作名称">
+          <hs-input size="mini" v-model="form.name" placeholder="请输入操作名称"></hs-input>
+        </hs-form-item>
+        <hs-form-item label="操作时长">
+          <range-input :value="form.time"></range-input>
+        </hs-form-item>
+        <hs-form-item label="操作状态">
+          <dict-select :val.sync="form.gradeState" comm-group-name="state"></dict-select>
+        </hs-form-item>
+        <hs-form-item label="是否合法">
+          <dict-select :val.sync="form.isLegal" comm-group-name="state"></dict-select>
+        </hs-form-item>
+          <hs-form-item label="起始时间">
+            <el-date-picker
+              range-separator="至"
+              value-format="date"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              :picker-options="pickerOptions"
+              format="yyyy-MM-dd HH:mm:ss"
+              :default-time="['00:00:00','23:59:59']"
+              type="daterange"
+              v-model="form.createTime"
+              size="mini">
+            </el-date-picker>
+          </hs-form-item>
+        <hs-form-item class="query-block">
+          <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+          <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+        </hs-form-item>
+      </hs-form>
+    </header>
+    <section>
+      <simple-table :index="!0" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['gradeState']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+      </simple-table>
+    </section>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import RangeInput from '@/components/busi/custom/rangeinput.vue'
+import util from '@/utils/busi/util'
+import { operateLogList, operateLogCount, operateLogDetail } from '@/api/system'
+@Component({
+  name: 'operatelog-search',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    RangeInput,
+    DictSelect
+  }
+})
+export default class OperatelogSearch extends Vue {
+  private form = {
+    time: {
+      start: '',
+      end: ''
+    }
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'name',
+    label: '操作名称'
+  },
+  {
+    prop: 'state',
+    label: '操作状态'
+  },
+  {
+    prop: 'isLegal',
+    label: '是否合法'
+  },
+  {
+    prop: 'ip',
+    label: '客户端IP',
+    disabled: !0
+  },
+  {
+    prop: 'userName',
+    label: '操作用户'
+  },
+  {
+    prop: 'date',
+    label: '操作时间',
+    default: ['startDate', 'endDate']
+  },
+  {
+    prop: 'time',
+    label: '操作时长(毫秒)',
+    default: ['start', 'end']
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm({ ...this.form }, this.columns)
+    form.start = form.time.start || '-1'
+    form.end = form.time.end || '-1'
+    delete form.time
+    !pagination && (this.pagination.currentPage = 1)
+    await operateLogList({
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      await operateLogCount({
+        ...pagination || this.pagination
+      }).then((resCnt: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list
+        this.tableData.totalCount = resCnt.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      time: {
+        start: '',
+        end: ''
+      }
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await operateLogDetail({ id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          gradeCode: res.object.gradeCode,
+          gradeName: res.object.gradeName,
+          gradeState: res.object.gradeState
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

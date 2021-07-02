@@ -1,0 +1,305 @@
+<template>
+    <div class="collect-detail-container">
+        <el-dialog title="预付流水详情" :visible.sync="visible" :before-close="onClose" width="70%" @open="open()">
+            <div class="header">
+                <div class="line">
+                    <i class="hs-icon-user" /><span class="student-name">{{ info.stuName }}</span>
+                </div>
+                <div class="line">
+                    <static-item label="性别">{{ info.sexName }}</static-item>
+                    <static-item label="证件号">{{ info.idCard }}</static-item>
+                </div>
+            </div>
+            <section>
+              <div class="line">
+                <static-item label="流水号">{{ info.billNo }}</static-item>
+                <static-item label="创建时间">{{ timeConvert(info.createTime) }}</static-item>
+                <static-item label="流水状态">{{ info.statusName }}</static-item>
+                <static-item label="操作人">{{ info.createName }}</static-item>
+              </div>
+              <div class="line">
+                <static-item label="缴费时间">{{ timeConvert(info.payTime) }}</static-item>
+                <static-item label="缴费类型">预交</static-item>
+                <static-item label="一次性收费">{{ info.collectYearName }}</static-item>
+              </div>
+              <hs-table
+                id="prepaidTable"
+                :data="list"
+                :border="!0"
+                :show-summary="!0"
+                :summary-method="getSummaries"
+                style="width: 100%"
+                :loading="loading"
+                header-row-class-name="header-style">
+                  <hs-table-column align="center" prop="businessName" label="缴费业务"></hs-table-column>
+                  <hs-table-column align="center" prop="schoolName" label="缴费院校"></hs-table-column>
+                  <hs-table-column align="center" prop="gradeName" label="缴费年级"></hs-table-column>
+                  <hs-table-column align="center" prop="subjectName" label="缴费专业"></hs-table-column>
+                  <hs-table-column align="center" prop="feeItemName" label="收费项目"></hs-table-column>
+                  <hs-table-column align="center" prop="schoolYearName" label="学年"></hs-table-column>
+                  <hs-table-column align="center" prop="feeMustName" label="必缴"></hs-table-column>
+                  <hs-table-column align="center" prop="receivableAmount" :formatter="formatterMoney" label="应收"></hs-table-column>
+                  <hs-table-column align="center" prop="alreadyReductionAmount" :formatter="formatterMoney" label="已减免"></hs-table-column>
+                  <hs-table-column align="center" prop="alreadyRefundAmount" :formatter="formatterMoney" label="已退"></hs-table-column>
+                  <hs-table-column align="center" prop="acceptedAmount" :formatter="formatterMoney" label="已收"></hs-table-column>
+                  <hs-table-column align="center" prop="payAmount" :formatter="formatterMoney" label="本次预交"></hs-table-column>
+                  <hs-table-column align="center" prop="amount" :formatter="formatterMoney" label="本次到账"></hs-table-column>
+                </hs-table>
+                <hs-table :loading="loading" :data="[info]" style="width: 100%" :border="!0">
+                  <hs-table-column
+                    prop="cash"
+                    label="现金"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="brushCard"
+                    label="刷卡"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="transferMoney"
+                    label="转账"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="aliPay"
+                    label="支付宝"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="wechatPay"
+                    label="微信"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="oneCodePay"
+                    label="一码通"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="payPlatform"
+                    label="缴平台"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="xtPay"
+                    label="秀推"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="wechatOnlinePay"
+                    label="在线支付"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="payAmount"
+                    label="本次预收款"
+                    align="center"
+                    :formatter="formatterMoney">
+                  </hs-table-column>
+                </hs-table>
+                <div class="line auto">
+                  <el-tooltip class="item" effect="dark" content="勾选项本次应收之和" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+                  <static-item label="本次应收">{{ generatingThousandthPer(info.receivableAmount) }}</static-item>
+                  <el-tooltip class="item" effect="dark" content="本次预交款=收款方式缴费金额" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+                  <static-item label="本次预收款">{{ generatingThousandthPer(info.payAmount) }}</static-item>
+                  <el-tooltip class="item" effect="dark" content="本次产生余额=本次预收款-本次预交合计" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+                  <static-item label="本次产生余额">{{ generatingThousandthPer(info.accountAmount) }}</static-item>
+                </div>
+                <div class="line">
+                  单据摘要：{{ info.remark }}
+                </div>
+              </section>
+            <div slot="footer" class="dialog-footer">
+              <el-button type="danger" @click="onPrint">打  印</el-button>
+              <el-button @click="onClose">关  闭</el-button>
+            </div>
+            <!-- print -->
+            <print-receipt
+              z-index="1005"
+              :receiptVisible="receiptVisible"
+              :handleClose="receiptClose"
+              :collectFeesCode="turnoverID"
+              @callback="receiptClose"
+            />
+            <!-- print -->
+        </el-dialog>
+    </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+import { studentApi } from '@/api/studentcenter'
+import PrintReceipt from '@/components/PrintReceipt/index.vue'// 打印小票
+import dayjs from 'dayjs'
+@Component({
+  name: 'collect-detail',
+  components: {
+    SimpleTable,
+    StaticItem,
+    PrintReceipt
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private flowId!: number;
+
+  @Prop({ default: false }) private isAmateur!: boolean;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private info = {}
+
+  private list = []
+
+  private loading = !1
+
+  private turnoverID = '' // 流水ID
+  // 打印小票显示
+  private receiptVisible = false
+  // 打印小票相关
+  private receiptClose () { this.receiptVisible = false }
+  private onPrint () {
+    this.receiptVisible = true
+    this.turnoverID = this.flowId + ''
+  }
+
+  private async getPrepaidProcessedDetail () {
+    await studentApi(this.isAmateur ? 'amateurRepaidProcessedDetail' : 'prepaidProcessedDetail', {
+      id: this.flowId
+    }).then((res: any) => {
+      this.list = res.object.list
+      this.info = res.object.info
+      this.loading = !1
+    }).catch((err: any) => {
+      console.log('err', err)
+    })
+  }
+
+  private getSummaries (param: any) {
+    const { columns, data } = param
+    const sums:any = {}
+    columns.forEach((column: { property: string|number }, index: number) => {
+      if (index === 0) {
+        sums[index] = '合计'
+        return
+      }
+      const values = data.map((item: { [x: string]: any }) => Number(item[column.property]))
+      if (!values.every((value: number) => isNaN(value))) {
+        sums[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)
+        sums[index] = util.generatingThousandthPer(sums[index])
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private timeConvert (timeStamp: number) {
+    return !timeStamp ? '' : dayjs(timeStamp).format('YYYY-MM-DD HH:mm')
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private generatingThousandthPer (value: any) {
+    return util.generatingThousandthPer(value)
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      if (this.$el.querySelector('#prepaidTable')) {
+        var current = (this.$el as any)
+          .querySelector('#prepaidTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '7'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+        cell[5].style.display = 'none'
+        cell[6].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private clear () {
+    this.list = []
+    this.info = {}
+    this.loading = !1
+  }
+
+  private onClose () {
+    this.clear()
+    this.$emit('update:visible', false)
+  }
+
+  // public mounted (): void {
+  // }
+
+  public open (): void {
+    this.loading = !0
+    this.setColSpan()
+    this.getPrepaidProcessedDetail()
+  }
+}
+</script>
+
+<style lang='scss'>
+.collect-detail-container{
+    .header{
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #e4e4e4;
+    }
+    .line {
+        width: 100%;
+        display: flex;
+        margin-bottom: 12px;
+        .hs-icon-user {
+            font-size: 22px;
+            font-weight: bold;
+            margin-right: 12px;
+            margin-top: 2px;
+        }
+        .student-name {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        &.auto .static-label{
+          font-size: 16px;
+          font-weight: bold;
+        }
+    }
+    section{
+      margin-top: 10px;
+    }
+    .static-item-container{
+      width: 25%;
+      .static-label{
+        width: 150px;
+      }
+    }
+}
+</style>

@@ -1,0 +1,37 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+const apiUrl = setting.apiUrl
+
+/**
+* 获取学生列表
+* @param data
+*/
+export const getStudentList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/list`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+/**
+* 验证数据
+* @param data
+*/
+export const validateData = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/list`,
+    method: 'post',
+    data: qs.stringify(data.data)
+  })
+
+  /**
+  * 导入数据
+  * @param data
+  */
+  export const importData = (data: any) =>
+    request({
+      url: `${apiUrl.api}/fcs/student/list`,
+      method: 'post',
+      data: qs.stringify(data.data)
+    })

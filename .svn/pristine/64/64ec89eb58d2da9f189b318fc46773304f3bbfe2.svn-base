@@ -1,0 +1,186 @@
+<!-- 业务下拉框 -->
+<template>
+  <el-select :collapse-tags="collapseTags" :disabled="disabled" ref="select" :filterable="filterable" :multiple-limit="multipleLimit" v-loading="loading" v-model="valSync" :placeholder="placeholder" size="mini" :multiple="multiple" @change="change" :clearable="clearable">
+    <el-option
+      v-for="item in list"
+      :key="item[prop.key]"
+      :label="item[prop.value]"
+      :value="item[prop.key]">
+    </el-option>
+  </el-select>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Prop, PropSync, Watch } from 'vue-property-decorator'
+import { getConstant, getOption, getList } from '@/api/common'
+import comm from './commdict'
+import { LocalStorage } from '@/utils/storage'
+import { isEmpty } from '@/utils/common'
+
+@Component({
+  name: 'dict-select'
+})
+export default class DictSelect extends Vue {
+  // 快速查询
+  @Prop({ type: Boolean, default: !0 })
+  private filterable!: boolean
+
+  // 可清除
+  @Prop({ type: Boolean, default: !1 })
+  private clearable!: boolean
+
+  // 禁用
+  @Prop({ type: Boolean, default: !1 })
+  private disabled!: boolean
+
+  // 全部选项
+  @Prop({ type: Boolean, default: !1 })
+  private hasAll!: boolean
+
+  // 多选限制数
+  @Prop({ type: Number })
+  private multipleLimit!: number
+
+  // 本地字段key
+  @Prop({ type: String })
+  private commGroupName!: string
+
+  // 下拉数据
+  @Prop({ type: Array })
+  private data!: []
+
+  // 扩展参数 url data等
+  @Prop({ type: Object })
+  private option!: {}|any
+
+  // 下拉参数
+  @Prop({ type: Object, default: () => ({ key: 'key', value: 'value' }) })
+  private prop!: {}|any
+
+  // 变量字典key
+  @Prop({ type: String })
+  private optionGroupName!: string
+
+  // 常量字典key
+  @Prop({ type: String })
+  private constantGroupName!: string
+
+  @PropSync('val', { type: [String, Array, Number] })
+  private valSync!: string|[]|number
+
+  @Prop({ type: String, default: '请选择' })
+  private placeholder!: string
+
+  @Prop({ type: Boolean, default: !1 })
+  private collapseTags!: boolean
+
+  @Prop({ type: Boolean, default: !1 })
+  private multiple!: boolean
+
+  private change (val: any) {
+    // 解决切换后标签变化的顺序问题
+    setTimeout(() => {
+      const labels = (this.$refs.select as any).multiple ? (this.$refs.select as any).selected.map((v: any) => v.label) : (this.$refs.select as any).selected.label
+      this.$listeners.change && this.$emit('change', val, labels)
+    })
+  }
+
+  private list: any = []
+
+  private loading = !1
+
+  private iniCommDict () {
+    this.list = comm.dict(this.commGroupName)
+  }
+
+  private filterMethod (val: any) {
+    this.list = this.list.filter((v: any) => {
+      console.log(val, v.value)
+      return val === v.value
+    })
+  }
+
+  @Watch('data', { deep: !0 })
+  private dataChange () {
+    this.list = this.data
+  }
+
+  // 可利用该函数来实现联动效果
+  public async getList () {
+    if (isEmpty(this.option)) return
+    await getList({
+      url: this.option.url,
+      data: this.option.data
+    }).then((res: any) => {
+      if (res.object) {
+        this.list = res.object.list
+      }
+    }).catch(err => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private async getConstant () {
+    if (!this.constantGroupName) return
+    const key = `constant-${this.constantGroupName}`
+    const list = LocalStorage.getObj(key)
+    if (!isEmpty(list)) {
+      this.list = list
+    } else {
+      await getConstant({
+        groupName: this.constantGroupName,
+        timeStamp: new Date().getTime()
+      }).then((res: any) => {
+        if (res.object) {
+          this.list = res.object.list
+          LocalStorage.setObj(key, this.list)
+        }
+      }).catch(err => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }
+  }
+
+  private async getOption () {
+    if (!this.optionGroupName) return
+    const key = `option-${this.optionGroupName}`
+    const list = LocalStorage.getObj(key)
+    if (!isEmpty(list)) {
+      this.list = list
+    } else {
+      await getOption({
+        optionName: this.optionGroupName
+      }).then((res: any) => {
+        if (res.object) {
+          this.list = res.object.list
+          LocalStorage.setObj(key, this.list)
+        }
+      }).catch(err => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }
+  }
+
+  mounted () {
+    // 常量 变量 本地字典 自带数据4种情况分支，待优化
+    this.loading = !0
+    if (this.data) {
+      this.list = this.data
+    }
+    this.iniCommDict()// 本地字典
+    this.getList()// 通用方法
+    this.getOption() // 变量字典
+    this.getConstant() // 常量字典
+    if (this.hasAll) {
+      this.list = [{
+        [this.prop.key]: '',
+        [this.prop.value]: '全部'
+      }].concat(this.list)
+    }
+    this.loading = !1
+  }
+}
+</script>

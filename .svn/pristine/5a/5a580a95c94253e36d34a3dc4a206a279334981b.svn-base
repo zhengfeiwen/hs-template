@@ -1,0 +1,334 @@
+<template>
+  <div>
+   <el-dialog append-to-body :close-on-click-modal="!1" title="票据打印" :close-on-press-escape="false"
+     :visible.sync="receiptVisible" :before-close="handleClose" width="350px"  id="receipt-page" @open="open">
+     <div v-if="printErrorVisible" class="print-error">Web打印服务CLodop未安装启动，点击这里<a href="http://tcsrcz.oss-cn-hangzhou.aliyuncs.com/fcs/template/CLodop.zip" type="primary">下载执行安装</a>（若此前已安装过，可点<a href="http://tcsrcz.oss-cn-hangzhou.aliyuncs.com/fcs/template/CLodop.zip" type="primary">这里直接再次下载安装</a>），成功后请刷新本页面。</div>
+       <div class="content-wrapper-dialog">
+            <div style="text-align: center; font-size: 12pt;line-height:1.5;">{{receiptInfo.schoolName}}</div>
+            <div style="padding:10px 0; text-align: center; font-size: 9pt;">{{receiptInfo.subtitle}}</div>
+            <span class="item">流水号：<span>{{receiptInfo.billNo}}</span></span>
+            <span class="item">日期：<span>{{receiptInfo.payTime ? dayjs(receiptInfo.payTime).format('YYYY-MM-DD') : '' }}</span></span>
+            <span class="item">姓名：<span>{{receiptInfo.stuName}}</span></span>
+            <span class="item">年级：<span>{{receiptInfo.gradeName}}</span></span>
+
+            <div style="font-size: 9pt;margin-bottom:20px" class="print-table">
+              <ul class="receipt-table">
+                <li style="border-bottom: 1px dashed #ccc;">
+                  <span>序号</span>
+                  <span>项目</span>
+                  <span>金额（元）</span>
+                </li>
+                <li v-for="(item,index) in receiptList" :key="index">
+                  <span style="padding-left:5px">{{index+1}}</span>
+                  <span>{{item.feeItemName}}</span>
+                  <span>{{item.amount}}</span>
+                </li>
+                <li style="border-top: 1px dashed #ccc;">
+                  <span></span>
+                  <span>合计</span>
+                  <span>{{receiptInfo.total}}</span>
+                </li>
+              </ul>
+            </div>
+            <p class="msg-item">电话：{{receiptInfo.tel}}</p>
+            <p class="msg-item">地址：{{receiptInfo.address}}</p>
+            <p class="msg-item">{{receiptInfo.ticketTips}}</p>
+            <div class="print-btn">
+                <el-button type="danger" size="mini" @click="print" :loading="loading">打印</el-button>
+            </div>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script  lang="ts">
+import { Vue, Prop, Component, Watch } from 'vue-property-decorator'
+import { commonApi } from '@/api/common'
+import lodopFunc from '@/utils/LodopFuncs'
+import dayjs from 'dayjs'
+@Component({
+  name: 'print-receipt'
+})
+
+export default class PrintReceipt extends Vue {
+  @Prop({ type: String })
+  private collectFeesCode!: string
+
+  @Prop({ type: Boolean })
+  private receiptVisible!: Boolean
+
+  @Prop({ type: Function })
+  private handleClose!: Function
+
+  private dayjs = dayjs
+  private printErrorVisible = false
+  private loading:any = false
+  private receiptInfo:any = {
+    schoolName: '',
+    subtitle: '',
+    stuName: '',
+    ticketTips: '',
+    billNo: '',
+    payTime: '',
+    gradeName: '',
+    address: '',
+    tel: '',
+    total: 0
+  }
+
+  private receiptList:any = []
+
+  private printContent (schoolName:string, printSubtitle:string, address:string, lodop:any) {
+    let top = 10 // 高度计算
+
+    lodop.SET_PRINT_STYLE('FontColor', 0)
+    lodop.SET_PRINT_STYLE('FontName', '黑体')
+    lodop.SET_PRINT_STYLE('FontSize', 10)
+
+    const { billNo, payTime, stuName, gradeName, ticketTips, tel, total } = this.receiptInfo
+
+    // 学校名称
+    if (schoolName.length > 13) { // 需要换行
+      const line1st = schoolName.substring(0, 13)
+      const line2nd = schoolName.substring(13, schoolName.length)
+      let schoolNameLeft = 120 - line1st.length * 7.8
+      lodop.ADD_PRINT_TEXT(top, schoolNameLeft, '60mm', 20, line1st)
+      lodop.SET_PRINT_STYLEA(0, 'FontSize', 11.5)
+      top += 20
+      schoolNameLeft = 120 - line2nd.length * 7.8
+      lodop.ADD_PRINT_TEXT(top, schoolNameLeft, '60mm', 20, line2nd)
+      lodop.SET_PRINT_STYLEA(0, 'FontSize', 11.5)
+    } else {
+      const schoolNameLeft = 120 - schoolName.length * 7.8
+      lodop.ADD_PRINT_TEXT(top, schoolNameLeft, '60mm', 20, schoolName)
+      lodop.SET_PRINT_STYLEA(0, 'FontSize', 11.5)
+    }
+
+    // 打印副标题
+    if (printSubtitle != null && printSubtitle !== '') {
+      top += 20
+      if (printSubtitle.length > 17) { // 换行
+        const line1st = printSubtitle.substring(0, 17)
+        const line2nd = printSubtitle.substring(17, printSubtitle.length)
+        let printSubtitleLeft = 120 - line1st.length * 6.2
+        lodop.ADD_PRINT_TEXT(top, printSubtitleLeft, '60mm', 20, line1st)
+        lodop.SET_PRINT_STYLEA(0, 'FontSize', 9)
+        top += 20
+        printSubtitleLeft = 120 - line2nd.length * 6.2
+        lodop.ADD_PRINT_TEXT(top, printSubtitleLeft, '60mm', 20, line2nd)
+        lodop.SET_PRINT_STYLEA(0, 'FontSize', 9)
+      } else {
+        const printSubtitleLeft = 120 - printSubtitle.length * 6.2
+        lodop.ADD_PRINT_TEXT(top, printSubtitleLeft, '60mm', 20, printSubtitle)
+        lodop.SET_PRINT_STYLEA(0, 'FontSize', 9)
+      }
+    }
+
+    // 流水号 日期 姓名 年级
+    top += 20
+    lodop.ADD_PRINT_TEXT(top, 2, 431, 20, '流水号:' + billNo)
+    lodop.ADD_PRINT_TEXT(top, 132, 431, 20, '日期:' + (payTime ? this.dayjs(payTime).format('YYYY-MM-DD') : ''))
+    top += 27
+    lodop.ADD_PRINT_TEXT(top, 132, 431, 20, '年级:' + gradeName)
+    lodop.ADD_PRINT_TEXT(top, 2, 431, 20, '姓名:')
+    lodop.ADD_PRINT_TEXT(top, 40, '25mm', 20, stuName)
+    if (stuName.length > 6) { top += 14 }
+    top += 27
+    lodop.ADD_PRINT_TEXT(top, 5, 431, 20, '序号')
+    lodop.ADD_PRINT_TEXT(top, 55, 431, 20, '项目')
+    lodop.ADD_PRINT_TEXT(top, 160, 431, 20, '金额(元)')
+    top += 14
+    lodop.ADD_PRINT_TEXT(top, 0, '70mm', 20, '----------------------------------')
+    var height = 27
+    var initialHeight = top - 14
+    this.receiptList.forEach((item:any, index:any) => {
+      initialHeight += 27
+      lodop.ADD_PRINT_TEXT(initialHeight, 15, 430, 20, index + 1)
+      lodop.ADD_PRINT_TEXT(initialHeight, 50, '40mm', 20, item.feeItemName)
+      lodop.ADD_PRINT_TEXT(initialHeight, 160, 430, 20, item.amount)
+      if (item.feeItemName.length > 8) {
+        initialHeight += 27
+      }
+    })
+
+    lodop.ADD_PRINT_TEXT(initialHeight + 14, 0, '70mm', 20, '----------------------------------')
+    initialHeight += height
+    lodop.ADD_PRINT_TEXT(initialHeight, 55, 431, 20, '合计')
+    lodop.ADD_PRINT_TEXT(initialHeight, 160, 431, 20, total) // 合计
+    initialHeight = initialHeight + height
+
+    lodop.ADD_PRINT_TEXT(initialHeight, 0, '70mm', 127, '电话:' + tel)
+    lodop.SET_PRINT_STYLEA(0, 'FontSize', 9)
+    initialHeight += height
+
+    lodop.ADD_PRINT_TEXT(initialHeight, 0, '65mm', 127, '地址:' + address)
+    lodop.SET_PRINT_STYLEA(0, 'FontSize', 9)
+
+    if (address.length > 19) {
+      initialHeight += 22
+    } else if (address.length > 38) {
+      initialHeight += 10
+    }
+
+    initialHeight += 20
+    lodop.ADD_PRINT_TEXT(initialHeight, 0, '65mm', 127, ticketTips)
+    initialHeight += 50
+    lodop.ADD_PRINT_TEXT(initialHeight, 0, '65mm', 127, '')
+  }
+
+  // 打印小票
+  private printNote () {
+    this.loading = true
+    const { address, schoolName, subtitle } = this.receiptInfo
+    this.$nextTick(() => {
+      const printLineHeight = 40
+      let pageHeight = 900 // 单页数据时的高度
+      // 学校名称换行
+      if (schoolName.length > 13) {
+        pageHeight += printLineHeight
+      }
+      // 学校副标题换行
+      if (subtitle !== null && subtitle !== '') {
+        pageHeight += printLineHeight
+      }
+      // 地址换行
+      if (address.length > 33) {
+        pageHeight += printLineHeight * 1.5
+      } else if (address.length > 15) {
+        pageHeight += printLineHeight
+      }
+      // 费用换行
+      if (this.receiptList.length) {
+        pageHeight += (this.receiptList.length - 1) * 100
+      }
+      try {
+        const lodop = lodopFunc.getLodop()
+
+        lodop.PRINT_INITA(
+          0,
+          0,
+          522,
+          333,
+          '打印控件功能演示_Lodop功能_自定义纸张1'
+        )
+
+        lodop.SET_PRINT_PAGESIZE(0, 800, pageHeight, 'A4')
+        this.printContent(schoolName, subtitle, address, lodop)
+
+        // lodop.PREVIEW()
+        // this.loading = false
+        try {
+          const _reslut = lodop.PRINT() // 直接打印
+          if (_reslut) {
+            this.loading = false
+            setTimeout(() => { this.$message({ type: 'success', message: '打印完成!', showClose: !0, duration: 1500 }) }, 100)
+          } else {
+            this.loading = false
+            setTimeout(() => {
+              this.$message({
+                type: 'warning',
+                showClose: !0,
+                duration: 1500,
+                message: '打印出错!'
+              })
+            }, 100)
+          }
+        } catch (error) {
+          this.loading = false
+          setTimeout(() => {
+            this.$message({ type: 'warning', message: '打印出错!', showClose: !0, duration: 1500 })
+          }, 100)
+        }
+      } catch (err) {
+        console.log(err)
+        this.printErrorVisible = true
+      }
+    })
+  }
+
+  // 打印
+  private print () {
+    this.printNote()
+    this.loading = false
+    this.$emit('callback')
+  }
+
+  private open () {
+    this.printErrorVisible = false
+  }
+
+  // 获取打印信息
+  @Watch('collectFeesCode')
+  private async feesPrintInfo (newValue:any) {
+    const res: any = await commonApi('feesPrint', { id: newValue })
+    if (res.code === 10000) {
+      this.receiptInfo = res.object.info
+      this.receiptList = res.object.list
+      this.receiptInfo.total = (this.receiptInfo.total > 0 ? (this.receiptInfo.total / 100).toFixed(2) : 0)
+    } else {
+      this.$message.error({ message: res.message, showClose: !0, duration: 1500 })
+      this.$emit('callback')
+    }
+  }
+}
+</script>
+<style lang="scss" scoped>
+.print-error{
+  color: $mainRed;
+  font-size: 12px;
+  a{
+    font-size: 12px;
+    color: #409eff;
+  }
+  a:hover{
+    text-decoration: underline;
+  }
+}
+#receipt-page {
+  .receipt-table{
+      margin:0px;
+      padding:0px;
+      li{
+          list-style: none;
+            span {
+                display: inline-block;
+                line-height: 30px;
+            }
+            span:nth-child(3n + 1) {
+                width: 20%;
+            }
+            span:nth-child(3n + 2) {
+                width: 50%;
+            }
+            span:nth-child(3n + 3) {
+                width: 30%;
+            }
+        }
+  }
+  .item {
+    display: inline-block;
+    margin-bottom: 8px;
+    width: 50%;
+    font-size: 9pt;
+  }
+
+  .msg-item {
+      font-size: 9pt;
+      line-height: 1.5;
+  }
+
+  ::v-deep .el-dialog__body {
+    padding: 0px 20px 20px 10px;
+  }
+  .content-wrapper-dialog {
+    padding: 15px 15px 45px;
+    box-sizing: border-box;
+    background: #fff;
+  }
+  .print-btn {
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+  }
+}
+</style>

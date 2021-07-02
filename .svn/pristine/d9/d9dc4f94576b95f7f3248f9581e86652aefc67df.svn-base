@@ -1,0 +1,205 @@
+<template>
+  <div class="flex">
+      <div class="inner-sidebar">
+        <p class="bs-item" :class="{ active: bsItem===1 }" >全日制</p>
+        <p class="bs-item" :class="{ active: bsItem===2 }">业余学历</p>
+        <p class="bs-item" :class="{ active: bsItem===3 }">其他业务</p>
+        <p class="bs-item" :class="{ active: bsItem===4 }">中职项目</p>
+      </div>
+      <div class="grademanage-container">
+        <el-tabs v-model="activeName" type="card" @tab-click="handleClick">
+          <el-tab-pane label="待预付" name="toPrepaid">
+                  <header>
+              <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+                <hs-form-item label="学习类型">
+                  <hs-input size="mini" v-model="form.gradeCode" placeholder="请输入学习类型" ></hs-input>
+                </hs-form-item>
+                <hs-form-item label="院校">
+                  <hs-input size="mini" v-model="form.gradeName" placeholder="请输入院校" ></hs-input>
+                </hs-form-item>
+                <hs-form-item label="年级">
+                  <hs-input size="mini" v-model="form.gradeName" placeholder="请输入年级" ></hs-input>
+                </hs-form-item>
+                <hs-form-item label="专业">
+                  <hs-input size="mini" v-model="form.gradeName" placeholder="请输入专业" ></hs-input>
+                </hs-form-item>
+                <hs-form-item label="学生姓名">
+                  <hs-input size="mini" v-model="form.gradeName" placeholder="请输入学生姓名" ></hs-input>
+                </hs-form-item>
+                <hs-form-item label="学生来源">
+                  <hs-input size="mini" v-model="form.gradeName" placeholder="请输入学生来源" ></hs-input>
+                </hs-form-item>
+                <hs-form-item label="学籍状态">
+                  <dict-select :val.sync="form.gradeState" comm-group-name="state"></dict-select>
+                </hs-form-item>
+                <hs-form-item label="起止时间">
+                  <el-date-picker
+                    range-separator="至"
+                    value-format="timestamp"
+                    start-placeholder="开始日期"
+                    end-placeholder="结束日期"
+                    :picker-options="pickerOptions"
+                    type="daterange"
+                    format="yyyy-MM-dd HH:mm:ss"
+                    :default-time="['00:00:00','23:59:59']"
+                    v-model="form.createTime"
+                    size="mini">
+                  </el-date-picker>
+                </hs-form-item>
+                <hs-form-item class="query-block">
+                  <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+                  <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+                </hs-form-item>
+              </hs-form>
+            </header>
+            <section>
+              <simple-table :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['gradeState']">
+                <template slot="operator" slot-scope="{ scope }">
+                  <hs-button
+                    @click.native.prevent="showDetail(scope.row)"
+                    type="text"
+                    size="small">
+                    详情
+                  </hs-button>
+                </template>
+              </simple-table>
+            </section>
+            <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+          </el-tab-pane>
+          <el-tab-pane label="已处理" name="processed">
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { gradeList, gradeDetail } from '@/api/base'
+@Component({
+  name: 'grade-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class GradeManage extends Vue {
+  private form = {
+    gradeState: 1
+  }
+
+  private activeName = 'toPrepaid'
+
+  private loading = !1
+  private bsItem = 1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'gradeCode',
+    label: '学生姓名'
+  },
+  {
+    prop: 'gradeName',
+    label: '性别'
+  },
+  {
+    prop: 'gradeState',
+    label: '学习类型'
+  },
+  {
+    prop: 'gradeState',
+    label: '院校名称'
+  },
+  {
+    prop: 'gradeState',
+    label: '年级'
+  },
+  {
+    prop: 'gradeState',
+    label: '专业名称'
+  },
+  {
+    prop: 'gradeState',
+    label: '所属中心'
+  },
+  {
+    prop: 'gradeState',
+    label: '学生来源'
+  },
+  {
+    prop: 'gradeState',
+    label: '证件后6位'
+  },
+  {
+    prop: 'gradeState',
+    label: '学籍状态'
+  }
+  ]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm({ ...this.form }, this.columns)
+    !pagination && (this.pagination.currentPage = 1)
+    await gradeList({
+      ...form,
+      ...pagination || this.pagination
+    }).then((res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      gradeState: 1
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await gradeDetail({ id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          gradeCode: res.object.gradeCode,
+          gradeName: res.object.gradeName,
+          gradeState: res.object.gradeState
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+    util.initFlexForm({ max: 7 })
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+@import "../collect";
+</style>

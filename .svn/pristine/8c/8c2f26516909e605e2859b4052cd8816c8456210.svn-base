@@ -1,0 +1,79 @@
+<!-- 收费标准新增弹窗 -->
+<template>
+  <hs-dialog title="收费标准新增" :visible.sync="visibleSync" width="40%" :close-on-click-modal="!1">
+    <div class="add-container">
+      <hs-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+        <hs-form-item label="收费项目" prop="feeItemName">
+          <hs-input size="mini" v-model="form.feeItemName" placeholder="请输入收费项目" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="金额" prop="amt">
+          <hs-input size="mini" v-money v-model="form.amt" placeholder="请输入金额" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="比缴" prop="name">
+          <hs-radio v-model="form.isMust" :label="1">是</hs-radio>
+          <hs-radio v-model="form.isMust" :label="0">否</hs-radio>
+        </hs-form-item>
+        <hs-form-item label="允许退费" prop="memo">
+          <hs-radio v-model="form.isRefund" :label="1">是</hs-radio>
+          <hs-radio v-model="form.isRefund" :label="0">否</hs-radio>
+        </hs-form-item>
+      </hs-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="primary" @click="onSave">确认</hs-button>
+      <hs-button type="default" @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, PropSync, Vue } from 'vue-property-decorator'
+import { addCatalog } from '@/api/notice'
+
+@Component({
+  name: 'add-dialog'
+})
+
+export default class AddDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private form = {
+    name: '',
+    isMust: 1,
+    isRefund: 1
+  }
+
+  private rules = {
+    feeItemName: [
+      { required: true, message: '请输入栏目名称', trigger: 'blur' }
+    ],
+    amt: [
+      { required: true, message: '请输入备注', trigger: 'blur' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      await addCatalog({
+        ...this.form
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message(res.message)
+        }
+      })
+    })
+  }
+}
+</script>
+<style lang="scss">
+  .add-container{
+    width: 100%;
+    min-width: 500px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+</style>

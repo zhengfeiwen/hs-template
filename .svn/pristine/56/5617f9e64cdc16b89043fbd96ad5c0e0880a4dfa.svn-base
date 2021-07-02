@@ -1,0 +1,125 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+const apiUrl = setting.apiUrl
+
+/**
+* 获取学生列表
+* @param data
+*/
+export const getStudentList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 验证数据
+* @param data
+*/
+export const validateData = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 导入数据
+* @param data
+*/
+export const importData = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/student/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 减免待处理列表
+* @param data
+*/
+export const reduceUntreatedList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/untreated/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 减免待处理列表总数
+* @param data
+*/
+export const reduceUntreatedCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/untreated/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 减免已处理列表
+* @param data
+*/
+export const reduceAlreadyList = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/already/process/list`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 减免已处理列表总数
+* @param data
+*/
+export const reduceAlreadyCount = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/already/process/list/count`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 减免作废
+* @param data
+*/
+export const reduceAlreadyNullifyPayRecord = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/already/process/nullifyPayRecord`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 减免修改
+* @param data
+*/
+export const reduceAlreadyUpdatePayRecord = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/already/process/updatePayRecord`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 减免新增验证
+* @param data
+*/
+export const updateUntreatedGetReduceItem = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/untreated/getReduceItem`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+
+/**
+* 减免新增
+* @param data
+*/
+export const updateUntreatedInsert = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fulltime/reduce/untreated/insert`,
+    method: 'post',
+    data: qs.stringify(data)
+  })

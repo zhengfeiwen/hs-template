@@ -1,0 +1,378 @@
+<template>
+  <div class="dashboard-container">
+    <div class="dashboard-main">
+      <header>
+        <span>置顶通知:</span>
+        <div class="item" v-for="(item, i) in notices" :key="i">
+          <span>[{{ curDate }}]</span>
+          <hs-link type="danger" @click="onDetail(item)">{{ item.catalogTitle }}</hs-link>
+        </div>
+      </header>
+      <section>
+        <div class="user-message">
+          <div class="column">
+            <div class="line">
+              <!-- <hs-image class="head-img" :src="headImgUrl"></hs-image> -->
+              <hs-svgicon name="user" class="head-icon" />
+              <span>欢迎您，{{ userName }}</span>
+            </div>
+            <div class="line">
+              <static-item label='角色' :width="600">
+                <el-tag type="warning" style="margin: 0 6px 3px 0;" v-for="(role, i) in roles.split('|')" :key="i">{{ role }}</el-tag>
+              </static-item>
+            </div>
+          </div>
+          <div class="column">
+            <div class="line">
+              {{ curDate }} <span class="fw6">今日工作待办</span>
+            </div>
+            <div class="line">
+              <div class="item" v-for="(item, i) in totalData" :key="i">
+                <div class="title">
+                  {{ item.title }}
+                </div>
+                <div class="content">
+                  {{ item.value }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="column info-block" v-loading="infoLoading" element-loading-spinner="el-icon-loading">
+            <div class="line">
+              <span>业务</span><div>{{ infos.busCount }}</div>
+              <span>学生</span><div>{{ infos.stuCount }}</div>
+            </div>
+            <div class="line">
+              <span>院校</span><div>{{ infos.schCount }}</div>
+              <span>待收费</span><div>{{ infos.noPayCount }}</div>
+            </div>
+            <div class="line">
+              <span>专业</span><div>{{ infos.subCount }}</div>
+              <span>收款</span><div>{{ infos.payAmount }}</div>
+            </div>
+          </div>
+        </div>
+        <hs-tabs v-model="activeName" @tab-click="tabClick">
+          <hs-tab-pane name="getNoticeList">
+            <el-badge  v-if="total.all" slot="label" :value="total.all">全部消息</el-badge>
+            <span slot="label" v-else>全部消息</span>
+          </hs-tab-pane>
+          <hs-tab-pane name="getNoReadNoticeList">
+            <el-badge v-if="total.unread" slot="label" :value="total.unread">未读</el-badge>
+            <span slot="label" v-else>未读</span>
+          </hs-tab-pane>
+          <hs-tab-pane name="getReadNoticeList">
+            <el-badge v-if="total.readed" slot="label" :value="total.readed">已读</el-badge>
+            <span slot="label" v-else>已读</span>
+          </hs-tab-pane>
+        </hs-tabs>
+        <!-- <hs-button plain @click="onMarkReaded" size="mini">标记已读</hs-button> -->
+        <simple-table :selectable="selectable" :isCheckbox="!0" @selection-change="selectionChange" :data="tableData" :columns="columns" :loading="loading" @query="onQuery" :pagination.sync="pagination" :dicts="['']">
+          <template slot="custom_readState" slot-scope="{ scope }">
+            {{ scope.row.readState === 1 ? '已读' : '未读' }}
+          </template>
+          <template slot="operator" slot-scope="{ scope }">
+            <hs-button
+              @click.native.prevent="onDetail(scope.row)"
+              type="text"
+              size="small">
+              详情
+            </hs-button>
+          </template>
+        </simple-table>
+        <detail-dialog title="详情" :data="detailData" :visible.sync="visible"></detail-dialog>
+      </section>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import DetailDialog from './detaildialog.vue'
+import { RightModule } from '@/store/modules/right'
+import { LocalStorage } from '@/utils/storage'
+import { homeApi } from '@/api/home'
+import dayjs from 'dayjs'
+import util from '@/utils/busi/util'
+
+@Component({
+  name: 'Dashboard',
+  components: {
+    SimpleTable,
+    StaticItem,
+    DetailDialog
+  }
+})
+export default class extends Vue {
+  private activeName = 'getNoticeList'
+
+  private visible = !1
+
+  private detailData: any = {}
+
+  get headImgUrl () {
+    return RightModule.userInfo.headImgUrl
+  }
+
+  get userName () {
+    return RightModule.userInfo.userName || ''
+  }
+
+  private tabClick () {
+    this.onQuery()
+  }
+
+  private selectable (row: any) {
+    return !row.readState
+  }
+
+  private async onDetail (row: any) {
+    const res = await homeApi.getHomeNoticeInfo({
+      id: row.id
+    })
+    await homeApi.alreadyRead({
+      ids: row.id
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.initData()
+      } else {
+        this.$alert(res.message, { type: 'error' })
+      }
+    })
+    this.detailData = res.object.info
+    this.detailData.topName = this.detailData.top === 1 ? '是' : '否'
+    this.detailData.openName = this.detailData.open === 1 ? '是' : '否'
+    this.visible = !0
+  }
+
+  get roles () {
+    return LocalStorage.getObj('rpc-user-role-names')
+  }
+
+  private total = {
+    all: 0,
+    unread: 0,
+    readed: 0
+  }
+
+  private curDate = dayjs(new Date()).format('YYYY-MM-DD')
+
+  private notices = []
+
+  private totalData = [{
+    title: '未读通知',
+    value: 0
+  },
+  {
+    title: '待收费',
+    value: '-'
+  }]
+
+  private loading = !1
+
+  private tableData = {
+    list: [{}],
+    totalCount: 0
+  }
+
+  private async onMarkReaded () {
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择项目')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    await homeApi.alreadyRead({
+      ids: ids.join(',')
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.initData()
+        this.$message(res.message)
+      } else {
+        this.$alert(res.message, { type: 'error' })
+      }
+    })
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private columns = [{
+    prop: 'catalogTitle',
+    label: '名称'
+  },
+  {
+    prop: 'createName',
+    label: '发布者'
+  },
+  {
+    prop: 'readState',
+    label: '状态',
+    custom: !0
+  },
+  {
+    prop: 'openTime',
+    label: '发布时间',
+    format: 'date'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    !pagination && (this.pagination.currentPage = 1)
+    await homeApi[this.activeName]({
+      status: this.activeName,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData = res.object
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private infos = {
+    payAmount: '-',
+    noPayCount: '-',
+    stuCount: '-',
+    subCount: '-',
+    schCount: '-',
+    busCount: '-'
+  }
+
+  private infoLoading = !1
+
+  private async initData () {
+    this.infoLoading = !0
+    const res = await homeApi.flushSettlementCount()
+    const noticeData = await homeApi.getTopNotice()
+    this.notices = noticeData.object.list
+    this.total.unread = res.object.totalCount
+    this.totalData[0].value = res.object.totalCount
+    await this.onQuery()
+    // 统计数量
+    this.infos.payAmount = util.generatingThousandthPer((await homeApi.payAmount()).object.amount)
+    this.infos.noPayCount = (await homeApi.noPayCount()).object.totalCount
+    this.infos.stuCount = (await homeApi.stuCount()).object.totalCount
+    this.infos.subCount = (await homeApi.subjectCount()).object.totalCount
+    this.infos.schCount = (await homeApi.schoolCount()).object.totalCount
+    this.infos.busCount = (await homeApi.businessCount()).object.totalCount
+    this.infoLoading = !1
+  }
+
+  mounted () {
+    this.initData()
+  }
+}
+</script>
+<style lang="scss">
+  .dashboard-container{
+    height: 100%;
+    width: 100%;
+    padding: 10px 10px 0 10px;
+    background-color: #EAEAEA;
+    .dashboard-main{
+      height: 100%;
+      width: 100%;
+      background-color: #fff;
+      padding: 0 10px;
+      header{
+        width: 100%;
+        padding: 20px;
+        border-bottom: 1px solid #d9d9d9;
+        display: flex;
+        .item{
+          margin-left: 10px;
+          display: flex;
+          align-items: center;
+          span{
+            margin-right: 3px;
+          }
+        }
+      }
+      section{
+        width: 100%;
+        .user-message{
+          width: 100%;
+          display: flex;
+          padding-top: 10px;
+          .column{
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            &:not(:first-child){
+              padding-left: 60px;
+            }
+            &.info-block{
+              .line{
+                span{
+                  color: #d6d6d6;
+                  word-break: keep-all;
+                  width: 40px;
+                  text-align: right;
+                }
+                div{
+                  background-color: #e6dfdf;
+                  padding: 0 12px;
+                  min-width: 150px;
+                  height: 26px;
+                  text-align: center;
+                  line-height: 26px;
+                  margin: 0 12px 0 6px;
+                  color: #009688;
+                }
+              }
+            }
+            .line{
+              width: 100%;
+              display: flex;
+              align-items: center;
+              margin-bottom: 12px;
+              .head-icon{
+                font-size: 40px;
+                padding: 3px;
+                border: 1px solid #d6d6d6;
+                border-radius: 100%;
+                margin-right: 10px;
+              }
+              .hs-image{
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                margin-right: 12px;
+              }
+              .item{
+                width: 80px;
+                height: 50px;
+                background-color: #EBEEF5;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                margin-left: 1px;
+                cursor: pointer;
+                .content{
+                  padding: 6px;
+                  color: #009688;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  .el-badge__content.is-fixed{
+    top: 6px;
+  }
+</style>

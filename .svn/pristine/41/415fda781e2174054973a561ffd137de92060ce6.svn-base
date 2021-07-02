@@ -1,0 +1,291 @@
+<template>
+  <div class="login-container">
+    <hs-image class="background" :src="bgImg"></hs-image>
+    <header>
+      <hs-image :src="logo" alt=""></hs-image>
+      <span>高校收费平台</span>
+    </header>
+    <section class="shadow">
+      <hs-form
+        ref="loginForm"
+        :model="loginForm"
+        :rules="loginRules"
+        class="login-form"
+        autocomplete="on"
+        label-position="left"
+      >
+        <h3 class="title">
+          {{ $t('login.title') }}
+        </h3>
+        <hs-form-item prop="username">
+          <div class="item user">
+            <i class="hs-icon-user" />
+            <hs-input
+              ref="username"
+              v-model="loginForm.username"
+              placeholder="请输入账号"
+              name="username"
+              type="text"
+              tabindex="1"
+              autocomplete="on"
+            />
+          </div>
+        </hs-form-item>
+
+        <hs-tooltip
+          v-model="capsTooltip"
+          content="Caps lock is On"
+          placement="right"
+          manual
+        >
+          <hs-form-item prop="password">
+            <div class="item password">
+              <i class="hs-icon-lock" />
+              <hs-input
+                :key="passwordType"
+                ref="password"
+                v-model="loginForm.password"
+                :type="passwordType"
+                placeholder="密码"
+                name="password"
+                tabindex="2"
+                autocomplete="on"
+                @blur="capsTooltip = false"
+                @keyup.enter.native="handleLogin"
+              />
+              <span
+                class="show-pwd"
+                @click="showPwd"
+              >
+                <svg-icon :name="passwordType === 'password' ? 'eye-off' : 'eye-on'" />
+              </span>
+            </div>
+          </hs-form-item>
+        </hs-tooltip>
+        <hs-form-item prop="code" class="login-code">
+          <div class="item code">
+            <i class="hs-icon-shopping-bag-2" />
+            <hs-input type="text" tabindex="3" v-model="loginForm.code" placeholder="验证码"></hs-input>
+          </div>
+          <vue-img-verify @get-img-code="getImgCode" ref="vueImgVerify" />
+        </hs-form-item>
+        <el-button
+          type="error"
+          tabindex="4"
+          class="btn-login"
+          :loading="loading"
+          @keydown.enter.native.passive="handleLogin"
+          @click.native.prevent="handleLogin"
+        >
+          {{ $t('login.logIn') }}
+        </el-button>
+      </hs-form>
+    </section>
+    <footer>
+      <span>Copyright ©2020 泓深教育集团 All Rights Reserved浏览器支持：火狐、谷歌、IE11</span>
+      <div class="browser">
+        <span>浏览器支持：</span><hs-image :src="broswerSrc"></hs-image>
+      </div>
+    </footer>
+  </div>
+</template>
+
+<script lang="ts">
+import { Component, Vue, Watch } from 'vue-property-decorator'
+import { Route } from 'vue-router'
+import { Dictionary } from 'vue-router/types/router'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import { UserModule } from '@/store/modules/user'
+import LangSelect from '@/components/LangSelect/index.vue'
+import SocialSign from './components/SocialSignin.vue'
+import VueImgVerify from './vue-img-verify.vue'
+import md5 from 'md5'
+import { MenuModule } from '@/store/modules/menu'
+import { SessionStorage } from '@/utils/storage'
+import { RightModule } from '@/store/modules/right'
+import { PermissionModule } from '@/store/modules/permission'
+import router from '@/router'
+
+@Component({
+  name: 'Login',
+  components: {
+    LangSelect,
+    SimpleTable,
+    SocialSign,
+    VueImgVerify
+  }
+})
+export default class extends Vue {
+  get userName () {
+    return UserModule.name
+  }
+
+  private logo = require('../../assets/statics/pics/favicon.png')
+
+  private bgImg = require('../../assets/statics/pics/bg.png')
+
+  private imgCode = ''
+
+  private broswerSrc = require('../../assets/statics/pics/browser.png')
+
+  private dialogVisible = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private pagination = {
+    pageSize: 10,
+    currentPage: 1
+  }
+
+  private validateUsername = (rule: any, value: string, callback: Function) => {
+    callback()
+  }
+
+  private validatePassword = (rule: any, value: string, callback: Function) => {
+    if (value.length < 6) {
+      callback(new Error('密码不能少于6位数'))
+    } else {
+      callback()
+    }
+  }
+
+  private validateCode (rule: any, value: string, callback: Function) {
+    if (!this.loginForm.code || this.imgCode !== this.loginForm.code.toLowerCase()) {
+      callback(new Error('验证码错误'))
+      this.$message.error('验证码错误')
+    } else {
+      callback()
+    }
+  }
+
+  private loginForm: any = {
+    username: '',
+    password: '',
+    code: ''
+  }
+
+  private loginRules = {
+    username: [{ validator: this.validateUsername, trigger: 'blur' }],
+    password: [{ validator: this.validatePassword, trigger: 'blur' }],
+    code: [{ validator: this.validateCode, trigger: 'blur' }]
+  }
+
+  // 点击图片获取验证码
+  private getImgCode (code: any) {
+    this.imgCode = code
+  }
+
+  private passwordType = 'password'
+  private loading = false
+  private showDialog = false
+  private capsTooltip = false
+  private redirect?: string
+  private otherQuery: Dictionary<string> = {}
+
+  @Watch('$route', { immediate: true })
+  private onRouteChange (route: Route) {
+    const query = route.query as Dictionary<string>
+    if (query) {
+      this.redirect = query.redirect
+      this.otherQuery = this.getOtherQuery(query)
+    }
+  }
+
+  mounted () {
+    if (this.loginForm.username === '') {
+      (this.$refs.username as any).focus()
+    } else if (this.loginForm.password === '') {
+      (this.$refs.password as any).focus()
+    }
+    document.onkeydown = () => {
+      const _key = (window.event as any).keyCode
+      if (_key === 13) {
+        this.handleLogin()
+      }
+    }
+  }
+
+  private checkCapslock (e: KeyboardEvent) {
+    const { key } = e
+    this.capsTooltip = key !== null && key.length === 1 && (key >= 'A' && key <= 'Z')
+  }
+
+  private showPwd () {
+    if (this.passwordType === 'password') {
+      this.passwordType = ''
+    } else {
+      this.passwordType = 'password'
+    }
+    this.$nextTick(() => {
+      (this.$refs.password as any).focus()
+    })
+  }
+
+  private handleLogin () {
+    if (this.loading) return
+    (this.$refs.loginForm as any).validate(async (valid: boolean) => {
+      if (valid) {
+        this.loading = !1
+        const params = {
+          userAlias: this.loginForm.username.trim(),
+          password: md5(this.loginForm.password)
+        }
+        await UserModule.Login(params).then(async () => {
+          await RightModule.getRightInfo(UserModule.rpcid).then(() => {
+            // 初始化菜单权限
+            PermissionModule.GenerateRoutes(RightModule.accessroutes)
+            // 菜单权限加入到动态路由中
+            if (!RightModule.accessroutes || (RightModule.accessroutes as any).length === 0) {
+              throw new Error('获取菜单权限失败')
+            }
+            router.addRoutes(PermissionModule.dynamicRoutes)
+            this.close()
+          }).catch(() => {
+            RightModule.ResetAccessRoutes()
+            UserModule.ResetToken()
+          })
+        }).catch(err => {
+          this.$message(err)
+          this.loading = !1
+        })
+      } else {
+        this.loading = !1
+        return false
+      }
+    })
+  }
+
+  private getOtherQuery (query: Dictionary<string>) {
+    return Object.keys(query).reduce((acc, cur) => {
+      if (cur !== 'redirect') {
+        acc[cur] = query[cur]
+      }
+      return acc
+    }, {} as Dictionary<string>)
+  }
+
+  private close () {
+    this.dialogVisible = !1
+    // 默认打开第一个菜单
+    const parent = SessionStorage.get(RightModule.KEYS.ROUTE, 'array')[0].children[0]
+    setTimeout(() => {
+      MenuModule.updateMenuName(parent.name)
+      this.$router.push({
+        name: parent.children[0].name,
+        query: this.otherQuery
+      },
+      () => {
+        // do
+        this.loading = !1
+      })
+    }, 0.3 * 1000)
+  }
+}
+</script>
+
+<style lang="scss">
+@import './index.scss';
+</style>

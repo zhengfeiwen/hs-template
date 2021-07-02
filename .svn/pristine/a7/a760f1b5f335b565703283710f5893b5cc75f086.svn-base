@@ -1,0 +1,44 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+const settlementConfig: any = {
+  settlementUntreatedList: { url: '/fcs/proxy/settlement/untreated/list', headers: { 'data-format': 'money:response' } }, // 代理结算-待处理列表
+  settlementUntreatedListCount: { url: '/fcs/proxy/settlement/untreated/list/count' }, // 代理结算-待处理列表总数
+  settlementAlreadyExport: { url: '/fcs/proxy/settlement/already/export', responseType: 'blob', headers: { responseData: 'all' } }, // 代理结算-导出
+  settlementUntreatedInsert: { url: '/fcs/proxy/settlement/untreated/insert' }, // 代理结算-新增
+  settlementAlreadyList: { url: '/fcs/proxy/settlement/already/list', headers: { 'data-format': 'money:response' } }, // 代理结算-已处理列表
+  settlementAlreadyListCount: { url: '/fcs/proxy/settlement/already/list/count' }, // 代理结算-已处理列表总数
+  settlementAlreadyAbolish: { url: '/fcs/proxy/settlement/already/abolish' }, // 代理结算-作废
+  settlementUntreatedSettlementPage: { url: '/fcs/proxy/settlement/untreated/settlementPage', headers: { 'data-format': 'money:response' } }, // 获取结算结果显示
+  settlementAlreadyDetail: { url: '/fcs/proxy/settlement/already/detail', headers: { 'data-format': 'money:response' } } // 已结算-详情
+}
+
+export const api: any = {}
+
+Object.keys(settlementConfig).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${settlementConfig[key].url}`,
+      method: 'post',
+      data: params,
+      headers: settlementConfig[key].headers,
+      responseType: settlementConfig[key].responseType
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const settlementApi = (key: any, params: any = {}) => {
+  if (api[key]) {
+    return api[key](params)
+  } else {
+    throw Error('不存在该方法：' + key)
+  }
+}

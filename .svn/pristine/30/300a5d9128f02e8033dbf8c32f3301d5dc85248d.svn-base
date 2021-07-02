@@ -1,0 +1,19 @@
+{
+  "name": "猎学财务系统",
+  "devServerPort": 9629,
+  "mockServerPort": 9630,
+  "proxyTarget": {
+    "test": "http://118.178.134.97:8110/",
+    "xiong": "http://192.168.0.20:8604/pro_lb/",
+    "qing": "http://192.168.0.108:8040/pro_lb/",
+    "wen": "http://192.168.0.101:28080/pro-lb/",
+    "fei": "http://192.168.0.107:8046/pro-lb/",
+    "qiang": "http://192.168.0.71:8387/pro-lb/",
+    "ting": "http://192.168.0.120:8086/pro-lb/",
+    "changeOrigin": true,
+    "ws": true,
+    "pathRewrite": {
+      "/api": "/"
+    }
+  }
+}

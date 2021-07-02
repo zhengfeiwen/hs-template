@@ -1,0 +1,161 @@
+<template>
+  <simple-container-column @on-query="onQuery" @on-reset="onReset" :menuName="menuName">
+    <template slot="left">
+      <tree url="/fcs/school/tree" :props="{ children: 'children', label: 'name' }" @node-click="handleNodeClick"></tree>
+    </template>
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="专业代码">
+          <hs-input
+            size="mini"
+            v-model="form.subjectCode"
+            placeholder="请输入专业代码"
+          ></hs-input>
+        </el-form-item>
+        <el-form-item label="专业名称">
+          <hs-input
+            size="mini"
+            v-model="form.subjectName"
+            placeholder="请输入专业名称"
+          ></hs-input>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table ref="hsTable" :export-name="exportName" :exportable="exportable" :export-columns="columns" :columnable="!1" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" :pagination.sync="pagination" @query="onQuery" :dicts="['degree', 'len']">
+        <template slot="action">
+          <hs-button type="danger" v-permission="['fcsSchoolSubjectExport']" @click="onExport" icon="hs-icon-download" size="mini">导出</hs-button>
+        </template>
+      </simple-table>
+    </template>
+  </simple-container-column>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import SimpleContainerColumn from '@/components/container/column/index.vue'
+import Tree from '@/components/busi/custom/tree.vue'
+import util from '@/utils/busi/util'
+import { baseApi } from '@/api/base'
+import dayjs from 'dayjs'
+import { checkPermission } from '@/utils/permission'
+@Component({
+  name: 'fcsSclSubjectMenu',
+  components: {
+    SimpleContainerColumn,
+    SimpleTable,
+    Tree
+  }
+})
+export default class SchoolsubjectManage extends Vue {
+  private form: any = {}
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: -1
+  }
+
+  private columns = [{
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'subjectCode',
+    label: '专业代码'
+  },
+  {
+    prop: 'subjectName',
+    label: '专业名称'
+  },
+  {
+    prop: 'degree',
+    label: '学历层次',
+    export: 'degreeName'
+  },
+  {
+    prop: 'len',
+    label: '学制',
+    export: 'lenName'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    return util.trimForm({ ...temp }, this.columns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['fcsSchoolSubjectExport']),
+    src: '/fcs/schoolSubject/export',
+    data: this.exportParam
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `院校专业信息-${day}`
+  }
+
+  private onExport () {
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('schoolSubjectList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      schoolId: this.form.schoolId
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  public $refs!: {
+    grade: any
+    subject: any
+  };
+
+  private menuName = ''
+
+  private handleNodeClick (data: any) {
+    this.form.schoolId = data.schoolId
+    this.menuName = data.name
+    this.onQuery()
+  }
+
+  activated () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+@import "./index";
+</style>

@@ -1,0 +1,73 @@
+import { isType, urlParamsParse, spectialTrim } from './common'
+import { moneyStandardization } from './dicts/money'
+import { dictStandardization } from './dicts/constdict'
+import settings from '@/settings'
+import qs from 'qs'
+
+const whiteUrl: any[] = []
+
+// 数组数据标准化工厂入口
+const arrayFormat = (list: any, type: any, option: any = {}) => {
+  if (list.length === 0) return list
+  if (type === 'money') return list.map((obj: any) => objFormatMoney(obj, option))
+  if (type === 'dict') return list.map((obj: any) => objFormatDict(obj, option))
+  if (type === 'trim') return list.map((obj: any) => objFormatTrim(obj))
+}
+
+// 根据数据类型转化数据
+const typeFormat = (val: any) => {
+  if (isType(val, 'string')) return urlParamsParse(val)
+  if (isType(val, 'object')) return { ...val }
+  return val
+}
+
+// 金额格式化
+const objFormatMoney = (obj: any, option: any) => {
+  if (Object.keys(obj).length === 0) return obj
+  const _obj = typeFormat(obj)
+  Object.keys(_obj).map((key: any) => {
+    // money
+    _obj[key] = moneyStandardization(key, _obj[key], option)
+  })
+  return isType(obj, 'string') ? qs.stringify(_obj) : _obj
+}
+
+// 空值化
+const objFormatTrim = (obj: any, option: any = { stringNull: '-1', numberNull: -1 }) => {
+  if (Object.keys(obj).length === 0) return obj
+  const _obj = typeFormat(obj)
+  Object.keys(_obj).map((key: any) => {
+    // money
+    _obj[key] = spectialTrim(_obj[key], option)
+  })
+  return isType(obj, 'string') ? qs.stringify(_obj) : _obj
+}
+
+// 字典格式化
+const objFormatDict = (obj: any, option: any) => {
+  if (Object.keys(obj).length === 0) return obj
+  let _obj = typeFormat(obj)
+  Object.keys(_obj).map(async (key: any) => {
+    // dict
+    _obj = await dictStandardization(key, _obj, option)
+  })
+  return isType(obj, 'string') ? qs.stringify(_obj) : _obj
+}
+
+export const isWhite = (url: string) => whiteUrl.includes(url.substring(settings.apiUrl.api.length, url.length))
+
+// 标准化工厂
+export const standardization = (obj: any, format: any, option: any) => {
+  if (!obj) return obj
+  let _obj = obj
+  const formats = format.split('|')
+  formats.map((_format: any) => {
+    if (_format === 'array:trim') _obj = arrayFormat(obj, 'trim')
+    if (_format === 'object:trim') _obj = objFormatTrim(obj)
+    if (_format === 'array:money') _obj = arrayFormat(obj, 'money', option)
+    if (_format === 'object:money') _obj = objFormatMoney(obj, option)
+    if (_format === 'array:dict') _obj = arrayFormat(obj, 'dict', option)
+    if (_format === 'object:dict') _obj = objFormatDict(obj, option)
+  })
+  return _obj
+}

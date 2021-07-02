@@ -1,0 +1,115 @@
+<!-- 编辑学年弹窗 -->
+<template>
+  <hs-dialog title="编辑学年" :visible.sync="visibleSync" width="60%" :close-on-click-modal="!1" @open="open" modal-append-to-body>
+    <div class="add-container">
+      <el-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+        <el-form-item label="学习类型" prop="feeItem">
+          {{ data.studyName }}
+        </el-form-item>
+        <el-form-item label="院校名称" prop="amount">
+          {{ data.schoolName }}
+        </el-form-item>
+        <el-form-item label="年级" prop="name">
+          {{ data.gradeName }}
+        </el-form-item>
+        <el-form-item label="开始日期" prop="startDate">
+          <el-date-picker
+            prefix-icon='school-year-datepicker'
+            v-model="form.startDate"
+            type="date"
+            format="MM-dd"
+            size="mini"
+            placeholder="选择开始日期">
+          </el-date-picker>
+        </el-form-item>
+      </el-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <el-button :loading="addLoading" size="mini" type="danger" @click="onSave">确认</el-button>
+      <el-button type="info" plain size="mini" @click="visibleSync = !1">关闭</el-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import { baseApi } from '@/api/base'
+import { MessageBox } from 'element-ui'
+import dayjs from 'dayjs'
+
+@Component({
+  name: 'add-dialog',
+  components: {
+    DictSelect
+  }
+})
+
+export default class AddDialog extends Vue {
+  @Prop({ type: Object })
+  private data!: object|any
+
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private form: any = {
+    startDate: ''
+  }
+
+  private addLoading = !1
+
+  private rules = {
+    startDate: [
+      { required: true, message: '请选择学年开始日期', trigger: 'blur' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate((validate: any) => {
+      if (!validate) return
+      MessageBox.confirm(
+        '确定修改学年开始日期？修改后【学生收费】、【学生预交】界面将按新的学年起止时间，提供当前时间学生收费标准。', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消'
+        }).then(async () => {
+        this.save()
+      })
+    })
+  }
+
+  private async save () {
+    this.addLoading = !0
+    await baseApi('schoolYearUpdate', {
+      monthDay: dayjs(this.form.startDate).format('MM-DD'),
+      id: this.data.id,
+      gradeName: this.data.gradeName
+    }).then((res: any) => {
+      this.addLoading = !1
+      if (res.code === 10000) {
+        this.$message.success(res.message)
+        this.visibleSync = !1
+        this.$listeners['save-back'] && this.$emit('save-back')
+      } else if (res.code === -10000) {
+        this.$alert(res.message, { type: 'error' })
+      }
+    })
+  }
+
+  private open () {
+    this.form.startDate = this.data.startDate
+  }
+}
+</script>
+<style lang="scss">
+  .add-container{
+    width: 100%;
+    min-width: 500px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .el-message-box__wrapper, .el-date-picker{
+    z-index: 2020 !important;
+  }
+</style>

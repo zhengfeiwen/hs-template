@@ -1,0 +1,630 @@
+<template>
+  <div class="reduce-manage-container">
+    <div class="left">
+      <drawer-select :data="businessList" :value.sync="curBusiness"></drawer-select>
+    </div>
+    <div class="right">
+      <header>
+        <div class="header">
+          <span class="title">学生减免</span>
+          <hs-tabs v-model="activeName" type="card">
+            <hs-tab-pane label="待处理" name="undeal"></hs-tab-pane>
+            <hs-tab-pane label="已处理" name="dealed"></hs-tab-pane>
+          </hs-tabs>
+        </div>
+        <hs-form ref="form" :model="form" label-width="98px" :inline="true">
+          <hs-form-item label="院校">
+            <dict-select ref="school" @change="schoolChange" :option="options.school" :prop="{ key: 'id', value: 'schoolName' }" :val.sync="form.stuSchoolId"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="年级">
+            <dict-select ref="grade" @change="gradeChange" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.stuGradeId"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="学年">
+            <dict-select @change="schoolYearChange" :val.sync="form.schoolYear" constant-group-name="schoolYear"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="专业">
+            <dict-select ref="subject" @change="subjectChange" :data="subjectItemData" :prop="{ key: 'id', value: 'showValue' }" :val.sync="form.stuSubjectId" clearable></dict-select>
+          </hs-form-item>
+          <hs-form-item label="学生姓名">
+            <hs-input size="mini" v-model="form.stuName" placeholder="请输入学生姓名" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="助记码">
+            <hs-input size="mini" v-model="form.stuMnemonicCode" placeholder="请输入助记码" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="身份证号">
+            <hs-input size="mini" v-model="form.stuPaperworkNumber" placeholder="请输入身份证号" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="操作人" v-if="isDealed">
+            <hs-input size="mini" v-model="form.userName" placeholder="请输入操作人" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="减免时间" v-if="isDealed">
+            <el-date-picker
+              range-separator="至"
+              value-format="timestamp"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              :picker-options="pickerOptions"
+              type="daterange"
+              format="yyyy-MM-dd HH:mm"
+              :default-time="['00:00:00','23:59:59']"
+              v-model="form.reduceDate"
+              size="mini">
+            </el-date-picker>
+          </hs-form-item>
+          <hs-form-item label="创建时间" v-if="isDealed">
+            <el-date-picker
+              range-separator="至"
+              value-format="timestamp"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              :picker-options="pickerOptions"
+              type="daterange"
+              format="yyyy-MM-dd HH:mm"
+              :default-time="['00:00:00','23:59:59']"
+              v-model="form.createTime"
+              size="mini">
+            </el-date-picker>
+          </hs-form-item>
+          <hs-form-item label="单据号" v-if="isDealed">
+            <hs-input size="mini" v-model="form.billNo" placeholder="请输入单据号" ></hs-input>
+          </hs-form-item>
+          <hs-form-item label="单据状态" v-if="isDealed">
+            <dict-select :val.sync="form.status" constant-group-name="status"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="学籍状态" v-if="!isDealed">
+            <dict-select :val.sync="form.stuSchoolRollStatus" constant-group-name="schoolRollStatus"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="学习类型">
+            <dict-select ref="study" @change="studyChange" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.study"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="所属中心">
+            <dict-select ref="center" @change="centerChange" :option="options.center" :prop="{ key: 'id', value: 'centerName' }" :val.sync="form.stuBelongCenter"></dict-select>
+          </hs-form-item>
+          <hs-form-item label="学生来源" v-if="!isDealed">
+            <el-cascader :show-all-levels="!1" size="mini" v-model="form.stuSource" :props="{ emitPath: !1, checkStrictly: !1, label: 'optionValue', value: 'optionKey' }" :options="stuSourceData"></el-cascader>
+          </hs-form-item>
+          <hs-form-item class="query-block">
+            <hs-button type="primary" @click="onQuery" size="mini" icon="hs-icon-search">查询</hs-button>
+            <hs-button type="default" @click="onReset" size="mini" icon="hs-icon-refresh-right">重置</hs-button>
+          </hs-form-item>
+        </hs-form>
+      </header>
+      <section>
+        <simple-table :selectable="selectable" v-show="!isDealed" :isCheckbox="!0" :data="tableData" :columns="undealColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['stuSex','stuSchoolRollStatus']">
+          <template slot="operator" slot-scope="{ scope }">
+            <hs-button
+            v-permission="['fcsFullRedUnProcessedInsert']"
+              @click.native.prevent="pay(scope.row)"
+              type="text"
+              size="small">
+              减免
+            </hs-button>
+          </template>
+          <template slot="action">
+            <hs-button type="primary" icon="hs-icon-plus" @click="batchCollect" size="mini">批量导入</hs-button>
+          </template>
+        </simple-table>
+        <simple-table :operator="{ width: 120 }" v-show="isDealed" ref="hsTable" :export-name="exportName" :exportable="exportable" :export-data="getExportData" :isCheckbox="!0" @selection-change="selectionChange" :data="tableData" :columns="dealedColumns" :loading="loading" @query="onQuery" :pagination.sync="pagination" @row-dbclick="showDetail" :dicts="['stuSex', 'feesStatus', 'stuSchoolRollStatus']">
+          <template slot="operator" slot-scope="{ scope }">
+            <hs-button
+              v-permission="['fcsFullRedProcessedDetail']"
+              @click.native.prevent="showdetail(scope.row)"
+              type="text"
+              size="small">
+              查看
+            </hs-button>
+            <hs-button
+              v-permission="['fcsFullRedProcessedUpdate']"
+              @click.native.prevent="editdetail(scope.row)"
+              type="text"
+              size="small">
+              编辑
+            </hs-button>
+          </template>
+          <template slot="action">
+            <hs-button type="danger" icon="hs-icon-close" v-permission="['fcsFullRedNullifyPayRecord']" @click="onReduceAlreadyNullifyPayRecord" size="mini">作废</hs-button>
+            <hs-button type="primary" icon="hs-icon-download" @click="onExport" size="mini">导出</hs-button>
+            <hs-button type="primary" icon="hs-icon-c-scale-to-original" @click="onOpen" v-permission="['fcsOpenInvoice']" size="mini">开票</hs-button>
+          </template>
+        </simple-table>
+      </section>
+      <detail-dialog title="详情" :data="detailData" :visible.sync="visible" ></detail-dialog>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Vue, Component, Watch } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import DrawerSelect from '@/components/busi/drawerselect.vue'
+import util from '@/utils/busi/util'
+import dayjs from 'dayjs'
+import { checkPermission } from '@/utils/permission'
+import { collectApi } from '@/api/collect'
+import { commonApi, getList } from '@/api/common'
+import { getConstantByGroup } from '@/utils/dicts/constdict'
+import { LocalStorage } from '@/utils/storage'
+@Component({
+  name: 'reduce-manage',
+  components: {
+    SimpleTable,
+    DetailDialog,
+    DictSelect,
+    DrawerSelect
+  }
+})
+export default class ReduceManage extends Vue {
+  private activeName = 'undeal'
+
+  get isDealed () {
+    return this.activeName === 'dealed'
+  }
+
+  get pickerOptions () {
+    return util.pickerOptions
+  }
+
+  private businessList = []
+
+  private options: any = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {}
+    },
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+        // study: -1
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        // stuSchoolId: -1
+      }
+    },
+    subject: {
+      url: '/fcs/subject/getSubjectSelect',
+      data: {
+        // stuSchoolId: -1
+      }
+    },
+    center: {
+      url: '/fcs/center/getCenterSelect',
+      data: {
+        // businessId: 1
+      }
+    }
+  }
+
+  private studyChange () {
+    this.options.school.data.studyId = this.form.study || null;
+    (this.$refs.school as any).getList()
+  }
+
+  private schoolChange () {
+    this.options.grade.data.schoolId = this.form.stuSchoolId || null
+    this.options.subject.data.schoolId = this.form.stuSchoolId || null;
+    (this.$refs.grade as any).getList()
+    this.getSubjectItem()
+  }
+
+  private stuSourceData: any = []
+
+  private schoolYearChange () {
+    // do
+  }
+
+  private gradeChange () {
+    // do
+  }
+
+  private subjectChange () {
+    // do
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `学生减免-${day}`
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    return util.trimForm({ ...temp }, this.isDealed ? this.dealedColumns : this.undealColumns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['feeitemExport']),
+    src: '/fcs/item/export',
+    data: this.exportParam
+  }
+
+  private onExport () {
+    const menuName = LocalStorage.getObj('menu-name')
+    this.$confirm('确认要导出' + menuName + '数据?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      const columnKeys:any = []
+      this.dealedColumns.forEach((item:any) => {
+        if (!item.hidden) {
+          columnKeys.push(item.prop)
+        }
+      })
+      const { data, headers } = await collectApi('xxxxx', { businessId: 1, columnKeys })
+      if (!data) {
+        return
+      }
+      util.exportData(data, menuName + '数据.' + headers['content-file-suffix'])
+      this.$message({
+        type: 'success',
+        message: '导出成功!'
+      })
+    }).catch(() => { console.log('catch error') })
+  }
+
+  private async onOpen () {
+    const ids = this.selectedRow.map((v: any) => v.payRecordId)
+    await commonApi('openInvoice', ids).then((res:any) => {
+      if (res.code === 10000) {
+        this.$message.success('开票成功')
+      } else {
+        this.$message.error(res.message)
+      }
+    })
+    this.onQuery()
+  }
+
+  private showdetail (row: any) {
+    // row.id = row.stuId
+    row.payTime = row.payTime ? dayjs(row.payTime).format('YYYY年MM月DD日') : ''
+    this.$router.push({
+      name: 'reducepay',
+      params: Object.assign({ action: 'view', business: this.curBusiness.key }, row)
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  private editdetail (row: any) {
+    // row.id = row.stuId
+    this.$router.push({
+      name: 'reducepay',
+      params: Object.assign({ action: 'edit', business: this.curBusiness.key }, row)
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  private selectedRow: any[] = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+  }
+
+  private async onReduceAlreadyNullifyPayRecord () {
+    if (!this.selectedRow || this.selectedRow.length === 0) {
+      this.$alert('请选择项目')
+      return
+    }
+    const ids = this.selectedRow.map((v: any) => v.id)
+    await collectApi('reduceAlreadyNullifyPayRecord', {
+      ids: ids.join(',')
+    }).then((res:any) => {
+      if (res.code === 10000) {
+        this.$message.success('作废成功')
+      } else {
+        this.$message.error(res.message)
+      }
+    })
+  }
+
+  private curBusiness = {
+    key: '',
+    value: ''
+  }
+
+  private form: any = {
+    study: null,
+    reduceDate: '',
+    createTime: '',
+    stuSchoolId: null,
+    stuGradeId: null,
+    stuSubjectId: null
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private undealColumns = [{
+    prop: 'stuName',
+    label: '学生姓名'
+  },
+  {
+    prop: 'stuSex',
+    label: '性别'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'stuSchoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'stuGradeName',
+    label: '年级'
+  },
+  {
+    prop: 'stuSubjectName',
+    label: '专业名称'
+  },
+  {
+    prop: 'stuBelongCenterName',
+    label: '所属中心'
+  },
+  {
+    prop: 'stuSourceName',
+    label: '学生来源'
+  },
+  {
+    prop: 'stuPaperworkNumber',
+    label: '身份证号'
+  },
+  {
+    prop: 'stuSchoolRollStatus',
+    label: '学籍状态'
+  }]
+
+  private dealedColumns = [{
+    prop: 'billNo',
+    label: '流水号'
+  },
+  {
+    prop: 'stuName',
+    label: '学生姓名'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级'
+  },
+  {
+    prop: 'receivableAmount',
+    label: '本次应收',
+    format: 'money'
+  },
+  {
+    prop: 'alreadyReductionAmount',
+    label: '上次已减',
+    format: 'money'
+  },
+  {
+    prop: 'reductionAmount',
+    label: '本次减免',
+    format: 'money'
+  },
+  {
+    prop: 'payType',
+    label: '付款方式'
+  },
+  {
+    prop: 'createName',
+    label: '操作人'
+  },
+  {
+    prop: 'payTime',
+    label: '减免时间',
+    format: 'date'
+  },
+  {
+    prop: 'createTime',
+    label: '创建时间',
+    format: 'date'
+  },
+  {
+    prop: 'feesStatus',
+    label: '状态'
+  },
+  {
+    prop: 'printNum',
+    label: '打印次数'
+  },
+  {
+    prop: 'openInvoice',
+    label: '开票'
+  }]
+
+  @Watch('activeName')
+  private activeNameChange () {
+    if (this.isDealed) {
+      util.initFlexFormOption.max = 10
+    } else {
+      util.initFlexFormOption.max = 7
+    }
+    util.statusChange('extend')
+    this.tableData = {
+      list: [],
+      totalCount: 0
+    }
+    this.onReset()
+  }
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    this.loading = !0
+    !pagination && (this.pagination.currentPage = 1)
+    if (this.isDealed) {
+      const form = util.trimForm({ ...this.form })
+      await collectApi('reduceAlreadyList', {
+        ...form,
+        business: this.curBusiness.key,
+        ...pagination || this.pagination
+      }).then(async (res: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list.map((v: any) => {
+          v.feesStatus = v.status
+          return v
+        })
+        this.tableData.totalCount = res.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    } else {
+      const form = util.trimForm({ ...this.form })
+      await collectApi('reduceUntreatedList', {
+        ...form,
+        stuBusinessId: this.curBusiness.key,
+        ...pagination || this.pagination
+      }).then(async (res: any) => {
+        this.loading = !1
+        this.tableData.list = res.object.list.map((v: any) => {
+          const item = this.stuSourceDict.filter((f:any) => f.key === v.stuSource)
+          v.stuSourceName = item.length === 0 ? v.stuSource : item[0].value
+          return v
+        })
+        this.tableData.totalCount = res.object.totalCount
+      }).catch((err: any) => {
+        console.log('err', err)
+        this.loading = !1
+      })
+    }
+  }
+
+  private onReset () {
+    this.form = {
+      study: null,
+      reduceDate: '',
+      createTime: '',
+      stuSchoolId: null,
+      gradeId: null,
+      subject: null
+    }
+    this.options.school.data.studyId = this.form.study
+    this.options.grade.data.schoolId = this.form.stuSchoolId
+    this.options.subject.data.schoolId = this.form.stuSchoolId;
+    (this.$refs.school as any).getList();
+    (this.$refs.grade as any).getList();
+    (this.$refs.subject as any).getList()
+
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async pay (row: any) {
+    this.$router.push({
+      name: 'reducepay',
+      params: Object.assign({ action: 'add', business: this.curBusiness.key }, row)
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  private batchCollect () {
+    this.$router.push({
+      name: 'reducebatchimport',
+      params: Object.assign({ businessId: this.curBusiness.key })
+    },
+    () => {
+      // do
+      this.loading = !1
+    })
+  }
+
+  private stuSourceDict: any = []
+
+  private async initData () {
+    this.businessList = await getConstantByGroup('businessType', { update: !0 })
+    this.curBusiness = this.businessList[0]
+    await this.getConstrantList()
+    await this.getSubjectItem()
+    await commonApi('studentSourceTree').then((res: any) => {
+      if (res.code === 10000) {
+        this.stuSourceData = res.object.list
+      }
+    })
+    this.stuSourceDict = await getConstantByGroup('stuSource', { update: !0 })
+    await this.onQuery()
+  }
+
+  private selectable (row: any, index: any) {
+    return !0
+  }
+
+  private subjectItemData: any = []
+
+  private constrantArray: any = {
+    businessType: [],
+    subjectLen: [],
+    subjectDegree: []
+  }
+
+  private async getConstrantList () {
+    this.constrantArray.businessType = await getConstantByGroup('businessType')
+    this.constrantArray.subjectLen = await getConstantByGroup('subjectLen')
+    this.constrantArray.subjectDegree = await getConstantByGroup('subjectDegree')
+  }
+
+  private getValueByConstrantArray (groupName: string, key: any) {
+    const dict: any[] = this.constrantArray[groupName]
+    const valuedict = dict.filter((v: any) => v.key === key)
+    return valuedict.length > 0 ? valuedict[0].value : key
+  }
+
+  private async getSubjectItem () {
+    await getList({
+      url: this.options.subject.url,
+      data: {
+        schoolId: this.form.stuSchoolId || null
+      }
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        this.subjectItemData = []
+        res.object.list.map((v: any) => {
+          v.dataKey = `${v.id}-${v.subjectCode}-${v.subjectName}`
+          v.showValue = `[${this.getValueByConstrantArray('subjectDegree', Number(v.degree))}]${v.subjectName}[${this.getValueByConstrantArray('subjectLen', Number(v.len))}年]`
+          this.subjectItemData.push(v)
+        })
+      }
+    })
+  }
+
+  mounted () {
+    this.initData()
+    util.initFlexForm({ max: 7 })
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

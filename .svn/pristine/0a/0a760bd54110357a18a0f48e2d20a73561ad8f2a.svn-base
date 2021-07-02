@@ -1,0 +1,70 @@
+<!-- 列表详情弹窗 -->
+<template>
+  <hs-dialog title="栏目新增" :visible.sync="visibleSync" width="50%" :close-on-click-modal="!1">
+    <div class="notice-catalog-container">
+      <hs-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+        <hs-form-item label="栏目名称" prop="name">
+          <hs-input size="mini" v-model="form.name" placeholder="请输入栏目名称" ></hs-input>
+        </hs-form-item>
+        <hs-form-item label="备注" prop="memo" class="double line">
+          <el-input type="textarea" maxlength="200" show-word-limit :rows="3" v-model="form.memo" resize="none"></el-input>
+        </hs-form-item>
+      </hs-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <hs-button type="primary" @click="onSave">确认</hs-button>
+      <hs-button type="default" @click="visibleSync = !1">关闭</hs-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, PropSync, Vue } from 'vue-property-decorator'
+import { addCatalog } from '@/api/notice'
+
+@Component({
+  name: 'add-dialog'
+})
+
+export default class AddDialog extends Vue {
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private form = {
+    name: '',
+    memo: ''
+  }
+
+  private rules = {
+    name: [
+      { required: true, message: '请输入栏目名称', trigger: 'blur' }
+    ],
+    memo: [
+      { required: true, message: '请输入备注', trigger: 'blur' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      await addCatalog({
+        ...this.form
+      }).then((res: any) => {
+        if (res.code === 10000) {
+          this.$message(res.message)
+        }
+      })
+    })
+  }
+}
+</script>
+<style lang="scss">
+  .notice-catalog-container{
+    width: 100%;
+    min-width: 500px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+</style>

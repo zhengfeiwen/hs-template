@@ -1,0 +1,39 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+const apiUrl = setting.apiUrl
+
+const settlementConfig: any = {
+  aaa: { url: '/fcs/stu/sch/roll/list' }, // 学生列表
+  aaaCount: { url: '/fcs/stu/sch/roll/list/count' }, // 学生列表
+  bbb: { url: '/fcs/stu/sch/roll/list' }, // 学生列表
+  bbbCount: { url: '/fcs/stu/sch/roll/list/count' } // 学生列表
+}
+
+export const api: any = {}
+
+Object.keys(settlementConfig).map(key => {
+  api[key] = (params: any = {}) =>
+    request({
+      url: `${apiUrl.api}${settlementConfig[key].url}`,
+      method: 'post',
+      data: params,
+      headers: settlementConfig[key].headers,
+      responseType: settlementConfig[key].responseType
+    }).then(async (res:any) => {
+      // 分页链式
+      const countKey = `${key}Count`
+      if (api[countKey]) {
+        const resCnt = await api[countKey](params)
+        res.object.totalCount = resCnt.object.totalCount
+      }
+      return res
+    })
+})
+
+export const settlementApi = (key: any, params: any = {}) => {
+  if (api[key]) {
+    return api[key](params)
+  } else {
+    throw Error('不存在该方法：' + key)
+  }
+}

@@ -1,0 +1,55 @@
+export const SessionStorage = {
+  set: (key: string, value: string) => {
+    if (!key) {
+      throw Error('key is null')
+    }
+    sessionStorage.removeItem(key)
+    sessionStorage.setItem(key, value)
+  },
+  get: (key: string, format = '') => {
+    if (!key) {
+      throw Error('key is null')
+    }
+    const val = sessionStorage.getItem(key)
+    if (format.toLowerCase() === 'object') {
+      return (!val || val === 'undefined') ? {} : JSON.parse(val)
+    } else if (format.toLowerCase() === 'array') {
+      return (!val || val === 'undefined') ? [] : JSON.parse(val)
+    }
+    return val
+  },
+  remove: (key: string) => {
+    if (!key) {
+      throw Error('key is null')
+    }
+    return sessionStorage.removeItem(key)
+  }
+}
+
+export const LocalStorage = {
+  set: (key: string, value: string) => {
+    if (!key) {
+      throw Error('key is null')
+    }
+    localStorage.setItem(key, value)
+  },
+  get: (key: string) => {
+    if (!key) {
+      throw Error('key is null')
+    }
+    return localStorage.getItem(key)
+  },
+  setObj: (key: string, value: any) => {
+    if (!key) {
+      throw Error('key is null')
+    }
+    localStorage.setItem(key, JSON.stringify(value))
+  },
+  getObj: (key: string) => {
+    if (!key) {
+      throw Error('key is null')
+    }
+    const res = localStorage.getItem(key) as any || '{}'
+    return JSON.parse(res)
+  }
+}

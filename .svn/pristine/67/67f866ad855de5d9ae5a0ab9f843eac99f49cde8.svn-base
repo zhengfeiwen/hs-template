@@ -1,0 +1,39 @@
+import { RouteConfig } from 'vue-router'
+import Layout from '@/layout/index.vue'
+
+const Base: RouteConfig = {
+  path: '/base',
+  component: Layout,
+  redirect: 'noredirect',
+  name: 'basicDataMenu',
+  meta: {
+    default: !0,
+    permission: 'basicDataMenu',
+    title: 'base',
+    icon: 'peoples'
+  },
+  children: [{
+    path: 'feestandardmanage/index',
+    component: () => import(/* webpackChunkName: "feeStandardManage" */ '@/views/base/feestandardmanage/index.vue'),
+    name: 'feeStandardManage',
+    meta: {
+      title: 'feestandardmanage',
+      permission: 'feeStandardManage',
+      noCache: true,
+      icon: 'guide'
+    }
+  },
+  {
+    path: 'schoolfeestandard/index',
+    component: () => import(/* webpackChunkName: "schoolfeestandard" */ '@/views/base/schoolfeestandard/index.vue'),
+    name: 'schoolFeeStandard',
+    meta: {
+      title: 'schoolfeestandard',
+      permission: 'schoolFeeStandard',
+      noCache: true,
+      icon: 'guide'
+    }
+  }]
+}
+
+export default Base

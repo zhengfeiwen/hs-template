@@ -1,0 +1,118 @@
+<template>
+  <div class="lowerbrowser-container">
+    <img class="bg-block" src="@/assets/statics/pics/bg.jpg">
+    <div class="lowerbrowser-main">
+      <div class="bg"></div>
+      <div class="main">
+        <div class="text-block__text">
+          为了保障你的账号安全和最佳预览体验，当前业务已不支持IE10及以下浏览器和部分古老浏览器的访问，邀请您使用以下现代高级浏览器。
+        </div>
+        <div class="text-block__headline">
+          <p>建议使用以下浏览器</p>
+          <a class="item" href="https://www.google.cn/intl/zh-CN/chrome/">
+            <img class="pic-block" src="@/assets/404-images/chrome.png">
+            <span>Chrome谷歌</span>
+          </a>
+          <a class="item center" href="http://www.firefox.com.cn/">
+            <img class="pic-block" src="@/assets/404-images/firefox.png">
+            <span>Firefox火狐</span>
+          </a>
+          <a class="item" href="https://browser.360.cn/se/">
+            <img class="pic-block" src="@/assets/404-images/360.png">
+            <span>360浏览器</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
+
+@Component({
+  name: 'lowerbrowser'
+})
+export default class extends Vue {
+}
+</script>
+<style lang="scss">
+#app{
+  width: 100%;
+  height: 100%;
+}
+</style>
+
+<style lang="scss" scoped>
+.lowerbrowser-container {
+  width: 100%;
+  height: 100%;
+  padding: 12% 0;
+  line-height: 100%;
+  overflow: hidden;
+  .bg-block{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;
+  }
+  .lowerbrowser-main{
+    position: relative;
+    width: 100%;
+    height: 480px;
+    text-align: center;
+    .bg{
+      position: absolute;
+      width: 100%;
+      height: 480px;
+      top: 0;
+      left: 0;
+      background-color: #fff;
+      opacity: .6;
+      z-index: -1;
+    }
+    .main{
+      height: 280px;
+      width: 100%;
+      padding-top: 100px;
+      .text-block__text{
+        width: 30%;
+        margin: auto;
+        font-size: 18px;
+        line-height: 20px;
+        color: #FE4066;
+      }
+      .text-block__headline{
+        width: 700px;
+        height: 80px;
+        margin: 0 auto;
+        p{
+          font-size: 16px;
+          margin: 49px 0 37px 0;
+        }
+        .item{
+          width: 107px;
+          display: inline-block;
+          text-align: center;
+          cursor: pointer;
+          &:hover{
+            opacity: 0.6;
+          }
+          &.center{
+            margin:  0 101px;
+          }
+          img, span{
+            width: 107px;
+            height: 107px;
+            display: block;
+            margin: 8px auto;
+            color: #409eff;
+          }
+        }
+      }
+    }
+  }
+}
+</style>

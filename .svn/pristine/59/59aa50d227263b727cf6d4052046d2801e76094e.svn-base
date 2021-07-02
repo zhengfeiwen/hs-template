@@ -1,0 +1,9 @@
+.feestandardmanage-container{
+  height: 100%;
+  width: 100%;
+  .action-bolck, .alert-bolck{
+    width: 100%;
+    display: block;
+    margin: 0;
+  }
+}

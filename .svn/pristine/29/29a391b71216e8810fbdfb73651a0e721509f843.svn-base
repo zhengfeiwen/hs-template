@@ -1,0 +1,28 @@
+<template>
+  <div class="student-baseinfo-container">
+    <BaseInfo :stuId="stuId"></BaseInfo>
+    <AlterationRecord :stuId="stuId"></AlterationRecord>
+    <AbnormalTurnRecord :stuId="stuId"></AbnormalTurnRecord>
+  </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import BaseInfo from '@/components/common/Student/StudentBaseInfo/BaseInfo/index.vue'
+import AlterationRecord from '@/components/common/Student/StudentBaseInfo/AlterationRecord/index.vue'
+import AbnormalTurnRecord from '@/components/common/Student/StudentBaseInfo/AbnormalTurnRecord/index.vue'
+@Component({
+  name: 'student-baseinfo',
+  components: {
+    BaseInfo,
+    AlterationRecord,
+    AbnormalTurnRecord
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+}
+</script>
+
+<style lang='scss'>
+@import "./index";
+</style>

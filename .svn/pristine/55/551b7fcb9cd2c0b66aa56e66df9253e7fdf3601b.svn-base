@@ -1,0 +1,227 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="!1">
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="学习类型">
+          <dict-select ref="study" @change="changeStudy" :option="options.study" :prop="{ key: 'id', value: 'studyName' }" :val.sync="form.studyId"></dict-select>
+        </el-form-item>
+        <el-form-item label="院校">
+          <dict-select ref="school" @change="changeSchool" :option="options.school" :prop="{ key: 'id', value: 'showValue' }" format="school" :val.sync="form.schoolId"></dict-select>
+        </el-form-item>
+        <el-form-item label="年级">
+          <dict-select ref="grade" :option="options.grade" :prop="{ key: 'id', value: 'gradeName' }" :val.sync="form.gradeId"></dict-select>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table ref="hsTable" :export-name="exportName" :exportable="exportable" :export-columns="columns" :columnable="!1" :index="!0" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" :pagination.sync="pagination" @query="onQuery" :dicts="['studyState', 'businessId']">
+        <template slot="custom_startDate" slot-scope="{ scope }">
+          <span>{{ dayjs(scope.row.startDate).format('YYYY-MM-DD') }}</span>
+        </template>
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['schoolYearBasisDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+          <hs-button
+            v-permission="['schoolYearBasisUpdate']"
+            :disabled="scope.row.studyCode === '600006'"
+            @click.native.prevent="onEdit(scope.row)"
+            type="text"
+            size="small">
+            编辑
+          </hs-button>
+        </template>
+        <template slot="action">
+          <hs-button type="danger" v-permission="['fcsSchYearExport']" @click="onExport" icon="hs-icon-download" size="mini">导出</hs-button>
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="detailVisible" :dicts="['studyState', 'businessId']"></detail-dialog>
+    <add-dialog :visible.sync="visible" :data="addData" @save-back="onQuery"></add-dialog>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import SimpleContainer from '@/components/container/index.vue'
+import AddDialog from './add/index.vue'
+import util from '@/utils/busi/util'
+import dayjs from 'dayjs'
+import { baseApi } from '@/api/base'
+import { checkPermission } from '@/utils/permission'
+@Component({
+  name: 'school-year-basis',
+  components: {
+    SimpleContainer,
+    SimpleTable,
+    AddDialog,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class SchoolYearBasis extends Vue {
+  private dayjs = dayjs
+  private form: any = {
+    studyId: null,
+    schoolId: null,
+    gradeId: null
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [{}],
+    totalCount: 0
+  }
+
+  private options = {
+    study: {
+      url: '/fcs/study/getStudySelect',
+      data: {}
+    },
+    school: {
+      url: '/fcs/school/getSchoolSelect',
+      data: {
+        studyId: this.form.studyId || null
+      }
+    },
+    grade: {
+      url: '/fcs/grade/getGradeSelect',
+      data: {
+        schoolId: this.form.schoolId || null
+      }
+    }
+  }
+
+  private changeStudy () {
+    this.options.school.data.studyId = this.form.studyId
+    this.form.schoolId = null
+    this.form.gradeId = null;
+    (this.$refs.school as any).getList()
+  }
+
+  private changeSchool () {
+    this.options.grade.data.schoolId = this.form.schoolId
+    this.form.gradeId = null;
+    (this.$refs.grade as any).getList()
+  }
+
+  private columns = [{
+    prop: 'studyName',
+    label: '学习类型'
+  },
+  {
+    prop: 'schoolName',
+    label: '院校名称'
+  },
+  {
+    prop: 'gradeName',
+    label: '年级'
+  },
+  {
+    prop: 'startDate',
+    label: '学年开始时间',
+    custom: !0
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private exportParam () {
+    const temp = { ...this.form }
+    return util.trimForm({ ...temp }, this.columns)
+  }
+
+  private exportable = {
+    exportable: checkPermission(['fcsSchYearExport']),
+    src: '/fcs/school/year/export/list',
+    data: this.exportParam
+  }
+
+  get exportName () {
+    const day = dayjs(new Date()).format('YYYYMMDD')
+    return `学年信息-${day}`
+  }
+
+  private onExport () {
+    (this.$refs as any).hsTable.exportHandle()
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('schoolYearList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      studyId: null,
+      schoolId: null,
+      gradeId: null
+    }
+    this.onQuery()
+  }
+
+  private detailData = {}
+
+  private visible = !1
+
+  private detailVisible = !1
+
+  private async showDetail (row: any) {
+    await baseApi('schoolYearDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.detailVisible = !0
+        this.detailData = {
+          studyName: res.object.info.studyName,
+          schoolName: res.object.info.schoolName,
+          gradeName: res.object.info.gradeName,
+          schoolYearStartDate: res.object.info.startDate ? dayjs(res.object.info.startDate).format('YYYY-MM-DD') : dayjs(res.object.info.startDate).format('YYYY-MM-DD')
+        }
+      }
+    })
+  }
+
+  private addData = {}
+
+  private async onEdit (row: any) {
+    await baseApi('schoolYearDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.addData = {
+          ...res.object.info
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

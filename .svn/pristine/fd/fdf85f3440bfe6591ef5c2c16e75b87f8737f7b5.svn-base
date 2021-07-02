@@ -1,0 +1,218 @@
+<template>
+  <div class="flowdetail-container">
+      <hs-table
+    ref="multipleTable"
+    :data="tableData"
+    style="width: 100%"
+    row-key="id"
+    border
+    :show-header="true"
+    :highlight-current-row="false"
+    :row-class-name="tableRowClassName"
+    max-height="500"
+    :cell-style="{padding:'5px 0'}"
+    :span-method="arraySpanMethod"
+    @selection-change="handleSelectionChange"
+    lazy
+    :load="load"
+    :tree-props="{children: 'children', hasChildren: 'hasChildren'}">
+    <hs-table-column
+      prop="id"
+      label="缴费院校"
+      align="left">
+        <template slot-scope="scope">
+          <span v-if="scope.row.hasChildren" class="flow-li">
+            <span>流水号：{{ scope.row.billNo }}</span>
+            <span>类型：{{ scope.row.tradeType }}</span>
+            <span>本次{{ scope.row.tradeType }}:()</span>
+            <span>缴费时间：</span>
+            <span>创建时间：{{ scope.row.createTime }}</span>
+            <span>操作人：{{ scope.row.createName }}</span>
+            <span>流水状态：{{ scope.row.status }}</span>
+            <span>摘要：{{ scope.row.remark }}</span>
+          </span>
+          <span v-else>{{ scope.row.schoolName }}</span>
+        </template>
+    </hs-table-column>
+    <hs-table-column
+      prop="business"
+      label="业务"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="gradeName"
+      label="年级"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="subjectName"
+      label="缴费专业"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="FEEItemName"
+      label="收费项目"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="schoolYear"
+      label="学年"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="payAmount"
+      label="本次收款"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="reductionAmount"
+      label="本次减免"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      prop="refundAmount"
+      label="本次退费"
+      align="center">
+    </hs-table-column>
+    <hs-table-column
+      label="操作"
+      align="center">
+      <template slot-scope="scope">
+        <hs-button
+          size="mini"
+          type="text"
+          @click="showDetail(scope.$index, scope.row)">详情</hs-button>
+        <hs-button
+          size="mini"
+          type="text"
+          @click="handleEdit(scope.$index, scope.row)">编辑</hs-button>
+      </template>
+    </hs-table-column>
+</hs-table>
+<CollectDetail :visible.sync="CollectDetailVisible"></CollectDetail>
+  </div>
+</template>
+
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
+import { cellCallbackParams } from 'hs-elementui/src/utils/types/table'
+import CollectDetail from '@/views/collect/flowdetail/collectDetail/index.vue'
+@Component({
+  name: 'demo20',
+  components: {
+    CollectDetail
+  }
+})
+export default class extends Vue {
+  private CollectDetailVisible = false;
+
+  private tableData = [{
+    id: 1,
+    billNo: '2020121210101004',
+    tradeType: '退费',
+    createTime: '2021-11-11 10:10:10',
+    createName: '李工',
+    status: '正常',
+    remark: '这是摘要',
+    hasChildren: true
+  },
+  {
+    id: 2,
+    billNo: '2020121210101004',
+    tradeType: '退费',
+    createTime: '2021-11-11 10:10:10',
+    createName: '李工',
+    status: '正常',
+    remark: '这是摘要',
+    hasChildren: true
+  },
+  {
+    id: 3,
+    billNo: '2020121210101004',
+    tradeType: '退费',
+    createTime: '2021-11-11 10:10:10',
+    createName: '李工',
+    status: '正常',
+    remark: '这是摘要',
+    hasChildren: true
+  }]
+
+  private tableRowClassName (table: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { row, rowIndex } = table
+    if (rowIndex === 1) {
+      return 'warning-row'
+    } else if (rowIndex === 3) {
+      return ''
+    }
+    return ''
+  }
+
+  private indexMethod (index: number) {
+    return index * 2
+  }
+
+  private handleSelectionChange (val: any) {
+    console.log(val)
+  }
+
+  private filterHandler (value: any, row: any, column: any) {
+    const property = column.property
+    return row[property] === value
+  }
+
+  private load = function (tree:any, treeNode:any, resolve:any) {
+    setTimeout(() => {
+      resolve([
+        {
+          id: tree.id * 10 + 1,
+          schoolName: '福州大学',
+          business: '全日制',
+          gradeName: '2021',
+          subjectName: '会计',
+          FEEItemName: '学费',
+          schoolYear: 1,
+          payAmount: 100000,
+          reductionAmount: 0,
+          refundAmount: 0
+        }, {
+          id: tree.id * 10 + 2,
+          schoolName: '福州大学',
+          business: '业余',
+          gradeName: '2020',
+          subjectName: '工商管理',
+          FEEItemName: '保险费',
+          schoolYear: 1,
+          payAmount: 100000,
+          reductionAmount: 0,
+          refundAmount: 0
+        }
+      ])
+    }, 1000)
+  }
+
+  private async showDetail (row: any) {
+    // await gradeDetail({ id: row.id }).then((res: any) => {
+    //   if (res.code === 10000) {
+    //     this.CollectDetailVisible = !0
+    //     this.detailData = {
+    //       gradeCode: res.object.gradeCode,
+    //       gradeName: res.object.gradeName,
+    //       gradeState: res.object.gradeState
+    //     }
+    //   }
+    // })
+    this.CollectDetailVisible = !0
+  }
+
+  private arraySpanMethod = function (cellCallbackParams: cellCallbackParams) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { row, column, rowIndex, columnIndex } = cellCallbackParams
+    return row.hasChildren ? (columnIndex === 0 ? [1, 9] : columnIndex === 9 ? [1, 1] : [0, 0]) : (columnIndex === 9 ? [0, 0] : [1, 1])
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

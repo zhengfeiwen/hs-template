@@ -1,0 +1,8 @@
+.history-intercourse-detail-dialog-container{
+    .intercourse-info{
+        margin-bottom: 30px;
+        span{
+            margin-right: 20px;
+        }
+    }
+}

@@ -1,0 +1,223 @@
+import request from '@/utils/request'
+import setting from '@/settings'
+import qs from 'qs'
+import { isEmpty } from 'xe-utils'
+const apiUrl = setting.apiUrl
+
+/**
+ * 获取数据-通用
+ * @param data
+ */
+export const getList = (data: any) =>
+  request({
+    url: `${apiUrl.api}${data.url}`,
+    method: 'post',
+    data: data.data
+  })
+
+/**
+ * 获取院校下拉框
+ * @param data
+ */
+export const getSchoolSelect = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/school/getSchoolSelect`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取年级下拉框
+ * @param data
+ */
+export const getGradeSelect = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/grade/getGradeSelect`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取专业下拉框
+ * @param data
+ */
+export const getSubjectSelect = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/subject/getSubjectSelect`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取中心下拉框
+ * @param data
+ */
+export const getCenterSelect = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/center/getCenterSelect`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取学习类型列表
+ * @param data
+ */
+export const getStudySelect = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/study/getStudySelect`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取学年列表
+ * @param data
+ */
+export const getSchoolYearSelect = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/study/getStudySelect`,
+    method: 'post',
+    data
+  })
+/**
+ * 获取常量字典列表-特殊处理group
+ * @param data
+ */
+
+const groups: any = {
+  status: 'available',
+  openInvoice: 'available',
+  degree: 'subjectDegree',
+  len: 'subjectLen',
+  preItem: 'yesOrNo',
+  ifMust: 'yesOrNo',
+  ifRefund: 'yesOrNo',
+  studyState: 'available',
+  businessId: 'businessType',
+  business: 'businessType',
+  stuSex: 'sex',
+  stuSchoolRollStatus: 'schoolRollStatus'
+}
+
+export const getConstant = (data: any) => {
+  const groupName = data.groupName
+  if (!isEmpty(groups[groupName])) {
+    data = {
+      groupName: groups[groupName]
+    }
+  }
+  return request({
+    url: `${apiUrl.api}/fcs/fcsoption/getConstant`,
+    method: 'post',
+    data: qs.stringify(data)
+  })
+}
+
+/**
+*根据变量字典数据
+*
+* @param data
+* @returns {*}
+*/
+export const getOption = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fcsoption/getOption`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取获取常量值
+ * @param data
+ */
+export const getOptionValue = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/fcsoption/getOptionValue`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取院校树
+ * @param data
+ */
+export const schoolTree = (data: any) =>
+  request({
+    url: `${apiUrl.api}/lb/lboption/getOption`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 获取项目下拉框
+ * @param data
+ */
+export const getFeeItem = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/item/select`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 打印
+ * @param data
+ */
+export const feesPrint = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/common/fees/print`,
+    method: 'post',
+    data
+  })
+
+/**
+ * 开票
+ * @param data
+ */
+export const openInvoice = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/common/fees/open/invoice`,
+    method: 'post',
+    data
+  })
+
+/**
+  * 学生详情通用接口
+  *
+  * @param data
+  * @returns {*}
+  */
+export const stuCommonDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/common/detail`,
+    method: 'post',
+    data
+  })
+
+/**
+* 个人账户信息
+* @param data
+*/
+export const stuCommonAccountDetail = (data: any) =>
+  request({
+    url: `${apiUrl.api}/fcs/stu/common/account/detail`,
+    method: 'post',
+    data
+  })
+
+export const common = {
+  getList: getList,
+  getSchoolYearSelect: getSchoolYearSelect,
+  getSchoolSelect: getSchoolSelect,
+  getGradeSelect: getGradeSelect,
+  getSubjectSelect: getSubjectSelect,
+  getCenterSelect: getCenterSelect,
+  getStudySelect: getStudySelect,
+  getConstant: getConstant,
+  getOption: getOption,
+  getOptionValue: getOptionValue,
+  schoolTree: schoolTree,
+  getFeeItem: getFeeItem,
+  feesPrint: feesPrint
+}

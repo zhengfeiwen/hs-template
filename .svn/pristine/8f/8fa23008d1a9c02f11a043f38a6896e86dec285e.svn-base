@@ -1,0 +1,316 @@
+<template>
+    <div class="collect-detail-container">
+        <el-dialog title="流水详情" :visible.sync="visible" :before-close="onClose" width="70%">
+            <div class="header">
+                <div class="line">
+                    <i class="hs-icon-user" /><span class="student-name">郑斐文</span>
+                </div>
+                <div class="line">
+                    <static-item label="性别"> </static-item>
+                    <static-item label="证件号"></static-item>
+                </div>
+            </div>
+            <section>
+              <div class="line">
+                <static-item label="流水号"> </static-item>
+                <static-item label="创建时间"></static-item>
+                <static-item label="流水状态"> </static-item>
+                <static-item label="操作人"></static-item>
+              </div>
+              <div class="line">
+                <static-item label="缴费时间"> </static-item>
+                <static-item label="缴费类型"></static-item>
+                <static-item label="一次性收费"></static-item>
+              </div>
+              <hs-table
+                id="editAbletrendsTable"
+                :data="list"
+                :border="!0"
+                :show-summary="!0"
+                :summary-method="getSummaries"
+                style="width: 100%"
+                @selection-change="selectionChange"
+                header-row-class-name="header-style">
+                  <hs-table-column prop="feeItemName" label="收费项目"></hs-table-column>
+                  <hs-table-column prop="lenName" label="学年"></hs-table-column>
+                  <hs-table-column prop="feeMust" label="必缴"></hs-table-column>
+                  <hs-table-column prop="receivableAmount" :formatter="formatterMoney" label="应收"></hs-table-column>
+                  <hs-table-column prop="alreadyReductionAmount" :formatter="formatterMoney" label="已减免"></hs-table-column>
+                  <hs-table-column prop="reductionAmount" label="本次减免">
+                    <template slot-scope="scope">
+                      <span v-if="!list[scope.$index].edit">{{ generatingThousandthPer(list[scope.$index].reductionAmount) }}</span>
+                      <hs-input v-else style="width: 120px;" v-money size="mini" @click="change(scope.$index)" v-model.trim="list[scope.$index].reductionAmount"></hs-input>
+                    </template>
+                  </hs-table-column>
+                </hs-table>
+                <hs-table :data="tableData" style="width: 100%">
+                  <hs-table-column
+                    prop="date"
+                    label="现金"
+                    align="center">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="name"
+                    label="刷卡"
+                    align="center">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="address"
+                    label="转账"
+                    align="center">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="address"
+                    label="支付宝"
+                    align="center">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="address"
+                    label="微信"
+                    align="center">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="address"
+                    label="一码通"
+                    align="center">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="address"
+                    label="缴平台"
+                    align="center">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="address"
+                    label="秀推"
+                    align="center">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="address"
+                    label="在线支付"
+                    align="center">
+                  </hs-table-column>
+                  <hs-table-column
+                    prop="address"
+                    label="本次预收款"
+                    align="center">
+                  </hs-table-column>
+                </hs-table>
+                <div class="line auto">
+                  <el-tooltip class="item" effect="dark" content="勾选项应收金额合计" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+                  <static-item label="本次应收" :width="350">{{ totalReceivableAmount }}</static-item>
+                  <el-tooltip class="item" effect="dark" content="勾选项历史流水中减免总金额" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+                  <static-item label="上次已减" :width="350">{{ totalAlreadyReductionAmount }}</static-item>
+                  <el-tooltip class="item" effect="dark" content="勾选项当前减免金额之和" placement="bottom"><i class="hs-icon-question" /></el-tooltip>
+                  <static-item label="本次减免" :width="350">{{ titalReductionAmount }}</static-item>
+                </div>
+                <div class="line">
+                  单据摘要：
+                </div>
+              </section>
+            <div slot="footer" class="dialog-footer">
+                <el-button type="primary" >打印</el-button>
+            </div>
+        </el-dialog>
+    </div>
+</template>
+<script lang='ts'>
+import { Component, Prop, Vue } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import StaticItem from '@/components/busi/staticitem.vue'
+import util from '@/utils/busi/util'
+@Component({
+  name: 'collect-detail',
+  components: {
+    SimpleTable,
+    StaticItem
+  }
+})
+export default class extends Vue {
+  @Prop({ default: false }) private stuId!: number;
+
+  @Prop({ default: false }) private visible!: boolean;
+
+  private form = {
+    data: '',
+    workInfo: {}
+  }
+
+  private tableData = [{
+    date: '2016-05-02',
+    name: '王小虎',
+    address: 1200
+  }]
+
+  private generatingThousandthPer (num: any) {
+    return util.generatingThousandthPer(num)
+  }
+
+  get totalReceivableAmount () {
+    return util.generatingThousandthPer(this.selectedRow.reduce((sum, any, i: any, v: any) => sum + v[i].receivableAmount * 1, 0))
+  }
+
+  get totalAlreadyReductionAmount () {
+    return util.generatingThousandthPer(this.selectedRow.reduce((sum, any, i: any, v: any) => sum + v[i].alreadyReductionAmount * 1, 0))
+  }
+
+  get titalReductionAmount () {
+    return util.generatingThousandthPer(this.selectedRow.reduce((sum, any, i: any, v: any) => sum + v[i].reductionAmount * 1, 0))
+  }
+
+  private list: any[] = [
+    {
+      feeItemId: 1,
+      feeItemName: '收费项目1',
+      lenName: '',
+      feeMust: 4,
+      receivableAmount: 11,
+      alreadyReductionAmount: 11111,
+      reductionAmount: 100
+    },
+    {
+      feeItemId: 2,
+      feeItemName: '收费项目2',
+      lenName: '',
+      feeMust: 3,
+      receivableAmount: 22,
+      alreadyReductionAmount: 2,
+      reductionAmount: 100
+    },
+    {
+      feeItemId: 3,
+      feeItemName: '收费项目3',
+      lenName: '',
+      feeMust: 2,
+      receivableAmount: 33,
+      alreadyReductionAmount: 3,
+      reductionAmount: 100
+    },
+    {
+      feeItemId: 4,
+      feeItemName: '收费项目4',
+      lenName: '',
+      feeMust: 1,
+      receivableAmount: 44,
+      alreadyReductionAmount: 4,
+      reductionAmount: 100
+    }
+  ]
+
+  private selectedRow = []
+
+  private selectionChange (selected: any) {
+    this.selectedRow = selected
+    const len = this.list.length
+    for (let i = 0; i < len; i++) {
+      this.list[i].edit = !1
+      this.selectedRow.map((v: any) => {
+        if (v.feeItemId === this.list[i].feeItemId) {
+          this.list[i].edit = !0
+        }
+      })
+    }
+  }
+
+  private getSummaries (param: any) {
+    const { columns, data } = param
+    const sums: any = []
+    console.log(param)
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计（勾选项）'
+        return
+      }
+      const values = this.selectedRow.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = util.generatingThousandthPer(values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0))
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
+
+  private setColSpan () {
+    setTimeout(() => {
+      if (this.$el.querySelector('#editAbletrendsTable')) {
+        var current = (this.$el as any)
+          .querySelector('#editAbletrendsTable')
+          .querySelector('.el-table__footer-wrapper')
+          .querySelector('.el-table__footer')
+        var cell = current.rows[0].cells
+        cell[0].colSpan = '5'
+        cell[1].style.display = 'none'
+        cell[2].style.display = 'none'
+        cell[3].style.display = 'none'
+        cell[4].style.display = 'none'
+      }
+    }, 50)
+  }
+
+  private formatterMoney (row: any, column: any, cellValue: any) {
+    return util.generatingThousandthPer(cellValue)
+  }
+
+  private change (row: any) {
+    // do
+  }
+
+  private onReduction () {
+    // do
+  }
+
+  private onClose () {
+    this.$emit('update:visible', false)
+  }
+
+  public mounted (): void {
+    this.setColSpan()
+  }
+}
+</script>
+
+<style lang='scss'>
+.collect-detail-container{
+    .header{
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid #e4e4e4;
+    }
+    .line {
+        width: 100%;
+        display: flex;
+        margin-bottom: 12px;
+        .hs-icon-user {
+            font-size: 22px;
+            font-weight: bold;
+            margin-right: 12px;
+            margin-top: 2px;
+        }
+        .student-name {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        &.auto .static-label{
+          font-size: 16px;
+          font-weight: bold;
+        }
+    }
+    section{
+      margin-top: 10px;
+    }
+    .static-item-container{
+      width: 25%;
+      .static-label{
+        width: 100px;
+      }
+    }
+}
+</style>

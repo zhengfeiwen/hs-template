@@ -1,0 +1,170 @@
+<!-- 收费标准新增弹窗 -->
+<template>
+  <hs-dialog destroy-on-close append-to-body title="收费标准新增" :visible.sync="visibleSync" width="500px" :close-on-click-modal="!1" @open="open" @before-close="close">
+    <div class="feestandardmanage-add-container">
+      <el-form ref="form" :rules="rules" :model="form" label-width="98px" :inline="true" class="border-style">
+        <el-form-item label="收费项目" prop="feeItem">
+          <dict-select :disabled="hook > 1" :filterable="!0" ref="feeItem" :val.sync="form.feeItem" :data="feeItemData" :prop="{ key: 'value', value: 'feeItemName' }"></dict-select>
+        </el-form-item>
+        <el-form-item label="金额" prop="amount">
+          <el-input size="mini" :disabled="hook > 1" v-money v-model="form.amount" placeholder="请输入金额" ></el-input>
+        </el-form-item>
+        <el-form-item label="是否必缴" prop="ifMust">
+          <el-radio v-model="form.ifMust" :label="1">是</el-radio>
+          <el-radio v-model="form.ifMust" :label="0">否</el-radio>
+        </el-form-item>
+        <el-form-item label="允许退费" prop="ifRefund">
+          <el-radio v-model="form.ifRefund" :label="1">是</el-radio>
+          <el-radio v-model="form.ifRefund" :label="0">否</el-radio>
+        </el-form-item>
+      </el-form>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <el-button size="mini" type="danger" :loading="saveLoading" @click="onSave">确认</el-button>
+      <el-button size="mini" type="info" plain @click="close">关闭</el-button>
+    </span>
+  </hs-dialog>
+</template>
+
+<script lang="ts">
+
+import { Component, Prop, PropSync, Vue } from 'vue-property-decorator'
+import { baseApi } from '@/api/base'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import util from '@/utils/busi/util'
+import { commonApi } from '@/api/common'
+
+@Component({
+  name: 'add-dialog',
+  components: {
+    DictSelect
+  }
+})
+
+export default class AddDialog extends Vue {
+  @Prop({ type: Object })
+  private data!: object|any
+
+  @PropSync('visible', { type: Boolean, default: !1 })
+  private visibleSync!: boolean
+
+  private saveLoading = !1
+
+  private form: any = {
+    feeItem: '',
+    amount: '',
+    ifMust: 0,
+    ifRefund: 0
+  }
+
+  private rules = {
+    feeItem: [
+      { required: true, message: '请选择收费项目', trigger: 'blur' }
+    ],
+    amount: [
+      { required: true, message: '请输入金额', trigger: 'blur' }
+    ],
+    ifMust: [
+      { required: true, message: '请选择是否必缴', trigger: 'blur' }
+    ],
+    ifRefund: [
+      { required: true, message: '请选择允许退费', trigger: 'blur' }
+    ]
+  }
+
+  private onSave () {
+    (this.$refs.form as any).validate(async (validate: any) => {
+      if (!validate) return
+      this.saveLoading = !0
+      const feeItems = this.form.feeItem.split('-')
+      const data = Object.assign(util.trimForm(this.form), {
+        feeItemId: feeItems[0],
+        feeItemCode: feeItems[1],
+        feeItemName: feeItems[2]
+      })
+      data.amount = Number(data.amount) * 100
+      console.log(this.data)
+      if (this.data.type === 'add') {
+        await baseApi('standardInsert', data).then((res: any) => {
+          this.saveLoading = !1
+          if (res.code === 10000) {
+            this.$message.success({ message: res.message, showClose: !0 })
+            this.visibleSync = !1
+            this.$listeners['save-back'] && this.$emit('save-back')
+          } else if (res.code === -10000) {
+            this.$alert(res.message, { type: 'error' })
+          }
+        })
+      } else {
+        await baseApi('standardUpdate', data).then((res: any) => {
+          this.saveLoading = !1
+          if (res.code === 10000) {
+            this.$message.success({ message: res.message, showClose: !0 })
+            this.visibleSync = !1
+            this.$listeners['save-back'] && this.$emit('save-back')
+          } else if (res.code === -10000) {
+            this.$alert(res.message, { type: 'error' })
+          }
+        })
+      }
+    })
+  }
+
+  private feeItemData: any = []
+
+  private async getFeeItem () {
+    await baseApi('standardHook', {
+      id: this.data.id
+    }).then(async (res: any) => {
+      if (res.code === 10000) {
+        this.hook = res.object.totalCount
+      }
+    })
+    // if (this.feeItemData.length > 0) return
+    await commonApi('getFeeItem').then((res: any) => {
+      if (res.code === 10000) {
+        this.feeItemData = []
+        res.object.list.map((v: any) => {
+          v.value = `${v.id}-${v.feeItemCode}-${v.feeItemName}`
+          this.feeItemData.push(v)
+        })
+      }
+    })
+  }
+
+  private hook = 0
+
+  private close () {
+    this.form = {
+      feeItem: '',
+      amount: '',
+      ifMust: 1,
+      ifRefund: 1
+    }
+    this.visibleSync = !1
+  }
+
+  private async open () {
+    await this.getFeeItem()
+    this.form = {
+      feeItem: '',
+      amount: '',
+      ifMust: 1,
+      ifRefund: 1
+    }
+    if (this.data.type !== 'add') {
+      this.form = this.data
+      this.form.feeItem = `${this.form.feeItemId}-${this.form.feeItemCode}-${this.form.feeItemName}`
+    }
+  }
+}
+</script>
+<style lang="scss">
+  .feestandardmanage-add-container{
+    width: 100%;
+    min-width: 400px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+</style>

@@ -1,0 +1,94 @@
+import { LocalStorage } from '../storage'
+interface IUtil {
+  [x:string]: any
+}
+
+const util:IUtil = {
+}
+// 去掉form的字段空格 如果配置keys的话，将根据keys进行格式化，其中有default的话，将根据该配置格式化，没有值的为=1返回，default。length最大优先值为2，既 default: ['ben', 'end']
+util.trimForm = function (form: any, keys: any) {
+  const temp = Object.assign(form)
+  for (const key in form) {
+    if (typeof temp[key] === 'string' && temp[key] !== '') {
+      temp[key] = temp[key].trim()
+    }
+    if (temp[key] instanceof Array) {
+      temp[key] = temp[key].join(',')
+    }
+  }
+  if (!keys) return temp
+  if (typeof keys[0] === 'object') {
+    for (const key of keys) {
+      if (key.disabled) continue
+      if (key.default) {
+        if (!temp[key.default[0]]) {
+          temp[key.default[0]] = -1
+        }
+        if (key.default[1] && !temp[key.default[1]]) {
+          temp[key.default[1]] = -1
+        }
+      } else if (!temp[key.prop]) {
+        temp[key.prop] = -1
+      }
+    }
+  } else {
+    for (const key of keys) {
+      if (!temp[key]) {
+        temp[key] = -1
+      }
+    }
+  }
+  return temp
+}
+
+// 日期组件的快捷配置
+
+util.pickerOptions = {
+  shortcuts: [
+    {
+      text: '上一周',
+      onClick (picker: { $emit: (arg0: string, arg1: Date[]) => void }) {
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 3600 * 1000 * 24 * 7)
+        picker.$emit('pick', [start, end])
+      }
+    },
+    {
+      text: '最近一个月',
+      onClick (picker: { $emit: (arg0: string, arg1: Date[]) => void }) {
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
+        picker.$emit('pick', [start, end])
+      }
+    },
+    {
+      text: '最近三个月',
+      onClick (picker: { $emit: (arg0: string, arg1: Date[]) => void }) {
+        const end = new Date()
+        const start = new Date()
+        start.setTime(start.getTime() - 3600 * 1000 * 24 * 90)
+        picker.$emit('pick', [start, end])
+      }
+    }
+  ],
+  disabledDate: !0,
+  firstDayOfWeek: 7,
+  cellClassName: () => 'custClass',
+  onPick: null
+}
+
+util.generatingThousandthPer = (num: any) => {
+  if(!num) return ''
+  const _num = num.toString()
+  let num1 = _num.split(".")[0], num2 = _num.split(".")[1];
+  let c = num1.toString().replace(/(\d)(?=(?:\d{3})+$)/g, '$1, ');
+  return _num.indexOf(".") !== -1 ? c + "." + num2 : c;
+}
+
+util.getRouterParams = function () {
+  return JSON.parse(LocalStorage.get('routerParams') as any || '')
+}
+
+export default util

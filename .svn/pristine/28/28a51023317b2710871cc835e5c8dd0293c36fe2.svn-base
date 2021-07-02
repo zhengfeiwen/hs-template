@@ -1,0 +1,32 @@
+// 列表格子字典翻译
+const stateMap: any = {
+  1: '有效',
+  0: '无效'
+}
+
+const dicts: any = {}
+
+dicts.businessState = function (key: any) {
+  return key !== '' ? (stateMap[key] ? stateMap[key] : key) : ''
+}
+
+dicts.schoolState = function (key: any) {
+  return key !== '' ? (stateMap[key] ? stateMap[key] : key) : ''
+}
+
+dicts.subjectState = function (key: any) {
+  return key !== '' ? (stateMap[key] ? stateMap[key] : key) : ''
+}
+
+dicts.gradeState = function (key: any) {
+  return key !== '' ? (stateMap[key] ? stateMap[key] : key) : ''
+}
+
+dicts.studyState = function (key: any) {
+  return key !== '' ? (stateMap[key] ? stateMap[key] : key) : ''
+}
+
+dicts.agentState = function (key: any) {
+  return key !== '' ? (stateMap[key] ? stateMap[key] : key) : ''
+}
+export const dictMap = dicts

@@ -1,0 +1,150 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" :more="!1">
+    <template slot="query">
+      <el-form ref="form" :model="form" label-width="98px" :inline="true">
+        <el-form-item label="学习类型代码">
+          <hs-input
+            size="mini"
+            v-model="form.studyCode"
+            placeholder="请输入学习类型代码"
+          ></hs-input>
+        </el-form-item>
+        <el-form-item label="学习类型名称">
+          <hs-input
+            size="mini"
+            v-model="form.studyName"
+            placeholder="请输入学习类型名称"
+          ></hs-input>
+        </el-form-item>
+        <el-form-item label="学习类型状态">
+          <dict-select :isInit="!0" :val.sync="form.studyState" constant-group-name="status"></dict-select>
+        </el-form-item>
+        <el-form-item label="业务名称">
+          <dict-select :val.sync="form.businessId" constant-group-name="businessType"></dict-select>
+        </el-form-item>
+      </el-form>
+    </template>
+    <template>
+      <simple-table :columnable="!1" :index="!0" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" :pagination.sync="pagination" @query="onQuery" :dicts="['studyState', 'businessId']">
+        <template slot="operator" slot-scope="{ scope }">
+          <hs-button
+            v-permission="['fcsStudyDetail']"
+            @click.native.prevent="showDetail(scope.row)"
+            type="text"
+            size="small">
+            详情
+          </hs-button>
+        </template>
+      </simple-table>
+    </template>
+    <detail-dialog title="详情" :data="detailData" :visible.sync="visible" :dicts="['studyState', 'businessId']"></detail-dialog>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleTable from '@/components/busi/table/simple-table.vue'
+import DetailDialog from '@/components/busi/table/detail.vue'
+import DictSelect from '@/components/busi/custom/dictselect.vue'
+import SimpleContainer from '@/components/container/index.vue'
+import util from '@/utils/busi/util'
+import { baseApi } from '@/api/base'
+@Component({
+  name: 'fcsStudyMenu',
+  components: {
+    SimpleTable,
+    SimpleContainer,
+    DetailDialog,
+    DictSelect
+  }
+})
+export default class StudyTypeManage extends Vue {
+  private form = {
+    studyState: 1
+  }
+
+  private loading = !1
+
+  private tableData = {
+    list: [],
+    totalCount: 0
+  }
+
+  private columns = [{
+    prop: 'studyCode',
+    label: '学习类型代码'
+  },
+  {
+    prop: 'studyName',
+    label: '学习类型名称'
+  },
+  {
+    prop: 'studyState',
+    label: '学习类型状态',
+    'style-format': {
+      f: [0],
+      t: [1]
+    }
+  },
+  {
+    prop: 'businessId',
+    label: '业务名称'
+  }]
+
+  private pagination: any = {
+    currentPage: 1,
+    pageSize: 10
+  }
+
+  private async onQuery (pagination: any = null) {
+    // do something
+    this.loading = !0
+    const form = util.trimForm(this.form)
+    !pagination && (this.pagination.currentPage = 1)
+    await baseApi('studyList', {
+      ...form,
+      ...pagination || this.pagination
+    }).then(async (res: any) => {
+      this.loading = !1
+      this.tableData.list = res.object.list
+      this.tableData.totalCount = res.object.totalCount
+    }).catch((err: any) => {
+      console.log('err', err)
+      this.loading = !1
+    })
+  }
+
+  private onReset () {
+    this.form = {
+      studyState: 1
+    }
+    this.onQuery()
+  }
+
+  private visible = !1
+
+  private detailData = {}
+
+  private async showDetail (row: any) {
+    await baseApi('studyDetail', { id: row.id }).then((res: any) => {
+      if (res.code === 10000) {
+        this.visible = !0
+        this.detailData = {
+          studyCode: res.object.info.studyCode,
+          studyName: res.object.info.studyName,
+          studyState: res.object.info.studyState,
+          businessId: res.object.info.businessId
+        }
+      }
+    })
+  }
+
+  mounted () {
+    this.onQuery()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

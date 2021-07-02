@@ -1,0 +1,95 @@
+<template>
+  <simple-container @on-query="onQuery" @on-reset="onReset" menuName="学生详情">
+    <template slot="title">
+      <div class="title-right"><coverlap></coverlap></div>
+    </template>
+    <template slot="custom">
+      <UserInfo :userInfo="userInfo" /> <!-- 学生信息 -->
+    </template>
+    <template>
+      <el-tabs v-model="activeName" @tab-click="handleClick">
+        <el-tab-pane label="个人总来往" name="first" v-permission="['fcsPersonalTotal']">
+          <PersonalIntercourse :stuId="stuId" v-if="nowPage == 'first'"></PersonalIntercourse>
+        </el-tab-pane>
+        <el-tab-pane label="缴费流水" name="second" v-permission="['fcsStuFeesInfo']">
+          <FlowDetail :stuId="stuId" v-if="nowPage == 'second'"></FlowDetail>
+        </el-tab-pane>
+        <el-tab-pane label="学生信息" name="third">
+          <StudentBaseInfo :userInfo="userInfo" :stuId="stuId"  v-if="nowPage == 'third'"></StudentBaseInfo>
+        </el-tab-pane>
+      </el-tabs>
+    </template>
+  </simple-container>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'vue-property-decorator'
+import SimpleContainer from '@/components/container/index.vue'
+import UserInfo from '@/views/collect/components/userInfo.vue'
+import Coverlap from '@/components/busi/coverlap.vue'
+import StudentBaseInfo from '@/views/student/components/StudentBaseInfo/index.vue'
+import PersonalIntercourse from '@/views/student/components/PersonalIntercourse/index.vue'
+import FlowDetail from '@/views/collect/components/flowdetail/index.vue'
+import { commonApi } from '@/api/common'
+@Component({
+  name: 'student-manage',
+  components: {
+    SimpleContainer,
+    UserInfo,
+    Coverlap,
+    StudentBaseInfo,
+    PersonalIntercourse,
+    FlowDetail
+  }
+})
+export default class StudentCenterUpdateInput extends Vue {
+  private activeName = 'first'
+
+  private nowPage = 'first'
+
+  private stuId = this.$route.query.stuId
+
+  private handleClick (tab: any) {
+    this.nowPage = tab.name
+  }
+
+  private userInfo = {}
+
+  private async initData () {
+    await commonApi('stuCommonDetail', {
+      id: this.stuId
+    }).then((res: any) => {
+      if (res.code === 10000) {
+        const { stuGradeId, stuSubjectId, stuSchoolId, stuSex, stuBusinessId, stuSchoolCode, stuName, stuSexName, stuGradeName, stuSubjectName, stuSchoolName, subLenName, stuPaperworkNumber } = res.object.info
+        this.userInfo = {
+          stuGradeId,
+          stuSubjectId,
+          stuSchoolId,
+          stuBusinessId,
+          stuSchoolCode,
+          stuName,
+          stuSexName,
+          stuPaperworkNumber,
+          stuSubjectName,
+          stuSchoolName,
+          subLenName,
+          stuGradeName,
+          stuSex
+        }
+      }
+    })
+  }
+
+  activated () {
+    this.initData()
+  }
+
+  beforeMount () {
+    this.initData()
+  }
+}
+</script>
+
+<style lang="scss">
+@import "./index";
+</style>

@@ -6,6 +6,10 @@ interface IApiUrl {
   mock: string
 }
 
+interface IUpload {
+  filters: Object
+}
+
 interface ISettings {
   title: string // Overrides the default title
   showSettings: boolean // Controls settings panel display
@@ -20,6 +24,7 @@ interface ISettings {
   showAllMenuNode: boolean
   apiUrl: IApiUrl
   uploadUrl: string
+  upload: IUpload
   ossIp: string
   picPath: string
 }
@@ -36,6 +41,11 @@ const settings: ISettings = {
   showSubNav: false,
   devServerPort: 9629,
   mockServerPort: 9630,
+  upload: {
+    filters: {
+      max_file_size: '20mb'
+    }
+  },
   showAllMenuNode: true,
   ossIp: 'http://tcsrcz.oss-cn-hangzhou.aliyuncs.com',
   picPath: '/lb/schoolDetail',

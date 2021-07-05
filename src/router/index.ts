@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import VueRouter, { RouteConfig } from 'vue-router'
+import VueRouter, { RawLocation, RouteConfig } from 'vue-router'
 
 /* Layout */
 import Layout from '@/layout/index.vue'
@@ -7,6 +7,11 @@ import Layout from '@/layout/index.vue'
 import Base from './modules/base/index'
 
 Vue.use(VueRouter)
+// 解决vue-router 3.0.0+，多次路由问题
+const originalPush = VueRouter.prototype.push
+VueRouter.prototype.push = function push (location: RawLocation) {
+  return (originalPush.call(this, location) as any).catch((err: any) => err)
+}
 
 /*
   Note: sub-menu only appear when children.length>=1

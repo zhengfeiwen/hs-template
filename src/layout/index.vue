@@ -42,6 +42,7 @@
                 <span style="display: block">{{ $t("navbar.logOut") }}</span>
               </el-dropdown-item>
             </el-dropdown-menu>
+            <el-dropdown-menu></el-dropdown-menu>
           </el-dropdown>
           <!-- <hs-link class="right-menu-item helper" @click="drawer = true">{{ $t("navbar.helper") }}</hs-link> -->
         </div>

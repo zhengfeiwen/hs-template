@@ -14,9 +14,7 @@
       :FileUploaded="FileUploaded"
       :UploadComplete="UploadComplete"
       :Error="error"
-      :filters="{
-        max_file_size : '20mb'
-      }"
+      :filters="filters"
     />
     <hs-button type="danger" :disabled="loading" size="mini" id="browseButton_multi">选择文件</hs-button>
     <hs-button type="danger" :disabled="!allowUpload" size="mini" @click="up.start();loading = !0">开始上传</hs-button>
@@ -36,6 +34,7 @@
 import { UserModule } from '@/store/modules/user'
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator'
 import dayjs from 'dayjs'
+import settings from '@/settings'
 
 @Component({
   name: 'multi-file-upload'
@@ -47,6 +46,8 @@ export default class MulitiFileUpload extends Vue {
   get token () {
     return UserModule.token
   }
+
+  private filters = settings.upload.filters
 
   get postUrl () {
     return `${process.env.VUE_APP_BASE_API}api/core/oss/file/fileUploadPost`

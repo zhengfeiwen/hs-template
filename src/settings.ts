@@ -1,4 +1,5 @@
 interface IApiUrl {
+  sys: string
   api: string
   table: string
   json: string
@@ -31,7 +32,7 @@ interface ISettings {
 
 // You can customize below settings :)
 const settings: ISettings = {
-  title: '高校收费平台',
+  title: '模板框架',
   showSettings: false,
   showTagsView: false,
   fixedHeader: true,
@@ -51,6 +52,7 @@ const settings: ISettings = {
   picPath: '/lb/schoolDetail',
   uploadUrl: '/api/core/oss/file/fileUploadPost',
   apiUrl: {
+    sys: '/fcs',
     api: '/api',
     table: '/table',
     json: '/json',

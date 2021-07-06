@@ -4,6 +4,8 @@ import { LocalStorage } from '@/utils/storage'
 import { RightRoute, UserInfo, OpType } from '@/utils/types'
 import store from '@/store'
 import { UserModule } from './user'
+import { isEmpty } from '@/utils/common'
+import { getToken } from '@/utils/cookies'
 
 export interface IRightInfo {
   accessroutes: RightRoute[]
@@ -80,10 +82,11 @@ class Right extends VuexModule implements IRightInfo {
   public async getRightInfo () {
     // 判断是否已经获取过权限了
     const routes = LocalStorage.getObj(this.KEYS.ROUTE)
-    if (!routes || routes.length === 0) {
+    if (isEmpty(routes)) {
       const userRpcId = LocalStorage.getObj('user_rpc_id')
       const sysTypes = LocalStorage.getObj('sysTypes')
-      if (!userRpcId && !sysTypes) {
+      console.log(getToken(), 'getToken()')
+      if (getToken()) {
         await UserModule.Login({ userAlias: '', password: '' })
       }
       const res: any = await getRightInfo({})

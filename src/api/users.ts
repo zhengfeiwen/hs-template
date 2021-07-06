@@ -47,7 +47,7 @@ export const usersApi = (key: any, params: any = {}) => {
 
 export const login = (data: any) =>
   request({
-    url: `${apiUrl.api}/fcs/login/login`,
+    url: `${apiUrl.api}${apiUrl.sys}/login/login`,
     method: 'post',
     data: qs.stringify(data)
   })

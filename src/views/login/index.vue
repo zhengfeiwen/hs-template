@@ -5,7 +5,7 @@
     <el-image class="background" :src="bgImg"></el-image>
     <!-- <header>
       <el-image :src="logo" alt=""></el-image>
-      <span>猎学高校收费平台</span>
+      <span>模板框架</span>
     </header> -->
     <section class="shadow">
       <el-form
@@ -17,7 +17,7 @@
         label-position="left"
       >
         <h3 class="title">
-          高校收费平台
+          模板框架
         </h3>
         <el-form-item prop="username">
           <div class="item user">

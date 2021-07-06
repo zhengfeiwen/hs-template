@@ -8,7 +8,7 @@ const apiUrl = setting.apiUrl
  */
 export const getRightInfo = (data: any) =>
   request({
-    url: `${apiUrl.api}/fcs/login/getRightInfo`,
+    url: `${apiUrl.api}${apiUrl.sys}/login/getRightInfo`,
     method: 'post',
     data
   })

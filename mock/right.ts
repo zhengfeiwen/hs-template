@@ -8,7 +8,7 @@ const menuRight = {
     {
       meta: {
         cache: true,
-        title: "高校收费平台"
+        title: "模板框架"
       },
       component: "fcsBaseMenu",
       componentPath: "",

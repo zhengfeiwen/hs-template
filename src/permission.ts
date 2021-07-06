@@ -9,6 +9,7 @@ import { PermissionModule } from '@/store/modules/permission'
 import i18n from '@/lang' // Internationalization
 import settings from './settings'
 import { Message } from 'element-ui'
+import { isEmpty } from './utils/common'
 
 NProgress.configure({ showSpinner: false })
 
@@ -54,7 +55,6 @@ router.beforeEach(async (to: Route, _: Route, next: any) => {
   if (UserModule.token) {
     if (to.path.indexOf('/login') > -1) {
       // If is logged in, redirect to the home page
-      // UserModule.ResetToken()
       next()
       NProgress.done()
     } else {
@@ -62,34 +62,25 @@ router.beforeEach(async (to: Route, _: Route, next: any) => {
         MenuModule.updateMenuName('Dashboard')
       }
       // Check whether the user has obtained his permission roles
-      if (RightModule.accessroutes.length === 0) {
+      if (isEmpty(RightModule.accessroutes)) {
         try {
-          if (!UserModule.rpcid) {
-            next({ ...to, replace: true })
-          } else {
-            if (!RightModule.accessroutes || (RightModule.accessroutes as any).length === 0) {
-              // 获取菜单权限
-              await RightModule.getRightInfo().then(() => {
-                // 初始化菜单权限
-                PermissionModule.GenerateRoutes(RightModule.accessroutes)
-                // 菜单权限加入到动态路由中
-                if (!RightModule.accessroutes || (RightModule.accessroutes as any).length === 0) {
-                  next({ path: `/login?redirect=${to.path}`})
-                }
-                router.addRoutes(PermissionModule.dynamicRoutes)
-                next({ ...to, replace: true })
-              }).catch(res => {
-                console.error(res)
-                RightModule.ResetAccessRoutes()
-                UserModule.ResetToken()
-                // Message.error(res.msg || '获取菜单权限失败')
-                next({ path: `/login?redirect=${to.path}`})
-                NProgress.done()
-              })
-            } else {
-              next()
+          // 获取菜单权限
+          await RightModule.getRightInfo().then(() => {
+            // 初始化菜单权限
+            PermissionModule.GenerateRoutes(RightModule.accessroutes)
+            // 菜单权限加入到动态路由中
+            if (isEmpty(RightModule.accessroutes)) {
+              next({ path: `/login?redirect=${to.path}`})
             }
-          }
+            router.addRoutes(PermissionModule.dynamicRoutes)
+            next({ ...to, replace: true })
+          }).catch(res => {
+            console.error(res)
+            RightModule.ResetAccessRoutes()
+            UserModule.ResetToken()
+            next({ path: `/login?redirect=${to.path}`})
+            NProgress.done()
+          })
         } catch (err) {
           // 移除token 返回到登录界面
           UserModule.ResetToken()

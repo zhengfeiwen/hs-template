@@ -1,0 +1,139 @@
+import Vue from 'vue'
+import VueRouter, { RawLocation, RouteConfig } from 'vue-router'
+
+/* Layout */
+import Layout from '@/layout/index.vue'
+/* Router modules */
+import Base from './modules/base/index'
+
+Vue.use(VueRouter)
+// 解决vue-router 3.0.0+，多次路由问题
+const originalPush = VueRouter.prototype.push
+VueRouter.prototype.push = function push (location: RawLocation) {
+  return (originalPush.call(this, location) as any).catch((err: any) => err)
+}
+
+/*
+  Note: sub-menu only appear when children.length>=1
+  Detail see: https://panjiachen.github.io/vue-element-admin-site/guide/essentials/router-and-nav.html
+*/
+
+/*
+  name:'router-name'             the name field is required when using <keep-alive>, it should also match its component's name property
+                                 detail see : https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components
+  redirect:                      if set to 'noredirect', no redirect action will be trigger when clicking the breadcrumb
+  meta: {
+    id: '10000001'               will control the page roles (allow setting multiple roles)
+    title: 'title'               the name showed in subMenu and breadcrumb (recommend set)
+    icon: 'svg-name'             the icon showed in the sidebar
+    hidden: true                 if true, this route will not show in the sidebar (default is false)
+    alwaysShow: true             if true, will always show the root menu (default is false)
+                                 if false, hide the root menu when has less or equal than one children route
+    breadcrumb: false            if false, the item will be hidden in breadcrumb (default is true)
+    noCache: true                if true, the page will not be cached (default is false)
+    affix: true                  if true, the tag will affix in the tags-view
+    activeMenu: '/example/list'  if set path, the sidebar will highlight the path you set
+  }
+*/
+
+/**
+  基本路由，不受权限控制
+*/
+export const constantRoutes: RouteConfig[] = [
+  {
+    path: '/redirect',
+    component: Layout,
+    meta: { hidden: true },
+    children: [
+      {
+        path: '/redirect/:path(.*)',
+        component: () => import('@/views/redirect/index.vue')
+      }
+    ]
+  },
+  {
+    path: '/login',
+    component: () => import('@/views/login/index.vue'),
+    meta: { hidden: true }
+  },
+  {
+    path: '/auth-redirect',
+    component: () => import('@/views/login/auth-redirect.vue'),
+    meta: { hidden: true }
+  },
+  {
+    path: '/404',
+    component: () => import('@/views/error-page/404.vue'),
+    meta: { hidden: true }
+  },
+  {
+    path: '/lowerbrowser',
+    name: 'lowerbrowser',
+    component: () => import('@/views/error-page/lowerbrowser.vue'),
+    meta: { hidden: true }
+  },
+  {
+    path: '/401',
+    component: () => import('@/views/error-page/401.vue'),
+    meta: { hidden: true }
+  },
+  {
+    path: '/',
+    component: Layout,
+    redirect: '/dashboard',
+    meta: { hidden: true },
+    children: [
+      {
+        path: 'dashboard',
+        component: () => import('@/views/dashboard/index.vue'),
+        name: 'Dashboard',
+        meta: {
+          title: 'dashboard',
+          icon: 'dashboard',
+          affix: true,
+          id: '90000000'
+        }
+      }
+    ]
+  }
+]
+
+/**
+ * 动态路由，受权限控制
+*/
+export const asyncRoutes: RouteConfig[] = [
+  Base
+]
+
+const createRouter = () => new VueRouter({
+  mode: 'hash', // Disabled due to Github Pages doesn't support this, enable this if you need.
+  scrollBehavior: (to, from, savedPosition) => {
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { x: 0, y: 0 }
+    }
+  },
+  base: process.env.BASE_URL,
+  routes: constantRoutes
+})
+
+const router = createRouter()
+
+// Detail see: https://github.com/vuejs/vue-router/issues/1234#issuecomment-357941465
+export function resetRouter () {
+  const newRouter = createRouter();
+  (router as any).matcher = (newRouter as any).matcher // reset router
+}
+
+router.beforeEach(async (to, from, next) => {
+  cacheParams(to, from)
+  next()
+})
+
+function cacheParams (to: any, from: any) {
+  if (!from.name) return
+  localStorage.setItem('routerParams', JSON.stringify(to.params))
+}
+
+export default router

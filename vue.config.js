@@ -21,7 +21,10 @@ const cdn = {
   js: cdnDependencies.map(e => e.js).filter(e => e)
 }
 
+const Timestamp = new Date().getTime()
+
 console.log('---------------------------process.env-------------------------------')
+console.log(process.env.VUE_APP_TYPE)
 console.log('NODE_ENV:' + process.env.NODE_ENV)
 console.log('VUE_APP_BASE_API:' + process.env.VUE_APP_BASE_API)
 console.log('---------------------------process.env-------------------------------')
@@ -38,6 +41,7 @@ if (process.env.NODE_ENV === 'production') {
 module.exports = {
   publicPath: process.env.NODE_ENV === 'production' ? '/' : '/',
   lintOnSave: process.env.NODE_ENV === 'development',
+  outputDir: path.resolve(__dirname, `${process.env.VUE_APP_TYPE === 'test' ? 'dist-fcs.liexue' : 'dist-caiwu.liexue'}`),
   productionSourceMap: !1,
   configureWebpack: config => {
     const configNew = {}
@@ -54,6 +58,7 @@ module.exports = {
           maxChunks: 100, // 打包模块数量
           minChunkSize: 100
         })
+        // new GitRevisionPlugin()
       )
       config.externals = {
         vue: 'Vue',
@@ -114,6 +119,16 @@ module.exports = {
     }
   },
   chainWebpack (config) {
+    if (process.env.NODE_ENV === 'production') {
+      // 给js和css配置版本号
+      config.output.filename(`js/[name].[hash].${Timestamp}'.js`).end()
+      config.output.chunkFilename(`js/[name].[hash].${Timestamp}.js`).end()
+      config.plugin('extract-css').tap(() => [{
+        filename: `css/[name].${Timestamp}.css`,
+        chunkFilename: `css/[name].${Timestamp}.css`
+      }])
+    }
+
     config.resolve.alias.set('@', path.resolve(__dirname, './src'))
 
     /**

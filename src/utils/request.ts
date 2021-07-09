@@ -7,6 +7,7 @@ import { isWhite, standardization } from './apidatautils'
 import qs from 'qs'
 import { isEmpty } from 'xe-utils'
 import { DICT_MONEY_KEY, getConstantByGroup } from './dicts/constdict'
+import { getToken } from './cookies'
 
 const service = axios.create({
   baseURL: process.env.VUE_APP_BASE_API, // url = base url + request url
@@ -66,9 +67,16 @@ service.interceptors.request.use(
       })
     }
     // Add X-Access-Token header to every request, you can add other custom headers here
-    if (UserModule.token) {
+    const token = getToken()
+    if (token) {
       // config.headers['Content-Session-Token'] = 'ceaa1afa4b8643ccaeba03b7f8b65212'
-      config.headers['token'] = UserModule.token
+      config.headers['token'] = token
+    } else {
+      if (config.url.indexOf('singleSignOn') === -1 && config.url.indexOf('login') === -1) {
+        UserModule.ResetToken()
+        UserModule.Logout()
+        location.reload()
+      }
     }
     return config
   },

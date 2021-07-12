@@ -10,12 +10,12 @@
         <p v-for="(sn, i) in labels" :key="i">{{ sn }}</p>
       </div>
       <div slot="reference">
-        <el-select :no-data-text="noDataText" @click.native="getDatas" element-loading-spinner="el-icon-loading" :collapse-tags="collapseTags" :disabled="disabled" ref="select" :filterable="filterable" :multiple-limit="multipleLimit" v-loading="loading" v-model="valSync" :placeholder="placeholder" size="mini" :multiple="multiple" @change="change" :clearable="clearable">
+        <el-select :value-key="valueKey" :no-data-text="noDataText" @click.native="getDatas" element-loading-spinner="el-icon-loading" :collapse-tags="collapseTags" :disabled="disabled" ref="select" :filterable="filterable" :multiple-limit="multipleLimit" v-loading="loading" v-model="valSync" :placeholder="placeholder" size="mini" :multiple="multiple" @change="change" :clearable="clearable">
           <el-option
             v-for="item in list"
             :key="item[prop.key]"
             :label="item[prop.value]"
-            :value="item[prop.key]">
+            :value="valueKey ? item : item[prop.key]">
           </el-option>
         </el-select>
         <template slot="empty" v-if="emptyText">
@@ -23,12 +23,12 @@
         </template>
       </div>
     </el-popover>
-    <el-select :no-data-text="noDataText" v-else @click.native="getDatas" element-loading-spinner="el-icon-loading" :collapse-tags="collapseTags" :disabled="disabled" ref="select" :filterable="filterable" :multiple-limit="multipleLimit" v-loading="loading" v-model="valSync" :placeholder="placeholder" size="mini" :multiple="multiple" @change="change" :clearable="clearable">
+    <el-select :value-key="valueKey" :no-data-text="noDataText" v-else @click.native="getDatas" element-loading-spinner="el-icon-loading" :collapse-tags="collapseTags" :disabled="disabled" ref="select" :filterable="filterable" :multiple-limit="multipleLimit" v-loading="loading" v-model="valSync" :placeholder="placeholder" size="mini" :multiple="multiple" @change="change" :clearable="clearable">
       <el-option
         v-for="item in list"
         :key="item[prop.key]"
         :label="item[prop.value]"
-        :value="item[prop.key]">
+        :value="valueKey ? item : item[prop.key]">
       </el-option>
       <template slot="empty" v-if="emptyText">
         <p class="el-select-dropdown__empty">{{emptyText}}</p>
@@ -91,6 +91,10 @@ export default class DictSelect extends Vue {
   @Prop({ type: Object, default: () => ({ key: 'key', value: 'value' }) })
   private prop!: {}|any
 
+  // valueKey
+  @Prop({ type: String })
+  private valueKey!: string
+
   // 变量字典key
   @Prop({ type: String })
   private optionGroupName!: string
@@ -100,8 +104,8 @@ export default class DictSelect extends Vue {
   private constantGroupName!: string
 
   // 值
-  @PropSync('val', { type: [String, Array, Number] })
-  private valSync!: string|[]|number
+  @PropSync('val', { type: [String, Array, Number, Object] })
+  private valSync!: string|[]|number|object
 
   // 占位符
   @Prop({ type: String, default: '请选择' })

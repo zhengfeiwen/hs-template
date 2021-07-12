@@ -126,6 +126,7 @@ import { getExportList } from '@/api/common'
 import { dictMap, initDictMap } from './tabledict'
 import { format, formatValue } from './format'
 import { isEmpty } from '@/utils/common'
+import util from '@/utils/busi/util'
 @Component({
   name: 'simple-table'
 })
@@ -145,10 +146,6 @@ export default class SimpleTable extends Vue {
   // showSummary
   @Prop({ type: Boolean, default: !1 })
   private showSummary!: boolean
-
-  // getSummaries
-  @Prop({ type: Function })
-  private getSummaries!: Function
 
   // 加载遮罩
   @Prop({ type: Boolean, default: !1 })
@@ -243,6 +240,32 @@ export default class SimpleTable extends Vue {
   private currentPage = 1
 
   private dictMap = dictMap
+
+  public getSummaries (param: any) {
+    const { columns, data } = param
+    const sums: any = []
+    columns.forEach((column: any, index: any) => {
+      if (index === 0) {
+        sums[index] = '合计'
+        return
+      }
+      const values = data.map((item: any) => Number(item[column.property]))
+      if (!values.every((value: any) => isNaN(value))) {
+        sums[index] = values.reduce((prev: any, curr: any) => {
+          const value = Number(curr)
+          if (!isNaN(value)) {
+            return prev + curr
+          } else {
+            return prev
+          }
+        }, 0)
+        sums[index] = util.generatingThousandthPer(sums[index])
+      } else {
+        sums[index] = ''
+      }
+    })
+    return sums
+  }
 
   getExportData (callback: Function) {
     // 导出时候判断是否配置了导出接口，否则取列表数据
@@ -383,6 +406,7 @@ export default class SimpleTable extends Vue {
       }
     })
     this._exportColumns = (this.exportColumns || this.columns).filter((ev: any) => hiddencolumns.includes(ev.prop))
+    this.columnsSet = this.columnsSet.filter((ev: any) => hiddencolumns.includes(ev.prop))
     this.$listeners['column-set-save'] && this.$emit('column-set-save', columns)
   }
 
@@ -425,13 +449,11 @@ export default class SimpleTable extends Vue {
 
   // 获取格式化信息 初始化列设置配置
   beforeMount () {
-    this.columns.map((v: any) => {
-      v.format && (this.formatStr[v.prop] = v.format)
-      v.hidden = !!v.hidden
-      this.columnsSet.push({
-        ...v
-      })
-      v['style-format'] && (this.styleFormat[v.prop] = v['style-format'])
+    this.columnsSet = this.columns
+    this.columnsSet.map((v: any, i: any) => {
+      this.columnsSet[i].format && (this.formatStr[v.prop] = this.columnsSet[i].format)
+      this.columnsSet[i].hidden = !!this.columnsSet[i].hidden
+      this.columnsSet[i]['style-format'] && (this.styleFormat[v.prop] = this.columnsSet[i]['style-format'])
     })
     if (this.exportColumns && this.exportColumns.length > 0) {
       this._exportColumns = this.exportColumns.map((v: any) => {

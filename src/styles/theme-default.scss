@@ -29,14 +29,6 @@ html {
   }
 }
 
-// 网格format字段颜色 f false t true
-.f{
-  color: $mainRed;
-}
-.t{
-  color: #009688; 
-}
-
 // 网格头错位问题
 .el-table--border th.gutter:last-of-type {
   display: block!important;
@@ -208,7 +200,7 @@ html {
 }
 
 .el-form-item__content{
-  line-height: 0;
+  line-height: inherit;
 }
 
 .el-checkbox__input.is-checked .el-checkbox__inner, .el-checkbox__input.is-indeterminate .el-checkbox__inner {
@@ -416,9 +408,18 @@ html {
 
 // table 样式调整
 .el-table{
-  td .cell{
-    font-size: 14px;
+  td {
     color: #212121;
+    // 网格format字段颜色 f false t true
+    &.f{
+      color: $mainRed;
+    }
+    &.t{
+      color: #009688; 
+    }
+    .cell{
+      font-size: 14px;
+    }
   }
   th .cell{
     font-size: 14px;

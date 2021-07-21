@@ -9,3 +9,9 @@ export type TableData = {
   list: object[]
   totalCount: number
 }
+
+export type Column = Array<{
+  [x: string]: any
+  prop: string
+  label: string
+}>

@@ -16,7 +16,8 @@
     "debug": "vue-cli-service build --mode debug",
     "svg": "vsvg -s ./src/icons/svg -t ./src/icons/components --ext ts --es6",
     "mock": "cd mock && ts-node-dev mock-server.ts",
-    "fix-memory-limit": "cross-env LIMIT=4096 increase-memory-limit"
+    "fix-memory-limit": "cross-env LIMIT=4096 increase-memory-limit",
+    "create": "cd file-cli && create"
   },
   "dependencies": {
     "@tinymce/tinymce-vue": "^3.2.6",

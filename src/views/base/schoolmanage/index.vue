@@ -28,7 +28,7 @@
       </el-form>
     </template>
     <template>
-      <simple-table ref="hsTable" :columnable="!1" :export-name="exportName" :exportable="exportable" :export-columns="columns" :index="!0" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" :pagination.sync="pagination" @query="onQuery" @row-dbclick="showDetail" :dicts="['status', 'business']">
+      <simple-table ref="hsTable" :columnable="!1" :index="!0" :isCheckbox="!1" :data="tableData" :columns="columns" :loading="loading" :pagination.sync="pagination" @query="onQuery" @row-dbclick="showDetail" :dicts="['status', 'business']">
         <template slot="operator" slot-scope="{ scope }">
           <hs-button
             v-permission="['fcsSchoolDetail']"
@@ -38,9 +38,6 @@
             详情
           </hs-button>
         </template>
-        <template slot="action-block">
-          <hs-button type="danger" v-permission="['fcsSchExport']" @click="onExport" icon="hs-icon-download" size="mini">导出</hs-button>
-        </template>
       </simple-table>
     </template>
     <detail-dialog title="详情" :data="detailData" :visible.sync="visible"  :dicts="['status', 'business']"></detail-dialog>
@@ -48,15 +45,13 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'vue-property-decorator'
+import { Component } from 'vue-property-decorator'
 import SimpleTable from '@/components/busi/table/simple-table.vue'
 import DetailDialog from '@/components/busi/table/detail.vue'
 import DictSelect from '@/components/busi/custom/dictselect.vue'
 import DialogSelect from '@/components/busi/custom/dialogselect.vue'
-import util from '@/utils/busi/util'
 import SimpleContainer from '@/components/container/index.vue'
-import dayjs from 'dayjs'
-import { checkPermission } from '@/utils/permission'
+import CSimpleQuery from '@/standard/class/CSimpleQuery'
 @Component({
   name: 'fcsSchoolMenu',
   components: {
@@ -67,12 +62,10 @@ import { checkPermission } from '@/utils/permission'
     DialogSelect
   }
 })
-export default class SchoolManage extends Vue {
-  private form: any = { status: 1, study: '' }
+export default class SchoolManage extends CSimpleQuery {
+  form: any = { status: 1, study: '' }
 
-  private loading = !1
-
-  private tableData = {
+  tableData = {
     list: [{
       schoolCode: '1000',
       schoolName: '福州大学',
@@ -83,7 +76,7 @@ export default class SchoolManage extends Vue {
     totalCount: -1
   }
 
-  private columns = [{
+  columns = [{
     prop: 'schoolCode',
     label: '院校代码'
   },
@@ -115,29 +108,9 @@ export default class SchoolManage extends Vue {
     format: 'date'
   }]
 
-  private pagination: any = {
+  pagination: any = {
     currentPage: 1,
     pageSize: 10
-  }
-
-  private exportParam () {
-    const temp = { ...this.form }
-    return util.trimForm({ ...temp }, this.columns)
-  }
-
-  private exportable = {
-    exportable: checkPermission(['fcsSchExport']),
-    src: '/fcs/school/export',
-    data: this.exportParam
-  }
-
-  get exportName () {
-    const day = dayjs(new Date()).format('YYYYMMDD')
-    return `院校信息-${day}`
-  }
-
-  private onExport () {
-    (this.$refs as any).hsTable.exportHandle()
   }
 
   private options: any = {
@@ -155,33 +128,6 @@ export default class SchoolManage extends Vue {
     (this.$refs.study as any).getList()
   }
 
-  private async onQuery (pagination: any = null) {
-    // this.loading = !0
-    // const form = util.trimForm(this.form)
-    // !pagination && (this.pagination.currentPage = 1)
-    // await baseApi('getSchoolList', {
-    //   ...form,
-    //   ...pagination || this.pagination
-    // }).then(async (res: any) => {
-    //   this.loading = !1
-    //   // this.tableData.list = res.object.list
-    //   this.tableData.totalCount = 1
-    // }).catch((err: any) => {
-    //   console.log('err', err)
-    //   this.loading = !1
-    // })
-  }
-
-  private onReset () {
-    this.form.business = ''
-    this.form.study = ''
-    this.form.schoolCode = ''
-    this.form.schoolName = ''
-    this.form.status = 1
-    this.businessChange()
-    this.onQuery()
-  }
-
   private currentPage = 1
 
   private visible = !1
@@ -191,18 +137,6 @@ export default class SchoolManage extends Vue {
   private async showDetail (row: any) {
     this.visible = !0
     this.detailData = row
-    // await baseApi('schoolDetail', { id: row.id }).then((res: any) => {
-    //   if (res.code === 10000) {
-    //     this.detailData = {
-    //       schoolCode: res.object.info.schoolCode,
-    //       schoolName: res.object.info.schoolName,
-    //       business: res.object.info.business,
-    //       studyName: res.object.info.studyName,
-    //       status: res.object.info.status,
-    //       createTime: res.object.info.createTime ? dayjs(res.object.info.createTime).format('YYYY-MM-DD HH:mm') : dayjs(res.object.info.createTime).format('YYYY-MM-DD HH:mm')
-    //     }
-    //   }
-    // })
   }
 
   private businessOption = {
@@ -263,7 +197,7 @@ export default class SchoolManage extends Vue {
   }
 
   activated () {
-    this.onQuery()
+    this.initData()
   }
 }
 </script>

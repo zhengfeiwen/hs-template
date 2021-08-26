@@ -121,7 +121,7 @@
 </template>
 <script lang="ts">
 import { Vue, Component, Ref, Prop, PropSync, Watch } from 'vue-property-decorator'
-import { Pagination, TableData } from '@/utils/types/tables'
+import { Pagination, TableData } from '@/standard/types/tables'
 import { getExportList } from '@/api/common'
 import { dictMap, initDictMap } from './tabledict'
 import { format, formatValue } from './format'

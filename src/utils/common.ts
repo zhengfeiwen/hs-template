@@ -1,3 +1,4 @@
+import { LooseObject } from '@/standard/types/common'
 import { objFormatDict, objFormatMoney, objFormatTrim } from './apidatautils'
 import { getConstantByGroup } from './dicts/constdict'
 
@@ -79,4 +80,19 @@ export const objToEmpty = (obj: any, option: any = {}) => {
       obj[key] = ''
     }
   })
+}
+export const ObjFactory: LooseObject = {
+  init: function (t: any, obj: Object) {
+    t.initobj = obj
+  },
+  toEmpty: function (obj: object) {
+    objToEmpty(obj)
+  },
+  toInit: function (t: any, obj: LooseObject) {
+    if (!isEmpty(t.initobj)) {
+      Object.keys(obj).map((key: string) => {
+        obj[key] = t.initobj[key]
+      })
+    }
+  }
 }

@@ -21,12 +21,13 @@
 </template>
 
 <script lang="ts">
-import { Component } from 'vue-property-decorator'
+import { Component, Vue } from 'vue-property-decorator'
 import SimpleTable from '@/components/busi/table/simple-table.vue'
 import DictSelect from '@/components/busi/custom/dictselect.vue'
 import SimpleContainer from '@/components/container/index.vue'
-import CSimpleQuery from '@/template/class/CSimpleQuery'
-import ISimpleQuery from '@/template/interface/ISimpleQuery'
+import CSimpleQuery from '@/standard/class/CSimpleQuery'
+import ISimpleQuery from '@/standard/interface/ISimpleQuery'
+import { ObjFactory } from '@/utils/common'
 @Component({
   name: 'templateCLassName',
   components: {
@@ -35,7 +36,7 @@ import ISimpleQuery from '@/template/interface/ISimpleQuery'
     DictSelect
   }
 })
-export default class templateCLassName extends CSimpleQuery implements ISimpleQuery {
+export default class templateCLassName extends Vue {
   form: any = { status: 1, study: '' }
 
   // 表格数据
@@ -46,9 +47,11 @@ export default class templateCLassName extends CSimpleQuery implements ISimpleQu
 
   // 表格列
   columns = [{
-    prop: 'schoolCode',
-    label: '院校代码'
+    prop: 'prop',
+    label: '列名称'
   }]
+
+  loading = !1
 
   // 查询方法
   onQuery () {
@@ -56,6 +59,21 @@ export default class templateCLassName extends CSimpleQuery implements ISimpleQu
     setTimeout(() => {
       this.loading = false
     }, 3000)
+  }
+
+  initData () {
+    ObjFactory.init(this, this.form)
+    console.log(this)
+    this.form.aaa = 'zfw'
+    console.log(this)
+  }
+
+  onMounted () {
+    this.initData()
+  }
+
+  onReset () {
+    ObjFactory.toInit(this, this.form)
   }
 }
 </script>

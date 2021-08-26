@@ -75,7 +75,7 @@
 </template>
 
 <script lang="ts">
-import { Pagination, TableData } from '@/utils/types/tables'
+import { Pagination, TableData } from '@/standard/types/tables'
 import { Vue, Component, Prop, PropSync } from 'vue-property-decorator'
 
 @Component({

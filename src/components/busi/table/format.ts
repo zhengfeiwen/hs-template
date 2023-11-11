@@ -1,3 +1,13 @@
+/*
+ * @Author: zhengfeiwen zfw_emperor_1993@163.com
+ * @Date: 2023-11-10 14:57:22
+ * @LastEditors: zhengfeiwen zfw_emperor_1993@163.com
+ * @LastEditTime: 2023-11-11 22:36:08
+ * @FilePath: \hs-template\src\components\busi\table\format.ts
+ * @Description:
+ *
+ * Copyright (c) 2023 by ${git_name_email}, All Rights Reserved.
+ */
 // 列表数据 格式化工具
 import util from '@/utils/busi/util'
 import dayjs from 'dayjs'
@@ -15,7 +25,7 @@ export const format = (list: any, type: any, str: any) => {
   return res
 }
 
-const formatTime = (list: any, str: any, format: string = 'YYYY-MM-DD HH:mm') => {
+const formatTime = (list: any, str: any, format = 'YYYY-MM-DD HH:mm') => {
   if (!list || list.length === 0) return []
   return list.map((v: any) => {
     if (v[str]) {

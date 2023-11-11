@@ -12,18 +12,18 @@ const Base: RouteConfig = {
     icon: 'database'
   },
   children: [
-  {
-    path: 'schoolmanage/index',
-    component: () => import(/* webpackChunkName: "schoolManage" */ '@/views/base/schoolmanage/index.vue'),
-    name: 'fcsSchoolMenu',
-    meta: {
-      title: 'schoolmanage',
-      parent: 'fcsBaseMenu',
-      permission: 'fcsSchoolMenu',
-      noCache: true,
-      icon: 'university'
-    }
-  }]
+    {
+      path: 'schoolmanage/index',
+      component: () => import(/* webpackChunkName: "schoolManage" */ '@/views/base/schoolmanage/index.vue'),
+      name: 'fcsSchoolMenu',
+      meta: {
+        title: 'schoolmanage',
+        parent: 'fcsBaseMenu',
+        permission: 'fcsSchoolMenu',
+        noCache: true,
+        icon: 'university'
+      }
+    }]
 }
 
 export default Base
